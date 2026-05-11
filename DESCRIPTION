@@ -1,0 +1,55 @@
+Package: cvaworkflows
+Title: Workflows to create species distribution models and ensemble model
+Version: 0.0.0.9000
+Authors@R: c(person(given = "Katherine",
+                    family = "Gallagher",
+                    role = c("cre","aut")))
+Description: Underlying functions and workflows to explain how to create ensemble model for climate vulnerability assessment
+License: file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends:
+    R (>= 4.0)
+VignetteBuilder: knitr
+RoxygenNote: 7.3.2
+Roxygen: list(markdown = TRUE)
+Imports:
+  ncdf4,
+  caret,
+  DescTools,
+  fields,
+  parallel,
+  doParallel,
+  abind,
+  sf,
+  sftime, 
+  survdat,
+  dbutils,
+  measurements,
+  lubridate,
+  raster, 
+  reshape2,
+  Matrix,
+  TMB,
+  sdmTMB,
+  sdmTMBextra,
+  future,
+  ranger,
+  sp,
+  akgfmaps,
+  EFHSDM,
+  terra,
+  meteo,
+  dismo,
+  gbm,
+  gamm4,
+  ROCR,
+  sftime,
+  furrr, 
+  maxnet, 
+  gstat
+Remotes:
+    NOAA-EDAB/survdat,
+    andybeet/dbutils,
+    EFHSDM=noaa-akro/alaska-efh-ensemble-sdm
+Config/testthat/edition: 3
