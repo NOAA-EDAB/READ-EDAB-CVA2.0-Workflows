@@ -1,55 +1,57 @@
-Package: cvaworkflows
-Title: Workflows to create species distribution models and ensemble model
+Package: READ-EDAB-CVA2.0-Workflows
+Title: Research repo to run CVA models
 Version: 0.0.0.9000
-Authors@R: c(person(given = "Katherine",
-                    family = "Gallagher",
-                    role = c("cre","aut")))
-Description: Underlying functions and workflows to explain how to create ensemble model for climate vulnerability assessment
+Authors@R: 
+  person("Katherine", "Gallagher", , "katherine.gallagher@noaa.gov", role = c("aut", "cre"))
+Description: What the package does (one paragraph).
 License: file LICENSE
 Encoding: UTF-8
-LazyData: true
-Depends:
-    R (>= 4.0)
-VignetteBuilder: knitr
-RoxygenNote: 7.3.2
 Roxygen: list(markdown = TRUE)
-Imports:
-  ncdf4,
-  caret,
-  DescTools,
-  fields,
-  parallel,
-  doParallel,
-  abind,
-  sf,
-  sftime, 
-  survdat,
-  dbutils,
-  measurements,
-  lubridate,
-  raster, 
-  reshape2,
-  Matrix,
-  TMB,
-  sdmTMB,
-  sdmTMBextra,
-  future,
-  ranger,
-  sp,
-  akgfmaps,
-  EFHSDM,
-  terra,
-  meteo,
-  dismo,
-  gbm,
-  gamm4,
-  ROCR,
-  sftime,
-  furrr, 
-  maxnet, 
-  gstat
+RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.1)
+Imports: 
+    DescTools,
+    EFHSDM,
+    Matrix,
+    ROCR,
+    TMB,
+    abind,
+    akgfmaps,
+    caret,
+    dbutils,
+    dismo,
+    doParallel,
+    fields,
+    fmsb,
+    foreach,
+    furrr,
+    future,
+    gamm4,
+    gbm,
+    gifski,
+    gsstat,
+    lubridate,
+    maxnet,
+    measurements,
+    meteo,
+    ncdf4,
+    parallel,
+    ranger,
+    raster,
+    reshape2,
+    sdmTMB,
+    sdmTMBextra,
+    sf,
+    sftime,
+    sftime,
+    spm
+    survdat,
+    terra,
+    tidyr,
+    tinytex
 Remotes:
-    NOAA-EDAB/survdat,
-    andybeet/dbutils,
-    EFHSDM=noaa-akro/alaska-efh-ensemble-sdm
-Config/testthat/edition: 3
+  NOAA-EDAB/survdat,
+  andybeet/dbutils,
+  EFHSDM=noaa-akro/alaska-efh-ensemble-sdm,
+  afsc-gap-products/akgfmaps
