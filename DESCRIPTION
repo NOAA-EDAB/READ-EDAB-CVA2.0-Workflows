@@ -1,0 +1,55 @@
+Package: READ-EDAB-CVA2.0-Workflows
+Title: Research repo to run CVA models
+Version: 0.0.0.9000
+Authors@R: 
+  person("Katherine", "Gallagher", , "katherine.gallagher@noaa.gov", role = c("aut", "cre"))
+Description: What the package does (one paragraph).
+License: file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports: 
+    DescTools,
+    EFHSDM,
+    Matrix,
+    ROCR,
+    TMB,
+    abind,
+    akgfmaps,
+    caret,
+    dbutils,
+    dismo,
+    doParallel,
+    fields,
+    fmsb,
+    foreach,
+    furrr,
+    future,
+    gamm4,
+    gbm,
+    gifski,
+    gsstat,
+    lubridate,
+    maxnet,
+    measurements,
+    meteo,
+    ncdf4,
+    parallel,
+    ranger,
+    raster,
+    reshape2,
+    sdmTMB,
+    sdmTMBextra,
+    sf,
+    sftime,
+    sftime,
+    spm
+    survdat,
+    terra,
+    tidyr,
+    tinytex
+Remotes:
+  NOAA-EDAB/survdat,
+  andybeet/dbutils,
+  EFHSDM=noaa-akro/alaska-efh-ensemble-sdm,
+  afsc-gap-products/akgfmaps
