@@ -10,8 +10,7 @@
 
 #' @return \code{saveRast} returns the range of the rasterBrick returned by \code{build_fisheries_raster}. This should be equal to 0 2 if species is present in dataset, and 0 1 if species is not caught in dataset. This function will also save the resulting rasterBrick as a netcdf file in the species' input_rasters folder
 
-save_rasters_wrapper <- function(csv_name, is_obs, grid, spp, spp_names, skip){
-
+save_rasters_wrapper <- function(csv_name, is_obs, grid, spp, spp_names, skip) {
   data <- read.csv(paste0('./Data/csvs/standardized/', csv_name, '.csv'))
 
   #open log file
@@ -24,37 +23,73 @@ save_rasters_wrapper <- function(csv_name, is_obs, grid, spp, spp_names, skip){
     sink()
   })
 
-  print(paste(csv_name , spp, sep = '-'))
+  print(paste(csv_name, spp, sep = '-'))
   print(Sys.time())
 
-  if(skip){
-    if(file.exists(paste0(file.path(getwd(), spp, 'input_rasters'), '/', csv_name, '.nc'))){
+  if (skip) {
+    if (
+      file.exists(paste0(
+        file.path(getwd(), spp, 'input_rasters'),
+        '/',
+        csv_name,
+        '.nc'
+      ))
+    ) {
       print('file exists and skip == T, so skipping this file!')
       return(NA)
     } else {
-
       nms <- strsplit(spp_names, split = ',')[[1]]
-      rast <- build_fisheries_raster(data = data, is_obs = is_obs, grid = grid, all_names = nms)
+      rast <- build_fisheries_raster(
+        data = data,
+        is_obs = is_obs,
+        grid = grid,
+        all_names = nms
+      )
 
-      if(is.null(rast)){
+      if (is.null(rast)) {
         print('rast is NULL - minimum conditions not met')
       } else {
         print(range(rast[]))
-       raster::writeRaster(rast, filename = paste0(file.path(getwd(),spp, 'input_rasters'), '/', csv_name, '.nc'), bylayer = F,overwrite = T)
+        raster::writeRaster(
+          rast,
+          filename = paste0(
+            file.path(getwd(), spp, 'input_rasters'),
+            '/',
+            csv_name,
+            '.nc'
+          ),
+          bylayer = F,
+          overwrite = T
+        )
       }
 
       return(range(rast[]))
-
-    }#end skip && if file is present
-  } else { #if skip = F, just run it without checking
+    } #end skip && if file is present
+  } else {
+    #if skip = F, just run it without checking
     nms <- strsplit(spp_names, split = ',')[[1]]
-    rast <- build_fisheries_raster(data = data, is_obs = is_obs, grid = grid, all_names = nms)
+    rast <- build_fisheries_raster(
+      data = data,
+      is_obs = is_obs,
+      grid = grid,
+      all_names = nms
+    )
 
-    if(is.null(rast)){
+    if (is.null(rast)) {
       print('rast is NULL - minimum conditions not met')
     } else {
       print(range(rast[]))
-      raster::writeRaster(rast, filename = paste0(file.path(getwd(),spp, 'input_rasters'), '/', csv_name, '.nc'), bylayer = F,overwrite = T)
+      raster::writeRaster(
+        rast,
+        filename = paste0(
+          file.path(getwd(), spp, 'input_rasters'),
+          '/',
+          csv_name,
+          '.nc'
+        ),
+        bylayer = F,
+        overwrite = T
+      )
     }
 
     return(range(rast[]))

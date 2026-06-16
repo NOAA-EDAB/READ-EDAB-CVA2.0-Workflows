@@ -9,7 +9,7 @@
 
 #' @return returns the file path of the saved predictions. Predicted rasters, model weights, and preds from the ensemble are saved within specific directories. See the manual for recommended directory set up.
 
-build_ensemble_wrapper <- function(spp, yr_min, yr_max, build_ens = T){
+build_ensemble_wrapper <- function(spp, yr_min, yr_max, build_ens = T) {
   #open log file
   sink(file = file.path(getwd(), 'logs', 'ensemble.log'), append = T)
   #sink(file = file.path(getwd(), 'logs', paste0(csvName, '.log')), append = T, type = 'message')
@@ -23,40 +23,79 @@ build_ensemble_wrapper <- function(spp, yr_min, yr_max, build_ens = T){
   print(Sys.time())
   print(spp)
 
-  if(build_ens){
+  if (build_ens) {
     print('generating weights...')
     #load in evaluation metrics
-    evalFlist <- dir(file.path(getwd(),spp, 'model_output', 'eval_metrics'), pattern = '.RData', full.names = T)
+    evalFlist <- dir(
+      file.path(getwd(), spp, 'model_output', 'eval_metrics'),
+      pattern = '.RData',
+      full.names = T
+    )
     eval <- vector(length = length(evalFlist))
-    for(y in 1:length(evalFlist)){
+    for (y in 1:length(evalFlist)) {
       load(evalFlist[y])
       eval[y] <- ev
     }
 
     #generate weights
-    weights <- eval/sum(eval) #we need to make weights like this since AUC bigger = better; whereas RMSE smaller = better
-    save(weights, file = paste(file.path(getwd(),spp, 'model_output'), 'ensemble_weights.RData', sep = '/'))
+    weights <- eval / sum(eval) #we need to make weights like this since AUC bigger = better; whereas RMSE smaller = better
+    save(
+      weights,
+      file = paste(
+        file.path(getwd(), spp, 'model_output'),
+        'ensemble_weights.RData',
+        sep = '/'
+      )
+    )
 
     print('making ensemble...')
-    load(paste(file.path(getwd(),spp), 'pa_clean.RData', sep = '/')) #load data - dfC
+    load(paste(file.path(getwd(), spp), 'pa_clean.RData', sep = '/')) #load data - dfC
     #names(dfC)[which(names(dfC) == 'value')] <- 'abund'
     #pull preds
-    predFlist <- dir(file.path(getwd(),spp, 'model_output', 'preds'), pattern = '.RData', full.names = T)
+    predFlist <- dir(
+      file.path(getwd(), spp, 'model_output', 'preds'),
+      pattern = '.RData',
+      full.names = T
+    )
     pds <- vector(mode = 'list', length = length(predFlist))
     ind <- NULL
-    for(y in 1:length(predFlist)){
+    for (y in 1:length(predFlist)) {
       load(predFlist[y])
-      if(grepl('BRT', predFlist[y])){
-        preds <- merge(preds[!duplicated(preds[c('x', 'y', 'month', 'year')]),c('x', 'y', 'abund', 'month', 'year', 'pred')], dfC, by = c('x', 'y', 'month', 'year'), all.y = T)
+      if (grepl('BRT', predFlist[y])) {
+        preds <- merge(
+          preds[
+            !duplicated(preds[c('x', 'y', 'month', 'year')]),
+            c('x', 'y', 'abund', 'month', 'year', 'pred')
+          ],
+          dfC,
+          by = c('x', 'y', 'month', 'year'),
+          all.y = T
+        )
       }
-      if(grepl('SDMTMB', predFlist[y])){
+      if (grepl('SDMTMB', predFlist[y])) {
         names(preds)[which(names(preds) == 'value')] <- 'abund'
-        preds <- merge(preds[!duplicated(preds[c('x', 'y', 'month', 'year')]),c('abund', 'month', 'year', 'x', 'y', 'pred')], dfC,  by = c('x', 'y', 'month', 'year'), all.y = T)
+        preds <- merge(
+          preds[
+            !duplicated(preds[c('x', 'y', 'month', 'year')]),
+            c('abund', 'month', 'year', 'x', 'y', 'pred')
+          ],
+          dfC,
+          by = c('x', 'y', 'month', 'year'),
+          all.y = T
+        )
       }
-      if(grepl('RF', predFlist[y])){
+      if (grepl('RF', predFlist[y])) {
         names(preds)[which(names(preds) == 'X')] <- 'x'
         names(preds)[which(names(preds) == 'Y')] <- 'y'
-        preds <- merge(preds[!duplicated(preds[c('x', 'y', 'month', 'year')]),c('abund', 'month', 'year', 'x', 'y', 'pred')], dfC, by = c('x', 'y', 'month', 'year'), all.y = T)
+        preds <- merge(
+          preds[
+            !duplicated(preds[c('x', 'y', 'month', 'year')]),
+            c('abund', 'month', 'year', 'x', 'y', 'pred')
+          ],
+          dfC,
+          by = c('x', 'y', 'month', 'year'),
+          all.y = T
+        )
       }
       pds[[y]] <- preds
 
@@ -68,35 +107,88 @@ build_ensemble_wrapper <- function(spp, yr_min, yr_max, build_ens = T){
     }
 
     ind2 <- apply(ind, 1, sum, na.rm = T)
-    pds <- lapply(pds, FUN = function(x){x[which(ind2 == length(weights)),]})
+    pds <- lapply(pds, FUN = function(x) {
+      x[which(ind2 == length(weights)), ]
+    })
 
     #make ensemble
-    ens <- build_sdm(model = 'ens', ensemble_weights = weights, ensemble_preds = pds)
-    save(ens, file = paste(file.path(getwd(),spp, 'model_output', 'models'), 'ENSEMBLE.RData', sep = '/'))
+    ens <- build_sdm(
+      model = 'ens',
+      ensemble_weights = weights,
+      ensemble_preds = pds
+    )
+    save(
+      ens,
+      file = paste(
+        file.path(getwd(), spp, 'model_output', 'models'),
+        'ENSEMBLE.RData',
+        sep = '/'
+      )
+    )
   } #end buildEns
 
-  load(paste(file.path(getwd(),spp, 'model_output'), 'ensemble_weights.RData', sep = '/')) #weights
+  load(paste(
+    file.path(getwd(), spp, 'model_output'),
+    'ensemble_weights.RData',
+    sep = '/'
+  )) #weights
 
   print('predicting ensemble...')
 
-  abundFlist <- dir(file.path(getwd(),spp, 'output_rasters'), pattern = paste0(yr_min, '_', yr_max, '.RData'), full.names = T)
+  abundFlist <- dir(
+    file.path(getwd(), spp, 'output_rasters'),
+    pattern = paste0(yr_min, '_', yr_max, '.RData'),
+    full.names = T
+  )
   #test if an ensemble object exists because we don't want to include that
   i <- grep('ENSEMBLE', abundFlist)
-  if(length(i) != 0){
+  if (length(i) != 0) {
     abundFlist <- abundFlist[-i]
   }
   abds <- vector(mode = 'list', length = length(abundFlist))
-  for(y in 1:length(abundFlist)){
+  for (y in 1:length(abundFlist)) {
     load(abundFlist[y])
     abds[[y]] <- raster::stack(abund)
   }
 
-  abund <- make_sdm_predictions(model = 'ens', rasts = abds, weights = weights, static_variables = NULL, mask = F, bathy_raster = NULL, bathy_max = NULL, se = NULL, month_col = NULL, year_col = NULL, xy_col = NULL)
+  abund <- make_sdm_predictions(
+    model = 'ens',
+    rasts = abds,
+    weights = weights,
+    static_variables = NULL,
+    mask = F,
+    bathy_raster = NULL,
+    bathy_max = NULL,
+    se = NULL,
+    month_col = NULL,
+    year_col = NULL,
+    xy_col = NULL
+  )
   nms <- expand.grid(month.abb, yr_min:yr_max)
   names(abund) <- paste(nms$Var1, nms$Var2, sep = '.')
-  save(abund, file = paste(file.path(getwd(),spp, 'output_rasters'), '/ENSEMBLE', '_', yr_min, '_', yr_max, '.RData', sep = ''))
+  save(
+    abund,
+    file = paste(
+      file.path(getwd(), spp, 'output_rasters'),
+      '/ENSEMBLE',
+      '_',
+      yr_min,
+      '_',
+      yr_max,
+      '.RData',
+      sep = ''
+    )
+  )
   print(Sys.time())
 
-  return(paste(file.path(getwd(),spp, 'output_rasters'), '/ENSEMBLE', '_', yr_min, '_', yr_max, '.RData', sep = ''))
+  return(paste(
+    file.path(getwd(), spp, 'output_rasters'),
+    '/ENSEMBLE',
+    '_',
+    yr_min,
+    '_',
+    yr_max,
+    '.RData',
+    sep = ''
+  ))
 }
-
