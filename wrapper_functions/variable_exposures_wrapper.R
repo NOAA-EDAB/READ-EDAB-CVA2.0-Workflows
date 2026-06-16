@@ -8,7 +8,13 @@
 #'
 #' @return Nothing is returned. The outputs from \code{make_variable_exposure(type = 'map')} and \code{make_variable_exposure(type = 'timeseries')} are saved in the appropriate folders
 
-variable_exposures_wrapper <- function(spp, ens_name, sdm_threshold = 0.1, present_time, future_time){
+variable_exposures_wrapper <- function(
+  spp,
+  ens_name,
+  sdm_threshold = 0.1,
+  present_time,
+  future_time
+) {
   #open log file
   sink(file = file.path(getwd(), 'logs', 'variable_averages.log'), append = T)
 
@@ -26,7 +32,7 @@ variable_exposures_wrapper <- function(spp, ens_name, sdm_threshold = 0.1, prese
 
   #avg ensemble HSM
   avgHSM <- vector(mode = 'list', length = 12)
-  for(y in 1:12){
+  for (y in 1:12) {
     mn <- seq(y, length(abund), by = 12)
     MNS <- raster::stack(abund[mn])
     avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
@@ -40,13 +46,47 @@ variable_exposures_wrapper <- function(spp, ens_name, sdm_threshold = 0.1, prese
   ###to add: subset avgHSM here by stock area if needed to calculate exposure across time and space appropriately
 
   #load in ranked data
-  load(paste0('./RawExposure/Data/', present_time, ' vs ', future_time, '_exposure_ranked.RData')) #expRanked
+  load(paste0(
+    './RawExposure/Data/',
+    present_time,
+    ' vs ',
+    future_time,
+    '_exposure_ranked.RData'
+  )) #expRanked
 
   #map
-  mapExp <- make_variable_exposure(type = 'map', ranked_exposure = expRanked, sdm_raster = avgHSM)
-  save(mapExp, file = paste0(file.path(getwd(),spp, 'Data'), '/', present_time, ' vs ', future_time, '/variable_exposure_maps.RData'))
+  mapExp <- make_variable_exposure(
+    type = 'map',
+    ranked_exposure = expRanked,
+    sdm_raster = avgHSM
+  )
+  save(
+    mapExp,
+    file = paste0(
+      file.path(getwd(), spp, 'Data'),
+      '/',
+      present_time,
+      ' vs ',
+      future_time,
+      '/variable_exposure_maps.RData'
+    )
+  )
 
   #timeseries
-  vecExp <- make_variable_exposure(type = 'timeseries', ranked_exposure = expRanked, sdm_raster = avgHSM)
-  save(vecExp, file = paste0(file.path(getwd(),spp, 'Data'), '/', present_time, ' vs ', future_time, '/variable_exposure_timeseries.RData'))
+  vecExp <- make_variable_exposure(
+    type = 'timeseries',
+    ranked_exposure = expRanked,
+    sdm_raster = avgHSM
+  )
+  save(
+    vecExp,
+    file = paste0(
+      file.path(getwd(), spp, 'Data'),
+      '/',
+      present_time,
+      ' vs ',
+      future_time,
+      '/variable_exposure_timeseries.RData'
+    )
+  )
 }
