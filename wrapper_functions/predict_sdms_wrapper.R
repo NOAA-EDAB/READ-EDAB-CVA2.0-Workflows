@@ -8,9 +8,12 @@
 
 #' @return returns the file path of the saved predictions. Outputs are saved within specific directories. See the vignette for recommended directory set up.
 
-predict_sdms_wrapper <- function(spp, model, yr_min, yr_max, skip){
+predict_sdms_wrapper <- function(spp, model, yr_min, yr_max, skip) {
   #open log file
-  sink(file = file.path(getwd(), 'logs', paste0(model, '_prediction.log')), append = T)
+  sink(
+    file = file.path(getwd(), 'logs', paste0(model, '_prediction.log')),
+    append = T
+  )
   #sink(file = file.path(getwd(), 'logs', paste0(csvName, '.log')), append = T, type = 'message')
 
   # Ensure the sinks are closed when the function exits, regardless of how it exits.
@@ -22,24 +25,97 @@ predict_sdms_wrapper <- function(spp, model, yr_min, yr_max, skip){
   print(Sys.time())
   print(spp)
 
-  load(paste0(file.path(getwd(),spp, 'model_output', 'models'), '/', toupper(model), '.RData')) #load model - mod
-  load(paste(file.path(getwd(),spp), 'pa_clean.RData', sep = '/')) #load data - dfC
+  load(paste0(
+    file.path(getwd(), spp, 'model_output', 'models'),
+    '/',
+    toupper(model),
+    '.RData'
+  )) #load model - mod
+  load(paste(file.path(getwd(), spp), 'pa_clean.RData', sep = '/')) #load data - dfC
 
-  if(skip){
-    if(file.exists(paste(file.path(getwd(),spp, 'output_rasters'), '/', toupper(model), '_', yr_min, '_', yr_max, '.RData', sep = ''))){
+  if (skip) {
+    if (
+      file.exists(paste(
+        file.path(getwd(), spp, 'output_rasters'),
+        '/',
+        toupper(model),
+        '_',
+        yr_min,
+        '_',
+        yr_max,
+        '.RData',
+        sep = ''
+      ))
+    ) {
       print('prediction already exists & skip == T, so skipping')
     } else {
       #predict model
       print(paste0(spp, '- predicting ', model, ' - ', Sys.time()))
-      abund <- make_sdm_predictions(mod = mod, model = model, rasts = norm, mask = T, bathy_raster = bathyR, bathy_max = 1000, se = dfC,  static_variables = staticVars, xy_col = c('x', 'y'), month_col = 'month', year_col = 'year')
-      save(abund, file = paste(file.path(getwd(),spp, 'output_rasters'), '/', toupper(model), '_', yr_min, '_', yr_max, '.RData', sep = ''))
+      abund <- make_sdm_predictions(
+        mod = mod,
+        model = model,
+        rasts = norm,
+        mask = T,
+        bathy_raster = bathyR,
+        bathy_max = 1000,
+        se = dfC,
+        static_variables = staticVars,
+        xy_col = c('x', 'y'),
+        month_col = 'month',
+        year_col = 'year'
+      )
+      save(
+        abund,
+        file = paste(
+          file.path(getwd(), spp, 'output_rasters'),
+          '/',
+          toupper(model),
+          '_',
+          yr_min,
+          '_',
+          yr_max,
+          '.RData',
+          sep = ''
+        )
+      )
     }
   } else {
     #predict model
     print(paste0(spp, '- predicting ', model, ' - ', Sys.time()))
-    abund <- make_sdm_predictions(mod = mod, model = model, rasts = norm, mask = T, bathy_raster = bathyR, bathy_max = 1000, se = dfC,  static_variables = staticVars, xy_col = c('x', 'y'), month_col = 'month', year_col = 'year')
-    save(abund, file = paste(file.path(getwd(),spp, 'output_rasters'), '/', toupper(model), '_', yr_min, '_', yr_max, '.RData', sep = ''))
+    abund <- make_sdm_predictions(
+      mod = mod,
+      model = model,
+      rasts = norm,
+      mask = T,
+      bathy_raster = bathyR,
+      bathy_max = 1000,
+      se = dfC,
+      static_variables = staticVars,
+      xy_col = c('x', 'y'),
+      month_col = 'month',
+      year_col = 'year'
+    )
+    save(
+      abund,
+      file = paste(
+        file.path(getwd(), spp, 'output_rasters'),
+        '/',
+        toupper(model),
+        '_',
+        yr_min,
+        '_',
+        yr_max,
+        '.RData',
+        sep = ''
+      )
+    )
   }
 
-  return(paste(file.path(getwd(),spp, 'output_rasters'), '/', toupper(model), '.RData', sep = ''))
+  return(paste(
+    file.path(getwd(), spp, 'output_rasters'),
+    '/',
+    toupper(model),
+    '.RData',
+    sep = ''
+  ))
 }

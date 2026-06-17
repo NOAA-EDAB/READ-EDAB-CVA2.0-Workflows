@@ -6,7 +6,7 @@
 #'
 #' @return \code{combine_rasters_wrapper} returns the range of the rasterBrick returned by \code{merge_fisheries_rasters}. This should be equal to 0 2, or else there are no presences in the dataset and the models will fail. This function will also save the resulting rasterBrick as a netcdf file in the species' input_rasters folder
 
-combine_fisheries_rasters_wrapper <- function(name, skip){
+combine_fisheries_rasters_wrapper <- function(name, skip) {
   sink(file.path(getwd(), 'logs', 'combineRasters.log'), append = T)
   # Ensure the sinks are closed when the function exits, regardless of how it exits.
   on.exit({
@@ -16,14 +16,20 @@ combine_fisheries_rasters_wrapper <- function(name, skip){
   print(Sys.time())
   print(name)
 
-  if(skip){
-    if(file.exists(paste(file.path(getwd(),name, 'input_rasters'), 'combined_rasters.nc', sep = '/'))){
+  if (skip) {
+    if (
+      file.exists(paste(
+        file.path(getwd(), name, 'input_rasters'),
+        'combined_rasters.nc',
+        sep = '/'
+      ))
+    ) {
       print('file exists and skip == T, so skipping this file!')
       return(NA)
     } else {
-      flist <-  dir(file.path(getwd(),name, 'input_rasters'), full.names = T)
+      flist <- dir(file.path(getwd(), name, 'input_rasters'), full.names = T)
       rasts <- vector(mode = 'list', length = length(flist))
-      for(r in 1:length(flist)){
+      for (r in 1:length(flist)) {
         rast <- raster::brick(flist[r]) #rast
         rasts[[r]] <- rast
         #print(r)
@@ -31,17 +37,40 @@ combine_fisheries_rasters_wrapper <- function(name, skip){
 
       combinedRasts <- merge_fisheries_rasters(rasts)
       print(range(combinedRasts[]))
-      raster::writeRaster(combinedRasts, filename = paste(file.path(getwd(),name, 'input_rasters'), 'combined_rasters.nc', sep = '/'), bylayer = F, overwrite = T)
+      raster::writeRaster(
+        combinedRasts,
+        filename = paste(
+          file.path(getwd(), name, 'input_rasters'),
+          'combined_rasters.nc',
+          sep = '/'
+        ),
+        bylayer = F,
+        overwrite = T
+      )
     } #end else
-  } else { #if skip = F, do it anyway
+  } else {
+    #if skip = F, do it anyway
 
-    flist <-  dir(file.path(getwd(),name, 'input_rasters'), full.names = T)
-    if(file.exists(paste(file.path(getwd(),name, 'input_rasters'), 'combined_rasters.nc', sep = '/'))){
-      i <- which(flist == paste(file.path(getwd(),name, 'input_rasters'), 'combined_rasters.nc', sep = '/'))
+    flist <- dir(file.path(getwd(), name, 'input_rasters'), full.names = T)
+    if (
+      file.exists(paste(
+        file.path(getwd(), name, 'input_rasters'),
+        'combined_rasters.nc',
+        sep = '/'
+      ))
+    ) {
+      i <- which(
+        flist ==
+          paste(
+            file.path(getwd(), name, 'input_rasters'),
+            'combined_rasters.nc',
+            sep = '/'
+          )
+      )
       flist <- flist[-i]
     }
     rasts <- vector(mode = 'list', length = length(flist))
-    for(r in 1:length(flist)){
+    for (r in 1:length(flist)) {
       rast <- raster::brick(flist[r]) #rast
       rasts[[r]] <- rast
       #print(r)
@@ -49,8 +78,16 @@ combine_fisheries_rasters_wrapper <- function(name, skip){
 
     combinedRasts <- merge_fisheries_rasters(rasts)
     print(range(combinedRasts[]))
-    raster::writeRaster(combinedRasts, filename = paste(file.path(getwd(),name, 'input_rasters'), 'combined_rasters.nc', sep = '/'), bylayer = F, overwrite = T)
+    raster::writeRaster(
+      combinedRasts,
+      filename = paste(
+        file.path(getwd(), name, 'input_rasters'),
+        'combined_rasters.nc',
+        sep = '/'
+      ),
+      bylayer = F,
+      overwrite = T
+    )
     #sink()
   } #end else
 }
-
