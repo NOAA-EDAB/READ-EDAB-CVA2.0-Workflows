@@ -644,7 +644,7 @@ args <- tidyr::expand_grid(
 #args$isObs <- replace(args$isObs, args$csvName == 'POP' | args$csvName == 'GOP', TRUE)
 #args$skip <- replace(args$skip, args$csvName == 'GOMBLL', TRUE)
 
-args2 <- merge(
+args2 <- terra::merge(
   x = args,
   y = spp.list[, c(1:7, 11)],
   by.x = 'spp',
@@ -662,9 +662,9 @@ altNames <- paste(
   sep = ','
 )
 
-plan(multisession, workers = 5)
+future::plan(multisession, workers = 5)
 #sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
+checks <- furrr::future_pmap(
   list(
     ..1 = args2$csvName,
     ..2 = args2$spp,
@@ -684,7 +684,7 @@ checks <- future_pmap(
   .progress = T
 )
 #sink()
-plan(sequential)
+future::plan(sequential)
 
 for (x in 1:nrow(args)) {
   saveRast(
@@ -714,13 +714,13 @@ args <- tidyr::expand_grid(
 #print(x)
 #}
 options(future.globals.maxSize = Inf)
-plan(multisession, workers = 3)
-combs <- future_pmap(
+future::plan(multisession, workers = 3)
+combs <- furrr::future_pmap(
   list(..1 = args$name, ..2 = args$skip, ..3 = args$pattern),
   ~ combineSave(name = ..1, skip = ..2, pattern = ..3),
   .progress = T
 )
-plan(sequential)
+future::plan(sequential)
 #sink()
 
 ###CHECKS BEFORE MOVING ON
@@ -731,7 +731,7 @@ flist <- dir(
   full.names = T
 )
 for (x in c(1, 7, 12, 19, 24, 32)) {
-  r <- brick(flist[x])
+  r <- raster::brick(flist[x])
   print(range(r[], na.rm = T))
 }
 
@@ -754,9 +754,9 @@ args <- tidyr::expand_grid(
 ) #create list of arguments for loop
 
 options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
+future::plan(multisession, workers = 3)
 #sink(file = 'rasters.log', append = T)
-dfs <- future_pmap(
+dfs <- furrr::future_pmap(
   list(
     ..1 = args$name,
     ..2 = args$skip,
@@ -774,15 +774,15 @@ dfs <- future_pmap(
     yMax = ..6
   ),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
 #sink()
-plan(sequential)
+future::plan(sequential)
 
 ##checks to make sure that guilds matched correctly
 for (x in c(37:42)) {
   load(paste(file.path(getwd(), spp.list$Name[x]), 'pa_guild.RData', sep = '/')) #dfG
-  print(names(dfG))
+  print(terra::names(dfG))
   print(spp.list$Name[x])
   print(spp.list$Feeding.Guild[x])
   print(spp.list$Habitat.Guild[x])
@@ -800,16 +800,16 @@ load('norm_MOM6_082025.RData') #norm
 
 args <- tidyr::expand_grid(model = models, spp = spp.list$Name[37:42], skip = F)
 
-plan(multisession, workers = 4)
+future::plan(multisession, workers = 4)
 #sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
+checks <- furrr::future_pmap(
   list(..1 = args$spp, ..2 = args$model, ..3 = args$skip),
   ~ makeMods(spp = ..1, model = ..2, skip = ..3),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
 #sink()
-plan(sequential)
+future::plan(sequential)
 
 ### run sdmtmb in sequence, step by step because it doesn't like makeMods for some reason
 for (x in 37:nrow(spp.list)) {
@@ -976,9 +976,9 @@ args <- tidyr::expand_grid(
 )
 
 options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
+future::plan(multisession, workers = 3)
 #sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
+checks <- furrr::future_pmap(
   list(
     ..1 = args$spp,
     ..2 = args$model,
@@ -988,10 +988,10 @@ checks <- future_pmap(
   ),
   ~ predictMods(spp = ..1, model = ..2, skip = ..3, yrMin = ..4, yrMax = ..5),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
 #sink()
-plan(sequential)
+future::plan(sequential)
 
 #maxent refuses to work in parallel so:
 for (x in 1:nrow(spp.list)) {
@@ -1029,7 +1029,7 @@ for (x in 37:nrow(spp.list)) {
   #predict mod
   if (class(mod) == 'sdmTMB') {
     require(sdmTMB)
-    pred <- predict(mod, newdata = allDF, type = 'response') #predict everything all at once
+    pred <- terra::predict(mod, newdata = allDF, type = 'response') #predict everything all at once
     pred$my <- paste(pred$month, pred$year, sep = '.')
     abund <- predictSDM(
       mod = mod,
@@ -1062,7 +1062,7 @@ norm20 <- vector(mode = 'list', length = length(norm))
 for (x in 1:length(norm)) {
   norm20[[x]] <- list(raster::subset(norm[[x]][[1]], 325:372))
 }
-names(norm20) <- names(norm) #even though names aren't showing up like they do in norm 93-19 it still works
+terra::names(norm20) <- terra::names(norm) #even though names aren't showing up like they do in norm 93-19 it still works
 
 load('./Data/staticVariables_cropped.RData') #staticVars
 bathyR <- staticVars$bathy
@@ -1085,7 +1085,7 @@ for (x in 37:nrow(spp.list)) {
   #predict mod
   if (class(mod) == 'sdmTMB') {
     require(sdmTMB)
-    pred <- predict(mod, newdata = all2023, type = 'response') #predict everything all at once
+    pred <- terra::predict(mod, newdata = all2023, type = 'response') #predict everything all at once
     pred$my <- paste(pred$month, pred$year, sep = '.')
     abund <- predictSDM(
       mod = mod,
@@ -1114,7 +1114,7 @@ load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2020_2030_102025.RData')
 my <- expand.grid(1:12, 2020:2029)
 nm <- paste(my[, 1], my[, 2], sep = '.')
 for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
+  terra::names(norm[[x]][[1]]) <- nm
 }
 load('./Data/staticVariables_cropped.RData') #staticVars
 bathyR <- staticVars$bathy
@@ -1137,7 +1137,7 @@ for (x in 37:nrow(spp.list)) {
   #predict mod
   if (class(mod) == 'sdmTMB') {
     require(sdmTMB)
-    pred <- predict(mod, newdata = all2030, type = 'response') #predict everything all at once
+    pred <- terra::predict(mod, newdata = all2030, type = 'response') #predict everything all at once
     pred$my <- paste(pred$month, pred$year, sep = '.')
     abund <- predictSDM(
       mod = mod,
@@ -1166,7 +1166,7 @@ load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2025_2035_102025.RData')
 my <- expand.grid(1:12, 2025:2034)
 nm <- paste(my[, 1], my[, 2], sep = '.')
 for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
+  terra::names(norm[[x]][[1]]) <- nm
 }
 load('./Data/staticVariables_cropped.RData') #staticVars
 bathyR <- staticVars$bathy
@@ -1189,7 +1189,7 @@ for (x in 37:nrow(spp.list)) {
   #predict mod
   if (class(mod) == 'sdmTMB') {
     require(sdmTMB)
-    pred <- predict(mod, newdata = all2535, type = 'response') #predict everything all at once
+    pred <- terra::predict(mod, newdata = all2535, type = 'response') #predict everything all at once
     pred$my <- paste(pred$month, pred$year, sep = '.')
     abund <- predictSDM(
       mod = mod,
@@ -1220,7 +1220,7 @@ norm20 <- vector(mode = 'list', length = length(norm))
 for (x in 1:length(norm)) {
   norm20[[x]] <- list(raster::subset(norm[[x]][[1]], 325:372))
 }
-names(norm20) <- names(norm) #even though names aren't showing up like they do in norm 93-19 it still works
+terra::names(norm20) <- terra::names(norm) #even though names aren't showing up like they do in norm 93-19 it still works
 norm <- norm20 #overwrite just to keep predictMods the same
 
 models <- c('gam', 'rf', 'brt')
@@ -1233,9 +1233,9 @@ args <- tidyr::expand_grid(
 )
 
 options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
+future::plan(multisession, workers = 3)
 #sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
+checks <- furrr::future_pmap(
   list(
     ..1 = args$spp,
     ..2 = args$model,
@@ -1251,10 +1251,10 @@ checks <- future_pmap(
     yr_max = ..5
   ),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
 #sink()
-plan(sequential)
+future::plan(sequential)
 
 
 ##2020-2030
@@ -1263,7 +1263,7 @@ load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2020_2030_102025.RData')
 my <- expand.grid(1:12, 2020:2029)
 nm <- paste(my[, 1], my[, 2], sep = '.')
 for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
+  terra::names(norm[[x]][[1]]) <- nm
 } #even though names aren't showing up like they do in norm 93-19 it still works
 
 models <- c('gam', 'rf', 'brt')
@@ -1276,9 +1276,9 @@ args <- tidyr::expand_grid(
 )
 
 options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
+future::plan(multisession, workers = 3)
 #sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
+checks <- furrr::future_pmap(
   list(
     ..1 = args$spp,
     ..2 = args$model,
@@ -1294,10 +1294,10 @@ checks <- future_pmap(
     yr_max = ..5
   ),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
 #sink()
-plan(sequential)
+future::plan(sequential)
 
 ##2025-2035
 load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2025_2035_102025.RData')
@@ -1305,7 +1305,7 @@ load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2025_2035_102025.RData')
 my <- expand.grid(1:12, 2025:2034)
 nm <- paste(my[, 1], my[, 2], sep = '.')
 for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
+  terra::names(norm[[x]][[1]]) <- nm
 }
 
 models <- c('gam', 'rf', 'brt')
@@ -1318,9 +1318,9 @@ args <- tidyr::expand_grid(
 )
 
 options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
+future::plan(multisession, workers = 3)
 #sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
+checks <- furrr::future_pmap(
   list(
     ..1 = args$spp,
     ..2 = args$model,
@@ -1336,10 +1336,10 @@ checks <- future_pmap(
     yr_max = ..5
   ),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
 #sink()
-plan(sequential)
+future::plan(sequential)
 
 ##maxent
 ##2020-2023
@@ -1349,7 +1349,7 @@ norm20 <- vector(mode = 'list', length = length(norm))
 for (x in 1:length(norm)) {
   norm20[[x]] <- list(raster::subset(norm[[x]][[1]], 325:372))
 }
-names(norm20) <- names(norm) #even though names aren't showing up like they do in norm 93-19 it still works
+terra::names(norm20) <- terra::names(norm) #even though names aren't showing up like they do in norm 93-19 it still works
 norm <- norm20 #overwrite just to keep predictMods the same
 
 for (x in 1:nrow(spp.list)) {
@@ -1370,7 +1370,7 @@ load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2020_2030_102025.RData')
 my <- expand.grid(1:12, 2020:2029)
 nm <- paste(my[, 1], my[, 2], sep = '.')
 for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
+  terra::names(norm[[x]][[1]]) <- nm
 } #even though names aren't showing up like they do in norm 93-19 it still works
 
 for (x in 37:nrow(spp.list)) {
@@ -1391,7 +1391,7 @@ load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2025_2035_102025.RData')
 my <- expand.grid(1:12, 2025:2034)
 nm <- paste(my[, 1], my[, 2], sep = '.')
 for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
+  terra::names(norm[[x]][[1]]) <- nm
 }
 
 for (x in 37:nrow(spp.list)) {
@@ -1420,16 +1420,16 @@ args <- tidyr::expand_grid(
   buildEns = T
 )
 
-plan(multisession, workers = 3)
+future::plan(multisession, workers = 3)
 #sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
+checks <- furrr::future_pmap(
   list(..1 = args$spp, ..2 = args$yrMin, ..3 = args$yrMax, ..4 = args$buildEns),
   ~ makeEns(spp = ..1, yrMin = ..2, yrMax = ..3, buildEns = ..4),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
 #sink()
-plan(sequential)
+future::plan(sequential)
 
 for (x in 1:nrow(spp.list)) {
   Sys.time()
@@ -1460,16 +1460,16 @@ args3 <- tidyr::expand_grid(
 
 args <- rbind(args1, args2, args3)
 
-plan(multisession, workers = 6)
+future::plan(multisession, workers = 6)
 #sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
+checks <- furrr::future_pmap(
   list(..1 = args$spp, ..2 = args$yrMin, ..3 = args$yrMax, ..4 = args$buildEns),
   ~ makeEns(spp = ..1, yrMin = ..2, yrMax = ..3, buildEns = ..4),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
 #sink()
-plan(sequential)
+future::plan(sequential)
 
 for (x in 1:nrow(spp.list)) {
   Sys.time()
@@ -1504,30 +1504,30 @@ altNames <- paste(
 make_performanceCSV(spp.list, testEns = T, yrMin = 2020, yrMax = 2023)
 
 #distribution of AUCs for component models
-boxplot(sppEval[, 7:11])
+terra::boxterra::plot(sppEval[, 7:11])
 
-sppEval$Feeding.Guild <- as.factor(sppEval$Feeding.Guild)
-sppEval$Habitat.Guild <- as.factor(sppEval$Habitat.Guild)
+sppEval$Feeding.Guild <- terra::as.factor(sppEval$Feeding.Guild)
+sppEval$Habitat.Guild <- terra::as.factor(sppEval$Habitat.Guild)
 
 #by groups
-par(mfrow = c(5, 2), par = c(2, 2, 2, 2))
-boxplot(BRT ~ Feeding.Guild, data = sppEval)
-boxplot(BRT ~ Habitat.Guild, data = sppEval)
+graphics::par(mfrow = c(5, 2), par = c(2, 2, 2, 2))
+terra::boxterra::plot(BRT ~ Feeding.Guild, data = sppEval)
+terra::boxterra::plot(BRT ~ Habitat.Guild, data = sppEval)
 
-boxplot(GAM ~ Feeding.Guild, data = sppEval)
-boxplot(GAM ~ Habitat.Guild, data = sppEval)
+terra::boxterra::plot(GAM ~ Feeding.Guild, data = sppEval)
+terra::boxterra::plot(GAM ~ Habitat.Guild, data = sppEval)
 
-boxplot(MAXENT ~ Feeding.Guild, data = sppEval)
-boxplot(MAXENT ~ Habitat.Guild, data = sppEval)
+terra::boxterra::plot(MAXENT ~ Feeding.Guild, data = sppEval)
+terra::boxterra::plot(MAXENT ~ Habitat.Guild, data = sppEval)
 
-boxplot(RF ~ Feeding.Guild, data = sppEval)
-boxplot(RF ~ Habitat.Guild, data = sppEval)
+terra::boxterra::plot(RF ~ Feeding.Guild, data = sppEval)
+terra::boxterra::plot(RF ~ Habitat.Guild, data = sppEval)
 
-boxplot(SDMTMB ~ Feeding.Guild, data = sppEval)
-boxplot(SDMTMB ~ Habitat.Guild, data = sppEval)
+terra::boxterra::plot(SDMTMB ~ Feeding.Guild, data = sppEval)
+terra::boxterra::plot(SDMTMB ~ Habitat.Guild, data = sppEval)
 
 ##distribution of AUCs for ensembles, both within and outside
-boxplot(sppEval[, 16:18])
+terra::boxterra::plot(sppEval[, 16:18])
 
 sppEval$Common.Name[which(sppEval$ENS.AUC < 0.7)]
 sppEval$Common.Name[which(sppEval$AUC.2020.2023 < 0.7)]
@@ -1561,12 +1561,12 @@ for (x in 1:nrow(spp.list)) {
     MNS <- raster::stack(abund[mn])
     avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
+  avgHSM <- raster::stack(avgHSM)
+  terra::names(avgHSM) <- month.abb
 
   avgHSM <- replace(avgHSM, abs(bathyR) > 1000, NA)
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
       '/mean_SDM_1993_2019_vert.pdf'
@@ -1574,18 +1574,18 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
+  graphics::par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
   for (y in 1:12) {
-    plot(
+    terra::plot(
       raster::subset(avgHSM, y),
       zlim = c(0, 1),
       col = cmocean('matter')(64),
       legend = F
     )
-    plot(coastCropped['id'], col = 'grey', add = T)
+    terra::plot(coastCropped['id'], col = 'grey', add = T)
     legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
   }
-  image.plot(
+  image.terra::plot(
     matrix(seq(0, 1, by = 0.1), 11, 11),
     legend.only = T,
     horizontal = T,
@@ -1620,12 +1620,12 @@ for (x in 1:nrow(spp.list)) {
     MNS <- raster::stack(abund[mn])
     avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
+  avgHSM <- raster::stack(avgHSM)
+  terra::names(avgHSM) <- month.abb
 
   avgHSM <- replace(avgHSM, abs(bathyR) > 1000, NA)
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
       '/mean_sdm_2020_2029.pdf'
@@ -1633,18 +1633,18 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
+  graphics::par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
   for (y in 1:12) {
-    plot(
+    terra::plot(
       raster::subset(avgHSM, y),
       zlim = c(0, 1),
       col = cmocean('matter')(64),
       legend = F
     )
-    plot(coastCropped['id'], col = 'grey', add = T)
+    terra::plot(coastCropped['id'], col = 'grey', add = T)
     legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
   }
-  image.plot(
+  image.terra::plot(
     matrix(seq(0, 1, by = 0.1), 11, 11),
     legend.only = T,
     horizontal = T,
@@ -1679,12 +1679,12 @@ for (x in 1:nrow(spp.list)) {
     MNS <- raster::stack(abund[mn])
     avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
+  avgHSM <- raster::stack(avgHSM)
+  terra::names(avgHSM) <- month.abb
 
   avgHSM <- replace(avgHSM, abs(bathyR) > 1000, NA)
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
       '/mean_sdm_2024_2034.pdf'
@@ -1692,18 +1692,18 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
+  graphics::par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
   for (y in 1:12) {
-    plot(
+    terra::plot(
       raster::subset(avgHSM, y),
       zlim = c(0, 1),
       col = cmocean('matter')(64),
       legend = F
     )
-    plot(coastCropped['id'], col = 'grey', add = T)
+    terra::plot(coastCropped['id'], col = 'grey', add = T)
     legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
   }
-  image.plot(
+  image.terra::plot(
     matrix(seq(0, 1, by = 0.1), 11, 11),
     legend.only = T,
     horizontal = T,
@@ -1742,8 +1742,8 @@ for (x in 1:nrow(spp.list)) {
     MNS <- raster::stack(abund93[mn])
     avg93[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avg93 <- stack(avg93)
-  names(avg93) <- month.abb
+  avg93 <- raster::stack(avg93)
+  terra::names(avg93) <- month.abb
 
   #avg ensemble HSM
   avg09 <- vector(mode = 'list', length = 12)
@@ -1752,13 +1752,13 @@ for (x in 1:nrow(spp.list)) {
     MNS <- raster::stack(abund[mn])
     avg09[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avg09 <- stack(avg09)
-  names(avg09) <- month.abb
+  avg09 <- raster::stack(avg09)
+  terra::names(avg09) <- month.abb
 
   diffHSM <- avg09 - avg93
   diffHSM <- replace(diffHSM, abs(bathyR) > 1000, NA)
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
       '/change_sdm_1993_2008_v_2009_2019.pdf'
@@ -1766,18 +1766,18 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
+  graphics::par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
   for (y in 1:12) {
-    plot(
+    terra::plot(
       raster::subset(diffHSM, y),
       zlim = c(-0.5, 0.5),
       col = cmocean('balance')(64),
       legend = F
     )
-    plot(coastCropped['id'], col = 'grey', add = T)
+    terra::plot(coastCropped['id'], col = 'grey', add = T)
     legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
   }
-  image.plot(
+  image.terra::plot(
     matrix(seq(-0.5, 0.5, by = 0.1), 11, 11),
     legend.only = T,
     horizontal = T,
@@ -1813,8 +1813,8 @@ for (x in 1:nrow(spp.list)) {
     MNS <- raster::stack(abund[mn])
     avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
+  avgHSM <- raster::stack(avgHSM)
+  terra::names(avgHSM) <- month.abb
   pHSM <- avgHSM
 
   load(paste0(
@@ -1830,14 +1830,14 @@ for (x in 1:nrow(spp.list)) {
     MNS <- raster::stack(abund[mn])
     avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
+  avgHSM <- raster::stack(avgHSM)
+  terra::names(avgHSM) <- month.abb
   fHSM <- avgHSM
 
   diffHSM <- fHSM - pHSM
   diffHSM <- replace(diffHSM, abs(bathyR) > 1000, NA)
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
       '/change_sdm_1993_2019_v_2020_2029.pdf'
@@ -1845,18 +1845,18 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
+  graphics::par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
   for (y in 1:12) {
-    plot(
+    terra::plot(
       raster::subset(diffHSM, y),
       zlim = c(-0.5, 0.5),
       col = cmocean('balance')(64),
       legend = F
     )
-    plot(coastCropped['id'], col = 'grey', add = T)
+    terra::plot(coastCropped['id'], col = 'grey', add = T)
     legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
   }
-  image.plot(
+  image.terra::plot(
     matrix(seq(-0.5, 0.5, by = 0.1), 11, 11),
     legend.only = T,
     horizontal = T,
@@ -1892,8 +1892,8 @@ for (x in 1:nrow(spp.list)) {
     MNS <- raster::stack(abund[mn])
     avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
+  avgHSM <- raster::stack(avgHSM)
+  terra::names(avgHSM) <- month.abb
   pHSM <- avgHSM
 
   load(paste0(
@@ -1909,14 +1909,14 @@ for (x in 1:nrow(spp.list)) {
     MNS <- raster::stack(abund[mn])
     avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
+  avgHSM <- raster::stack(avgHSM)
+  terra::names(avgHSM) <- month.abb
   fHSM <- avgHSM
 
   diffHSM <- fHSM - pHSM
   diffHSM <- replace(diffHSM, abs(bathyR) > 1000, NA)
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
       '/change_sdm_1993_2019_v_2025_2034.pdf'
@@ -1924,18 +1924,18 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
+  graphics::par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
   for (y in 1:12) {
-    plot(
+    terra::plot(
       raster::subset(diffHSM, y),
       zlim = c(-0.5, 0.5),
       col = cmocean('balance')(64),
       legend = F
     )
-    plot(coastCropped['id'], col = 'grey', add = T)
+    terra::plot(coastCropped['id'], col = 'grey', add = T)
     legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
   }
-  image.plot(
+  image.terra::plot(
     matrix(seq(-0.5, 0.5, by = 0.1), 11, 11),
     legend.only = T,
     horizontal = T,
@@ -1984,7 +1984,7 @@ for (s in 37:nrow(spp.list)) {
   )
 
   #set up data frame
-  vars <- names(dfC)[-c(1:3)]
+  vars <- terra::names(dfC)[-c(1:3)]
   dfI <- as.data.frame(matrix(nrow = length(flist), ncol = length(vars)))
   colnames(dfI) <- vars
 
@@ -1992,18 +1992,18 @@ for (s in 37:nrow(spp.list)) {
     load(flist[x]) #imp
     if (class(imp) == 'data.frame') {
       imp.vec <- imp$rel.inf ### need to remove spatial variables
-      names(imp.vec) <- imp$var
-      for (y in 1:length(names(imp.vec))) {
-        if (names(imp.vec)[y] %in% vars) {
-          i <- which(vars == names(imp.vec)[y])
+      terra::names(imp.vec) <- imp$var
+      for (y in 1:length(terra::names(imp.vec))) {
+        if (terra::names(imp.vec)[y] %in% vars) {
+          i <- which(vars == terra::names(imp.vec)[y])
           dfI[x, i] <- imp.vec[y]
         }
       }
     } else {
       #imp <- range01(imp)
-      for (y in 1:length(names(imp))) {
-        if (names(imp)[y] %in% vars) {
-          i <- which(vars == names(imp)[y])
+      for (y in 1:length(terra::names(imp))) {
+        if (terra::names(imp)[y] %in% vars) {
+          i <- which(vars == terra::names(imp)[y])
           dfI[x, i] <- imp[y]
         }
       }
@@ -2023,7 +2023,7 @@ for (s in 37:nrow(spp.list)) {
 
   pal <- brewer.pal(n = 5, 'Set1')
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[s], 'figures'),
       '/variable_importance_radars.pdf'
@@ -2031,7 +2031,7 @@ for (s in 37:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  par(mfrow = c(2, 1), mar = c(1, 4, 1, 4))
+  graphics::par(mfrow = c(2, 1), mar = c(1, 4, 1, 4))
   #for(x in 3:nrow(dfI)){
   radarchart(
     as.data.frame(dfI),
@@ -2082,17 +2082,17 @@ for (x in 37:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
-  abund <- stack(abund)
+  abund <- raster::stack(abund)
 
   #observations
-  obs <- stack(paste0(
+  obs <- raster::stack(paste0(
     '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
     spp.list$Name[x],
     '/input_rasters/combined_rasters_1993_2019.nc'
   ))
 
   #manipulate obs a bit to clean it up
-  names(obs) <- names(abund)
+  terra::names(obs) <- terra::names(abund)
   obsC <- crop(obs, extent(abund))
   obsC[obsC == 0] <- NA
   obsC[obsC == 1] <- 0
@@ -2107,10 +2107,10 @@ for (x in 37:nrow(spp.list)) {
     MNS <- raster::subset(resids, mn)
     avgR[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
   } #end for
-  avgR <- stack(avgR)
-  names(avgR) <- month.abb
+  avgR <- raster::stack(avgR)
+  terra::names(avgR) <- month.abb
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
       '/mean_residuals_1993_2019.pdf'
@@ -2118,18 +2118,18 @@ for (x in 37:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
+  graphics::par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
   for (y in 1:12) {
-    plot(
+    terra::plot(
       raster::subset(avgR, y),
       zlim = c(-1, 1),
       col = cmocean('balance')(64),
       legend = F
     )
-    plot(coastCropped['id'], col = 'grey', add = T)
+    terra::plot(coastCropped['id'], col = 'grey', add = T)
     legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
   }
-  image.plot(
+  image.terra::plot(
     matrix(seq(-1, 1, by = 0.1), 11, 11),
     legend.only = T,
     horizontal = T,
@@ -2141,7 +2141,7 @@ for (x in 37:nrow(spp.list)) {
   )
   dev.off()
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
       '/histogram_residuals_1993_2019.pdf'
@@ -2162,7 +2162,7 @@ metrics$Name <- gsub(' ', '', metrics$Common.Name)
 for (x in 37:nrow(metrics)) {
   m <- as.matrix(metrics[x, c(12:16)])
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), metrics$Name[x], 'figures'),
       '/component_model_weights.pdf'
@@ -2170,7 +2170,7 @@ for (x in 37:nrow(metrics)) {
     width = 6,
     height = 6
   )
-  barplot(
+  barterra::plot(
     m,
     names = c("BRT", 'GAM', 'MAXENT', 'RF', 'SDMTMB'),
     ylab = 'Weight',
@@ -2181,7 +2181,7 @@ for (x in 37:nrow(metrics)) {
   dev.off()
 
   aucs <- as.matrix(metrics[x, c(7:11)])
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), metrics$Name[x], 'figures'),
       '/component_model_aucs.pdf'
@@ -2189,7 +2189,7 @@ for (x in 37:nrow(metrics)) {
     width = 6,
     height = 6
   )
-  barplot(
+  barterra::plot(
     aucs,
     names = c("BRT", 'GAM', 'MAXENT', 'RF', 'SDMTMB'),
     ylab = 'AUC',
@@ -2214,20 +2214,20 @@ for (x in 37:nrow(spp.list)) {
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
 
-  abund <- stack(abund)
+  abund <- raster::stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
 
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
-      plot(
+      terra::plot(
         raster::subset(abund, y),
         zlim = c(0, 1),
         col = cmocean('matter')(64),
         legend = F
       )
-      plot(coastCropped['id'], col = 'grey', add = T)
-      legend('topleft', bty = 'n', legend = names(abund)[y], cex = 2)
-      image.plot(
+      terra::plot(coastCropped['id'], col = 'grey', add = T)
+      legend('topleft', bty = 'n', legend = terra::names(abund)[y], cex = 2)
+      image.terra::plot(
         matrix(seq(0, 1, by = 0.1), 11, 11),
         legend.only = T,
         horizontal = T,
@@ -2265,20 +2265,20 @@ for (x in 37:nrow(spp.list)) {
     '/output_rasters/ENSEMBLE_2025_2034.RData'
   )) #abund
 
-  abund <- stack(abund)
+  abund <- raster::stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
 
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
-      plot(
+      terra::plot(
         raster::subset(abund, y),
         zlim = c(0, 1),
         col = cmocean('matter')(64),
         legend = F
       )
-      plot(coastCropped['id'], col = 'grey', add = T)
-      legend('topleft', bty = 'n', legend = names(abund)[y], cex = 2)
-      image.plot(
+      terra::plot(coastCropped['id'], col = 'grey', add = T)
+      legend('topleft', bty = 'n', legend = terra::names(abund)[y], cex = 2)
+      image.terra::plot(
         matrix(seq(0, 1, by = 0.1), 11, 11),
         legend.only = T,
         horizontal = T,
@@ -2344,20 +2344,20 @@ for (x in 37:nrow(spp.list)) {
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
 
-  abund <- stack(abund)
+  abund <- raster::stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
 
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
-      plot(
+      terra::plot(
         raster::subset(abund, y),
         zlim = c(0, 1),
         col = cmocean('matter')(64),
         legend = F
       )
-      plot(coastCropped['id'], col = 'grey', add = T)
-      legend('topleft', bty = 'n', legend = names(abund)[y], cex = 2)
-      image.plot(
+      terra::plot(coastCropped['id'], col = 'grey', add = T)
+      legend('topleft', bty = 'n', legend = terra::names(abund)[y], cex = 2)
+      image.terra::plot(
         matrix(seq(0, 1, by = 0.1), 11, 11),
         legend.only = T,
         horizontal = T,
@@ -2395,20 +2395,20 @@ for (x in 37:nrow(spp.list)) {
     '/output_rasters/ENSEMBLE_2025_2034.RData'
   )) #abund
 
-  abund <- stack(abund)
+  abund <- raster::stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
 
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
-      plot(
+      terra::plot(
         raster::subset(abund, y),
         zlim = c(0, 1),
         col = cmocean('matter')(64),
         legend = F
       )
-      plot(coastCropped['id'], col = 'grey', add = T)
-      legend('topleft', bty = 'n', legend = names(abund)[y], cex = 2)
-      image.plot(
+      terra::plot(coastCropped['id'], col = 'grey', add = T)
+      legend('topleft', bty = 'n', legend = terra::names(abund)[y], cex = 2)
+      image.terra::plot(
         matrix(seq(0, 1, by = 0.1), 11, 11),
         legend.only = T,
         horizontal = T,
@@ -2557,12 +2557,12 @@ speciesMC$Species <- rownames(speciesMC)
 write.csv(speciesMC, file = './ConfidenceScores/Preliminary/mean_sd_scores.csv')
 
 #make histograms
-pdf(
+grDevices::pdf(
   file = './ConfidenceScores/Preliminary/preliminary_histograms.pdf',
   height = 11,
   width = 8
 )
-par(mfrow = c(3, 2))
+graphics::par(mfrow = c(3, 2))
 for (x in 1:nrow(speciesMC)) {
   #pull data from mean/sd scores data.frame
   m <- speciesMC[x, 'meanConfidence']
