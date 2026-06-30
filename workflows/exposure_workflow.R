@@ -72,21 +72,21 @@ for (x in 1:length(raw)) {
 }
 
 exp9309 <- calcExposure(pre, fut)
-names(exp9309) <- names(raw)
+terra::names(exp9309) <- terra::names(raw)
 save(exp9309, file = './RawExposure/Data/1993_2008_v_2009_2019_exposure.RData')
 
 #make and save nice plots of each variable
 for (x in 1:length(exp9309)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/1993-2008 vs 2009-19/',
-      names(exp9309[x]),
+      terra::names(exp9309[x]),
       '_exposure.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(exp9309[[x]], main = month.abb, zlim = range(exp9309[[x]][], na.rm = T))
+  terra::plot(exp9309[[x]], main = month.abb, zlim = range(exp9309[[x]][], na.rm = T))
   dev.off()
   print(x)
 }
@@ -129,65 +129,65 @@ for (v in 1:length(pre)) {
 #### plot climatologies
 #1993-2008
 for (x in 1:length(mPres)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/climatologies/',
-      names(raw[x]),
+      terra::names(raw[x]),
       '_1993_2008_climatology.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(mPres[[x]], main = month.abb, zlim = range(mPres[[x]][], na.rm = T))
+  terra::plot(mPres[[x]], main = month.abb, zlim = range(mPres[[x]][], na.rm = T))
   dev.off()
   print(x)
 }
 
 #2009-2019
 for (x in 1:length(mPres)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/climatologies/',
-      names(raw[x]),
+      terra::names(raw[x]),
       '_2009_2019_climatology.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(mFut[[x]], main = month.abb, zlim = range(mFut[[x]][], na.rm = T))
+  terra::plot(mFut[[x]], main = month.abb, zlim = range(mFut[[x]][], na.rm = T))
   dev.off()
   print(x)
 }
 
 ###plot differences
 for (x in 1:length(mPres)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/1993-2008 vs 2009-19/differences/',
-      names(raw[x]),
+      terra::names(raw[x]),
       '_difference.pdf'
     ),
     width = 11,
     height = 8
   )
   df <- mFut[[x]] - mPres[[x]]
-  plot(df, main = month.abb, zlim = range(df[], na.rm = T))
+  terra::plot(df, main = month.abb, zlim = range(df[], na.rm = T))
   dev.off()
   print(x)
 }
 
 ###plot present standard deviations
 for (x in 1:length(sdPres)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/1993-2008 vs 2009-19/present_sds/',
-      names(raw[x]),
+      terra::names(raw[x]),
       '_sds.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(sdPres[[x]], main = month.abb, zlim = range(sdPres[[x]][], na.rm = T))
+  terra::plot(sdPres[[x]], main = month.abb, zlim = range(sdPres[[x]][], na.rm = T))
   dev.off()
   print(x)
 }
@@ -211,21 +211,21 @@ load(
 fut <- raw
 
 exp0920 <- calcExposure(pre, fut)
-names(exp0920) <- names(raw)
+terra::names(exp0920) <- terra::names(raw)
 save(exp0920, file = './RawExposure/Data/2009_2019_v_2020_2030_exposure.RData')
 
 #make and save nice plots of each variable
 for (x in 1:length(exp0920)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/2009-19 vs 2020-30/',
-      names(exp0920[x]),
+      terra::names(exp0920[x]),
       '_exposure.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(exp0920[[x]], main = month.abb, zlim = range(exp0920[[x]][], na.rm = T))
+  terra::plot(exp0920[[x]], main = month.abb, zlim = range(exp0920[[x]][], na.rm = T))
   dev.off()
   print(x)
 }
@@ -267,49 +267,49 @@ for (v in 1:length(pre)) {
 #### plot climatologies (just fut since we already have 09-19)
 #2020-2030
 for (x in 1:length(mFut)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/climatologies/',
-      names(raw[x]),
+      terra::names(raw[x]),
       '_2020_2030_climatology.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(mFut[[x]], main = month.abb, zlim = range(mFut[[x]][], na.rm = T))
+  terra::plot(mFut[[x]], main = month.abb, zlim = range(mFut[[x]][], na.rm = T))
   dev.off()
   print(x)
 }
 
 ###plot differences
 for (x in 1:length(mPres)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/2009-19 vs 2020-30/differences/',
-      names(raw[x]),
+      terra::names(raw[x]),
       '_difference.pdf'
     ),
     width = 11,
     height = 8
   )
   df <- mFut[[x]] - mPres[[x]]
-  plot(df, main = month.abb, zlim = range(df[], na.rm = T))
+  terra::plot(df, main = month.abb, zlim = range(df[], na.rm = T))
   dev.off()
   print(x)
 }
 
 ###plot present standard deviations
 for (x in 1:length(sdPres)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/2009-19 vs 2020-30/present_sds/',
-      names(raw[x]),
+      terra::names(raw[x]),
       '_sds.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(sdPres[[x]], main = month.abb, zlim = range(sdPres[[x]][], na.rm = T))
+  terra::plot(sdPres[[x]], main = month.abb, zlim = range(sdPres[[x]][], na.rm = T))
   dev.off()
   print(x)
 }
@@ -331,21 +331,21 @@ load(
 fut <- raw
 
 exp0925 <- calcExposure(pre, fut)
-names(exp0925) <- names(raw)
+terra::names(exp0925) <- terra::names(raw)
 save(exp0925, file = './RawExposure/Data/2009_2019_v_2025_2035_exposure.RData')
 
 #make and save nice plots of each variable
 for (x in 1:length(exp0925)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/2009-19 vs 2025-35/',
-      names(exp0925[x]),
+      terra::names(exp0925[x]),
       '_exposure.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(exp0925[[x]], main = month.abb, zlim = range(exp0925[[x]][], na.rm = T))
+  terra::plot(exp0925[[x]], main = month.abb, zlim = range(exp0925[[x]][], na.rm = T))
   dev.off()
   print(x)
 }
@@ -383,33 +383,33 @@ for (v in 1:length(pre)) {
 #### plot climatologies (just fut since we already have 09-19)
 #2025-2035
 for (x in 1:length(mFut)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/climatologies/',
-      names(raw[x]),
+      terra::names(raw[x]),
       '_2025_2035_climatology.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(mFut[[x]], main = month.abb, zlim = range(mFut[[x]][], na.rm = T))
+  terra::plot(mFut[[x]], main = month.abb, zlim = range(mFut[[x]][], na.rm = T))
   dev.off()
   print(x)
 }
 
 ###plot differences
 for (x in 1:length(mPres)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/2009-19 vs 2025-35/differences/',
-      names(raw[x]),
+      terra::names(raw[x]),
       '_difference.pdf'
     ),
     width = 11,
     height = 8
   )
   df <- mFut[[x]] - mPres[[x]]
-  plot(df, main = month.abb, zlim = range(df[], na.rm = T))
+  terra::plot(df, main = month.abb, zlim = range(df[], na.rm = T))
   dev.off()
   print(x)
 }
@@ -431,16 +431,16 @@ save(
 
 #make and save nice plots of each variable
 for (x in 1:length(expRanked)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/1993-2008 vs 2009-19/',
-      names(expRanked[x]),
+      terra::names(expRanked[x]),
       '_exposure_ranked.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(expRanked[[x]], main = month.abb)
+  terra::plot(expRanked[[x]], main = month.abb)
   dev.off()
   print(x)
 }
@@ -459,16 +459,16 @@ save(
 
 #make and save nice plots of each variable
 for (x in 1:length(expRanked)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/2009-19 vs 2020-30/',
-      names(expRanked[x]),
+      terra::names(expRanked[x]),
       '_exposure_ranked.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(expRanked[[x]], main = month.abb)
+  terra::plot(expRanked[[x]], main = month.abb)
   dev.off()
   print(x)
 }
@@ -487,16 +487,16 @@ save(
 
 #make and save nice plots of each variable
 for (x in 1:length(expRanked)) {
-  pdf(
+  grDevices::pdf(
     paste0(
       './RawExposure/Figures/2009-19 vs 2025-35/',
-      names(expRanked[x]),
+      terra::names(expRanked[x]),
       '_exposure_ranked.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(expRanked[[x]], main = month.abb)
+  terra::plot(expRanked[[x]], main = month.abb)
   dev.off()
   print(x)
 }
@@ -515,8 +515,8 @@ args <- tidyr::expand_grid(
   fStart = 2009,
   fEnd = 2019
 )
-plan(multisession, workers = 6)
-checks <- future_pmap(
+future::plan(multisession, workers = 6)
+checks <- furrr::future_pmap(
   list(
     ..1 = args$spp,
     ..2 = args$ensName,
@@ -534,9 +534,9 @@ checks <- future_pmap(
     fEnd = ..6
   ),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
-plan(sequential)
+future::plan(sequential)
 
 #decade 1 - 2009-2019 v 2020 - 2030
 args <- tidyr::expand_grid(
@@ -547,8 +547,8 @@ args <- tidyr::expand_grid(
   fStart = 2020,
   fEnd = 2030
 )
-plan(multisession, workers = 6)
-checks <- future_pmap(
+future::plan(multisession, workers = 6)
+checks <- furrr::future_pmap(
   list(
     ..1 = args$spp,
     ..2 = args$ensName,
@@ -566,9 +566,9 @@ checks <- future_pmap(
     fEnd = ..6
   ),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
-plan(sequential)
+future::plan(sequential)
 
 #decade 2 - 2009-2019 v 2025 - 2035
 args <- tidyr::expand_grid(
@@ -579,8 +579,8 @@ args <- tidyr::expand_grid(
   fStart = 2025,
   fEnd = 2035
 )
-plan(multisession, workers = 6)
-checks <- future_pmap(
+future::plan(multisession, workers = 6)
+checks <- furrr::future_pmap(
   list(
     ..1 = args$spp,
     ..2 = args$ensName,
@@ -598,9 +598,9 @@ checks <- future_pmap(
     fEnd = ..6
   ),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr::furrr_options(seed = 2025)
 )
-plan(sequential)
+future::plan(sequential)
 
 ##################################
 
@@ -634,8 +634,12 @@ for (x in 1:nrow(spp.list)) {
     spp.list$Name[x],
     '/pa_clean.RData'
   )) #dfC
-  iv <- which(names(dfC) == 'x' | names(dfC) == 'y' | names(dfC) == 'value')
-  vars <- names(dfC)[-iv] #exclude space and value (presence/absence)
+  iv <- which(
+    terra::names(dfC) == 'x' |
+      terra::names(dfC) == 'y' |
+      terra::names(dfC) == 'value'
+  )
+  vars <- terra::names(dfC)[-iv] #exclude space and value (presence/absence)
 
   cW <- combineWeights(
     vars = vars,
@@ -670,7 +674,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   totalT <- combineTimeseries(
@@ -704,7 +708,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   totalT <- combineTimeseries(
@@ -738,7 +742,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   totalT <- combineTimeseries(
@@ -773,7 +777,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   totalT <- combineTimeseries(
@@ -807,7 +811,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   totalT <- combineTimeseries(
@@ -841,7 +845,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   totalT <- combineTimeseries(
@@ -877,7 +881,7 @@ for (x in 1:nrow(spp.list)) {
   )) #mapExp
 
   #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   totalM <- combineMaps(
@@ -911,7 +915,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   totalM <- combineMaps(
@@ -945,7 +949,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   totalM <- combineMaps(
@@ -980,7 +984,7 @@ for (x in 1:nrow(spp.list)) {
   )) #mapExp
 
   #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   totalM <- combineMaps(
@@ -1014,7 +1018,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   totalM <- combineMaps(
@@ -1048,7 +1052,7 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   totalM <- combineMaps(
@@ -1088,11 +1092,11 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   #plot variables
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/1993-2008 vs 2009-2019/exposure_variable_timeseries.pdf'
@@ -1100,7 +1104,7 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(
+  terra::plot(
     vecSub[1, ],
     t = 'b',
     lty = 1,
@@ -1135,7 +1139,7 @@ for (x in 1:nrow(spp.list)) {
   totalTS <- totalT
 
   #plot - total
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/1993-2008 vs 2009-2019/exposure_timeseries_all.pdf'
@@ -1143,7 +1147,7 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(
+  terra::plot(
     totalTA,
     t = 'b',
     lty = 8,
@@ -1170,7 +1174,7 @@ for (x in 1:nrow(spp.list)) {
   wi <- which(cW > 0.1)
   matSub <- vecSub[wi, ]
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/1993-2008 vs 2009-2019/exposure_timeseries_subset.pdf'
@@ -1178,7 +1182,7 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(
+  terra::plot(
     totalTS,
     t = 'b',
     lty = 9,
@@ -1219,11 +1223,11 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   #plot variables
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2020-2030/exposure_variable_timeseries.pdf'
@@ -1231,7 +1235,7 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(
+  terra::plot(
     vecSub[1, ],
     t = 'b',
     lty = 1,
@@ -1266,7 +1270,7 @@ for (x in 1:nrow(spp.list)) {
   totalTS <- totalT
 
   #plot - total
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2020-2030/exposure_timeseries_all.pdf'
@@ -1274,7 +1278,7 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(
+  terra::plot(
     totalTA,
     t = 'b',
     lty = 8,
@@ -1301,7 +1305,7 @@ for (x in 1:nrow(spp.list)) {
   wi <- which(cW > 0.1)
   matSub <- vecSub[wi, ]
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2020-2030/exposure_timeseries_subset.pdf'
@@ -1309,7 +1313,7 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(
+  terra::plot(
     totalTS,
     t = 'b',
     lty = 9,
@@ -1350,11 +1354,11 @@ for (x in 1:nrow(spp.list)) {
   )) #vecExp
 
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   #plot variables
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2025-2035/exposure_variable_timeseries.pdf'
@@ -1362,7 +1366,7 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(
+  terra::plot(
     vecSub[1, ],
     t = 'b',
     lty = 1,
@@ -1397,7 +1401,7 @@ for (x in 1:nrow(spp.list)) {
   totalTS <- totalT
 
   #plot - total
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2025-2035/exposure_timeseries_all.pdf'
@@ -1405,7 +1409,7 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(
+  terra::plot(
     totalTA,
     t = 'b',
     lty = 8,
@@ -1432,7 +1436,7 @@ for (x in 1:nrow(spp.list)) {
   wi <- which(cW > 0.1)
   matSub <- vecSub[wi, ]
 
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2025-2035/exposure_timeseries_subset.pdf'
@@ -1440,7 +1444,7 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(
+  terra::plot(
     totalTS,
     t = 'b',
     lty = 9,
@@ -1483,11 +1487,11 @@ for (x in 1:nrow(spp.list)) {
   )) #mapExp
 
   #subset timeseries matrix by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/1993-2008 vs 2009-2019/exposure_variable_maps.pdf'
@@ -1495,8 +1499,8 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(mapSub, zlim = c(1, 4), col = cmocean('matter')(4))
-  #plot(coastCropped['id'], col = 'grey', add = T)
+  terra::plot(mapSub, zlim = c(1, 4), col = cmocean('matter')(4))
+  #terra::plot(coastCropped['id'], col = 'grey', add = T)
   dev.off()
 
   #load total
@@ -1506,7 +1510,7 @@ for (x in 1:nrow(spp.list)) {
   )) #totalM
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/1993-2008 vs 2009-2019/exposure_total_maps_all.pdf'
@@ -1514,8 +1518,8 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
+  terra::plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
+  terra::plot(coastCropped['id'], col = 'grey', add = T)
   dev.off()
 
   #load total subset
@@ -1525,7 +1529,7 @@ for (x in 1:nrow(spp.list)) {
   )) #totalM
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/1993-2008 vs 2009-2019/exposure_total_maps_subset.pdf'
@@ -1533,8 +1537,8 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
+  terra::plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
+  terra::plot(coastCropped['id'], col = 'grey', add = T)
   dev.off()
 
   print(x)
@@ -1555,11 +1559,11 @@ for (x in 1:nrow(spp.list)) {
   )) #mapExp
 
   #subset timeseries matrix by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2020-2030/exposure_variable_maps.pdf'
@@ -1567,8 +1571,8 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(mapSub, zlim = c(1, 4), col = cmocean('matter')(4))
-  #plot(coastCropped['id'], col = 'grey', add = T)
+  terra::plot(mapSub, zlim = c(1, 4), col = cmocean('matter')(4))
+  #terra::plot(coastCropped['id'], col = 'grey', add = T)
   dev.off()
 
   #load total
@@ -1578,7 +1582,7 @@ for (x in 1:nrow(spp.list)) {
   )) #totalM
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2020-2030/exposure_total_maps_all.pdf'
@@ -1586,8 +1590,8 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
+  terra::plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
+  terra::plot(coastCropped['id'], col = 'grey', add = T)
   dev.off()
 
   #load total subset
@@ -1597,7 +1601,7 @@ for (x in 1:nrow(spp.list)) {
   )) #totalM
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2020-2030/exposure_total_maps_subset.pdf'
@@ -1605,8 +1609,8 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
+  terra::plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
+  terra::plot(coastCropped['id'], col = 'grey', add = T)
   dev.off()
 
   print(x)
@@ -1627,11 +1631,11 @@ for (x in 1:nrow(spp.list)) {
   )) #mapExp
 
   #subset timeseries matrix by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2025-2035/exposure_variable_maps.pdf'
@@ -1639,8 +1643,8 @@ for (x in 1:nrow(spp.list)) {
     width = 11,
     height = 8
   )
-  plot(mapSub, zlim = c(1, 4), col = cmocean('matter')(4))
-  #plot(coastCropped['id'], col = 'grey', add = T)
+  terra::plot(mapSub, zlim = c(1, 4), col = cmocean('matter')(4))
+  #terra::plot(coastCropped['id'], col = 'grey', add = T)
   dev.off()
 
   #load total
@@ -1650,7 +1654,7 @@ for (x in 1:nrow(spp.list)) {
   )) #totalM
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2025-2035/exposure_total_maps_all.pdf'
@@ -1658,8 +1662,8 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
+  terra::plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
+  terra::plot(coastCropped['id'], col = 'grey', add = T)
   dev.off()
 
   #load total subset
@@ -1669,7 +1673,7 @@ for (x in 1:nrow(spp.list)) {
   )) #totalM
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2025-2035/exposure_total_maps_subset.pdf'
@@ -1677,8 +1681,8 @@ for (x in 1:nrow(spp.list)) {
     width = 8,
     height = 11
   )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
+  terra::plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
+  terra::plot(coastCropped['id'], col = 'grey', add = T)
   dev.off()
 
   print(x)
@@ -1696,7 +1700,7 @@ for (x in 1:nrow(spp.list)) {
   cW <- rbind(rep(1, length(cW)), rep(0, length(cW)), cW)
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/dynamic_variable_weights.pdf'
@@ -1767,7 +1771,7 @@ for (x in 1:nrow(spp.list)) {
     '/2009-2019 vs 2025-2035/variable_exposure_maps.RData'
   )) #mapExp
   #subset timeseries matrix by rownames
-  i <- names(mapExp) %in% names(cW)
+  i <- terra::names(mapExp) %in% terra::names(cW)
   mapSub <- raster::subset(mapExp, which(i == T))
 
   #load timeseries
@@ -1776,11 +1780,11 @@ for (x in 1:nrow(spp.list)) {
     '/2009-2019 vs 2025-2035/variable_exposure_timeseries.RData'
   )) #vecExp
   #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
+  i <- rownames(vecExp) %in% terra::names(cW)
   vecSub <- vecExp[i, ]
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2025-2035/variable_exposure_maps_inset_timeseries.pdf'
@@ -1790,18 +1794,18 @@ for (x in 1:nrow(spp.list)) {
   )
   #set up panels according to the number of variables
   if (raster::nlayers(mapSub) < 6) {
-    par(mfrow = c(2, 3))
+    graphics::par(mfrow = c(2, 3))
   } else {
-    par(mfrow = c(3, 3))
+    graphics::par(mfrow = c(3, 3))
   }
 
   for (y in 1:raster::nlayers(mapSub)) {
     #get full name of variable
-    i <- varDF$Short.Name %in% names(mapSub)[y]
+    i <- varDF$Short.Name %in% terra::names(mapSub)[y]
 
     #map
-    par(plt = c(0.2, 0.9, 0.15, 0.875))
-    plot(
+    graphics::par(plt = c(0.2, 0.9, 0.15, 0.875))
+    terra::plot(
       raster::subset(mapSub, y),
       zlim = c(1, 4),
       col = cmocean('matter')(4),
@@ -1815,11 +1819,11 @@ for (x in 1:nrow(spp.list)) {
     )
     axis(2, at = seq(30, 50, by = 1), labels = seq(30, 50, by = 1), las = 2)
     axis(1, at = seq(-85, -65, by = 1), labels = seq(-85, -65, by = 1))
-    plot(coastCropped['id'], col = 'grey', add = T)
+    terra::plot(coastCropped['id'], col = 'grey', add = T)
 
     #inset timeseries
-    par(plt = c(0.55, 0.9, 0.25, 0.45), new = TRUE)
-    plot(
+    graphics::par(plt = c(0.55, 0.9, 0.25, 0.45), new = TRUE)
+    terra::plot(
       vecSub[y, ],
       t = 'b',
       lty = 8,
@@ -1838,8 +1842,8 @@ for (x in 1:nrow(spp.list)) {
 
   if (raster::nlayers(mapSub) != 6) {
     #add legend on the last one if the number of variables is not 6
-    plot(1:10, t = 'n', axes = F, xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
-    fields::image.plot(
+    terra::plot(1:10, t = 'n', axes = F, xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
+    fields::image.terra::plot(
       matrix(seq(1, 4, length.out = 16), 4, 4),
       legend.only = T,
       horizontal = F,
@@ -1856,9 +1860,9 @@ for (x in 1:nrow(spp.list)) {
     )
   } else {
     #if the number of variables is 6, it will still be a 3x3 grid, so put legend in the middle by adding an extra plot
-    plot(1:10, t = 'n', axes = F, xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
-    plot(1:10, t = 'n', axes = F, xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
-    fields::image.plot(
+    terra::plot(1:10, t = 'n', axes = F, xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
+    terra::plot(1:10, t = 'n', axes = F, xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
+    fields::image.terra::plot(
       matrix(seq(1, 4, length.out = 16), 4, 4),
       legend.only = T,
       horizontal = F,
@@ -1891,7 +1895,7 @@ for (x in 1:nrow(spp.list)) {
   )) #totalT
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2025-2035/total_exposure_maps_inset_timeseries_allvars.pdf'
@@ -1900,8 +1904,8 @@ for (x in 1:nrow(spp.list)) {
     height = 11
   )
   #map
-  par(fig = c(0, 1, 0, 1))
-  plot(
+  graphics::par(fig = c(0, 1, 0, 1))
+  terra::plot(
     totalM,
     zlim = c(1, 4),
     col = cmocean('matter')(4),
@@ -1915,8 +1919,8 @@ for (x in 1:nrow(spp.list)) {
   )
   axis(2, at = seq(30, 50, by = 1), labels = seq(30, 50, by = 1), las = 2)
   axis(1, at = seq(-85, -65, by = 1), labels = seq(-85, -65, by = 1))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  fields::image.plot(
+  terra::plot(coastCropped['id'], col = 'grey', add = T)
+  fields::image.terra::plot(
     matrix(seq(1, 4, length.out = 16), 4, 4),
     legend.only = T,
     horizontal = T,
@@ -1932,8 +1936,8 @@ for (x in 1:nrow(spp.list)) {
     col = cmocean::cmocean('matter')(4)
   )
 
-  par(fig = c(0.125, 0.6, 0.65, 0.95), new = TRUE)
-  plot(
+  graphics::par(fig = c(0.125, 0.6, 0.65, 0.95), new = TRUE)
+  terra::plot(
     totalT,
     t = 'b',
     lty = 8,
@@ -1969,7 +1973,7 @@ for (x in 1:nrow(spp.list)) {
   )) #totalT
 
   #plot
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'Figures'),
       '/2009-2019 vs 2025-2035/total_exposure_maps_inset_timeseries_impvars.pdf'
@@ -1978,8 +1982,8 @@ for (x in 1:nrow(spp.list)) {
     height = 11
   )
   #map
-  par(fig = c(0, 1, 0, 1))
-  plot(
+  graphics::par(fig = c(0, 1, 0, 1))
+  terra::plot(
     totalM,
     zlim = c(1, 4),
     col = cmocean('matter')(4),
@@ -1993,8 +1997,8 @@ for (x in 1:nrow(spp.list)) {
   )
   axis(2, at = seq(30, 50, by = 1), labels = seq(30, 50, by = 1), las = 2)
   axis(1, at = seq(-85, -65, by = 1), labels = seq(-85, -65, by = 1))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  fields::image.plot(
+  terra::plot(coastCropped['id'], col = 'grey', add = T)
+  fields::image.terra::plot(
     matrix(seq(1, 4, length.out = 16), 4, 4),
     legend.only = T,
     horizontal = T,
@@ -2010,8 +2014,8 @@ for (x in 1:nrow(spp.list)) {
     col = cmocean::cmocean('matter')(4)
   )
 
-  par(fig = c(0.125, 0.6, 0.65, 0.95), new = TRUE)
-  plot(
+  graphics::par(fig = c(0.125, 0.6, 0.65, 0.95), new = TRUE)
+  terra::plot(
     totalT,
     t = 'b',
     lty = 8,
