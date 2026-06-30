@@ -173,7 +173,7 @@ for (x in 1:nrow(spp.list)) {
   annualMets <- aggregate(distMetrics, by = list(distMetrics$year), FUN = mean)
 
   #plot center of gravity
-  pdf(
+  grDevices::pdf(
     paste0(file.path(getwd(), spp.list$Name[x]), '/center_of_gravity.pdf'),
     width = 8,
     height = 11
@@ -183,9 +183,9 @@ for (x in 1:nrow(spp.list)) {
     height = rep(1, 4),
     width = rep(1, 4)
   )
-  par(mar = c(2, 2, 1, 1))
+  graphics::par(mar = c(2, 2, 1, 1))
   #annual time series
-  plot(
+  terra::plot(
     cog ~ year,
     data = annualMets[annualMets$year < 2020, ],
     t = 'b',
@@ -203,7 +203,7 @@ for (x in 1:nrow(spp.list)) {
 
   #plot monthly
   for (m in month.abb) {
-    plot(
+    terra::plot(
       cog ~ year,
       data = distMetrics[distMetrics$month == m & distMetrics$year < 2020, ],
       t = 'b',
@@ -224,7 +224,7 @@ for (x in 1:nrow(spp.list)) {
   dev.off()
 
   #plot center of gravity
-  pdf(
+  grDevices::pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x]),
       '/area_of_high_probability.pdf'
@@ -237,9 +237,9 @@ for (x in 1:nrow(spp.list)) {
     height = rep(1, 4),
     width = rep(1, 4)
   )
-  par(mar = c(2, 2, 1, 1))
+  graphics::par(mar = c(2, 2, 1, 1))
   #annual time series
-  plot(
+  terra::plot(
     area ~ year,
     data = annualMets[annualMets$year < 2020, ],
     t = 'b',
@@ -257,7 +257,7 @@ for (x in 1:nrow(spp.list)) {
 
   #plot monthly
   for (m in month.abb) {
-    plot(
+    terra::plot(
       area ~ year,
       data = distMetrics[distMetrics$month == m & distMetrics$year < 2020, ],
       t = 'b',
