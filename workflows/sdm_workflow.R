@@ -5,51 +5,18 @@
 #####SET UP - LOAD EVERY TIME ####
 ##################################
 
-###load libraries
-library(ncdf4)
-library(caret)
-library(DescTools)
-library(fields)
-library(parallel)
-library(doParallel)
-library(abind)
-library(sf)
-library(sftime)
-library(survdat)
-library(dbutils)
-library(measurements)
-library(lubridate)
-library(raster)
-library(reshape2)
-library(Matrix)
-library(TMB)
-library(sdmTMB)
-library(sdmTMBextra)
-library(future)
-library(ranger)
-library(sp)
-library(akgfmaps)
-library(EFHSDM)
-library(terra)
-library(meteo)
-library(dismo)
-library(gbm)
-library(gamm4)
-library(ROCR)
-library(sftime)
-library(furrr)
-library(maxnet)
-library(gstat)
-
 ### set working directory
 setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs')
 #setwd('/home/oneapi/ClimateVulnerabilityAssessment2.0/SDMs')
 
 ### source functions
-targets::tar_source(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/functions"
-) #this + library calls will be replaced by calling the package
+#targets::tar_source(
+#  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/functions"
+#) #this + library calls will be replaced by calling the package
 #targets::tar_source("/home/oneapi/ClimateVulnerabilityAssessment2.0/functions")
+library(devtools)
+devtools::load_all('~/ClimateVulnerabilityAssessment2.0/functions/READ-EDAB-CVA2.0')
+library(spatialcva)
 
 #create species folders and appropriate subfolders
 #spp.list <- create_spp_list('spp_list.csv')
@@ -102,28 +69,28 @@ for (x in 1:nrow(spp.list)) {
 #####GET FISHERIES DATA ######
 ##############################
 
-####1993-2019
+####1993-2023
 #survey data - needs VPN
 surv <- standardize_fisheries_data(
-  data_type = 'Surveys',
+  data_type = 'NESurveys',
   channel = dbutils::connect_to_database(
     server = "NEFSC_pw_oraprod",
     uid = "KGALLAGHER"
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(surv, './Data/csvs/standardized/survey_1993_2019.csv')
+write.csv(surv, './Data/csvs/standardized/survey_1993_2023.csv')
 
 #observer data - needs VPN
 obs <- standardize_fisheries_data(
-  data_type = 'Observer',
+  data_type = 'NEObserver',
   channel = dbutils::connect_to_database(
     server = "NEFSC_pw_oraprod",
     uid = "KGALLAGHER"
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(obs, './Data/csvs/standardized/observer_1993_2019.csv')
+write.csv(obs, './Data/csvs/standardized/observer_1993_2023.csv')
 
 ## State run surveys
 #maine/new hampshire
@@ -138,18 +105,18 @@ menh <- standardize_fisheries_data(
     'Number_Caught',
     'Common_Name'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(menh, './Data/csvs/standardized/MENH_1993_2019.csv')
+write.csv(menh, './Data/csvs/standardized/MENH_1993_2023.csv')
 
 #mass
 mass <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = "./Data/csvs/raw/MABottom_Trawl_02_2026.csv",
   csv_columns = c('towID', 'Lon', 'Lat', 'Date', 'Num', 'SCI_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(mass, './Data/csvs/standardized/MA_1993_2019.csv')
+write.csv(mass, './Data/csvs/standardized/MA_1993_2023.csv')
 
 #new jersey
 nj <- standardize_fisheries_data(
@@ -163,9 +130,9 @@ nj <- standardize_fisheries_data(
     'NUMBER',
     'LATIN_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(nj, './Data/csvs/standardized/NJ_1993_2019.csv')
+write.csv(nj, './Data/csvs/standardized/NJ_1993_2023.csv')
 
 #ct
 ct <- standardize_fisheries_data(
@@ -179,18 +146,18 @@ ct <- standardize_fisheries_data(
     'TotalCount',
     'name'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(ct, './Data/csvs/standardized/CT_1993_2019.csv')
+write.csv(ct, './Data/csvs/standardized/CT_1993_2023.csv')
 
 #delaware
 de <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = "./Data/csvs/raw/DE_Tow_Catch_2025-07-18.csv",
   csv_columns = c('towID', 'LONDD', 'LATDD', 'date', 'number', 'SCI_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(de, './Data/csvs/standardized/DE_1993_2019.csv')
+write.csv(de, './Data/csvs/standardized/DE_1993_2023.csv')
 
 #neamap
 neamap <- standardize_fisheries_data(
@@ -204,18 +171,18 @@ neamap <- standardize_fisheries_data(
     'present_absent',
     'SCI_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(neamap, './Data/csvs/standardized/NEAMAP_1993_2019.csv')
+write.csv(neamap, './Data/csvs/standardized/NEAMAP_1993_2023.csv')
 
 #ny
 ny <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = "./Data/csvs/raw/NYDEC_Tow_Catch_Feb2026.csv",
   csv_columns = c('STATION', 'LONDD', 'LATDD', 'time', 'Presence', 'COM_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(ny, './Data/csvs/standardized/NY_1993_2019.csv')
+write.csv(ny, './Data/csvs/standardized/NY_1993_2023.csv')
 
 ####pull in older NEAMAP & MA w/bft
 #neamap
@@ -230,27 +197,27 @@ neamapBFT <- standardize_fisheries_data(
     'present_absent',
     'SCI_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(neamapBFT, './Data/csvs/standardized/NEAMAP-BFT_1993_2019.csv')
+write.csv(neamapBFT, './Data/csvs/standardized/NEAMAP-BFT_1993_2023.csv')
 
 #mass
 massBFT <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = "./Data/csvs/raw/MABottom_Trawl_2025-08-6-wBFT.csv",
   csv_columns = c('towID', 'Lon', 'Lat', 'Date', 'Num', 'SCI_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(massBFT, './Data/csvs/standardized/MA-BFT_1993_2019.csv')
+write.csv(massBFT, './Data/csvs/standardized/MA-BFT_1993_2023.csv')
 
 ###additional smooth dogfish presences from HMS
 hmsSD <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = './Data/csvs/raw/HMS_SmoothDogfish_09-12-25.csv',
   csv_columns = c('id', 'LON', 'LAT', 'date', 'pa', 'SCI_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(hmsSD, './Data/csvs/standardized/HMS-SD_1993_2019.csv')
+write.csv(hmsSD, './Data/csvs/standardized/HMS-SD_1993_2023.csv')
 
 ##shrimp survey
 shrimp <- standardize_fisheries_data(
@@ -264,9 +231,9 @@ shrimp <- standardize_fisheries_data(
     'EXPCATCHNUM',
     'SCINAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(shrimp, './Data/csvs/standardized/shrimp_1993_2019.csv')
+write.csv(shrimp, './Data/csvs/standardized/shrimp_1993_2023.csv')
 
 #gom bll
 gom <- standardize_fisheries_data(
@@ -280,9 +247,9 @@ gom <- standardize_fisheries_data(
     'CATCHNUM',
     'COMMON_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(gom, './Data/csvs/standardized/GOMBLL_1993_2019.csv')
+write.csv(gom, './Data/csvs/standardized/GOMBLL_1993_2023.csv')
 
 #GOP
 gop <- standardize_fisheries_data(
@@ -296,9 +263,9 @@ gop <- standardize_fisheries_data(
     'NUM_FISH',
     'SPECIES_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(gop, './Data/csvs/standardized/GOP_1993_2019.csv')
+write.csv(gop, './Data/csvs/standardized/GOP_1993_2023.csv')
 
 #POP
 pop <- standardize_fisheries_data(
@@ -312,223 +279,10 @@ pop <- standardize_fisheries_data(
     'NUM_FISH',
     'SPECIES_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(pop, './Data/csvs/standardized/POP_1993_2019.csv')
+write.csv(pop, './Data/csvs/standardized/POP_1993_2023.csv')
 
-###2020-2023
-#survey data - needs VPN
-surv <- standardize_fisheries_data(
-  data_type = 'Surveys',
-  channel = dbutils::connect_to_database(
-    server = "NEFSC_pw_oraprod",
-    uid = "KGALLAGHER"
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(surv, './Data/csvs/standardized/survey_2020_2023.csv')
-
-#observer data - needs VPN
-obs <- standardize_fisheries_data(
-  data_type = 'Observer',
-  channel = dbutils::connect_to_database(
-    server = "NEFSC_pw_oraprod",
-    uid = "KGALLAGHER"
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(obs, './Data/csvs/standardized/observer_2020_2023.csv')
-
-## State run surveys
-#maine/new hampshire
-menh <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/MaineDMR_Trawl_Survey_Tow_Catch_2025-07-17.csv",
-  csv_columns = c(
-    'towID',
-    'Start_Longitude',
-    'Start_Latitude',
-    'Start_Date',
-    'Number_Caught',
-    'Common_Name'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(menh, './Data/csvs/standardized/MENH_2020_2023.csv')
-
-#mass
-mass <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/MABottom_Trawl_02_2026.csv",
-  csv_columns = c('towID', 'Lon', 'Lat', 'Date', 'Num', 'SCI_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(mass, './Data/csvs/standardized/MA_2020_2023.csv')
-
-#new jersey
-nj <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/NJOT_Tow_Catch_2025-07-01.csv",
-  csv_columns = c(
-    'TOW_ID',
-    'START_LON',
-    'START_LAT',
-    'DATE.FORMAT',
-    'NUMBER',
-    'LATIN_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(nj, './Data/csvs/standardized/NJ_2020_2023.csv')
-
-#ct
-ct <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/CT_Tow_Catch_Feb_2026.csv",
-  csv_columns = c(
-    'Sample.Number',
-    'Longitude',
-    'Latitude',
-    'Date',
-    'TotalCount',
-    'name'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(ct, './Data/csvs/standardized/CT_2020_2023.csv')
-
-#delaware
-de <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/DE_Tow_Catch_2025-07-18.csv",
-  csv_columns = c('towID', 'LONDD', 'LATDD', 'date', 'number', 'SCI_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(de, './Data/csvs/standardized/DE_2020_2023.csv')
-
-#neamap
-neamap <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/NEAMAP_Tow_Catch_Feb2026.csv",
-  csv_columns = c(
-    'station',
-    'lon',
-    'lat',
-    'date',
-    'present_absent',
-    'SCI_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(neamap, './Data/csvs/standardized/NEAMAP_2020_2023.csv')
-
-#ny
-ny <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/NYDEC_Tow_Catch_Feb2026.csv",
-  csv_columns = c('STATION', 'LONDD', 'LATDD', 'time', 'Presence', 'COM_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(ny, './Data/csvs/standardized/NY_2020_2023.csv')
-
-####pull in older NEAMAP & MA w/bft
-#neamap
-neamapBFT <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/NEAMAP_Tow_Catch_2025-09-15-wBFT.csv",
-  csv_columns = c(
-    'station',
-    'lon',
-    'lat',
-    'date',
-    'present_absent',
-    'SCI_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(neamapBFT, './Data/csvs/standardized/NEAMAP-BFT_2020_2023.csv')
-
-#mass
-massBFT <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/MABottom_Trawl_2025-08-6-wBFT.csv",
-  csv_columns = c('towID', 'Lon', 'Lat', 'Date', 'Num', 'SCI_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(massBFT, './Data/csvs/standardized/MA-BFT_2020_2023.csv')
-
-###additional smooth dogfish presences from HMS
-hmsSD <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = './Data/csvs/raw/HMS_SmoothDogfish_09-12-25.csv',
-  csv_columns = c('id', 'LON', 'LAT', 'date', 'pa', 'SCI_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(hmsSD, './Data/csvs/standardized/HMS-SD_2020_2023.csv')
-
-##shrimp survey
-shrimp <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = './Data/csvs/raw/NEFSC_NShrimp_092025.csv',
-  csv_columns = c(
-    'towID',
-    'DECDEG_BEGLON',
-    'DECDEG_BEGLAT',
-    'BEGIN_EST_TOWDATE',
-    'EXPCATCHNUM',
-    'SCINAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(shrimp, './Data/csvs/standardized/shrimp_2020_2023.csv')
-
-#gom bll
-gom <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/GOM_BLLS_092025.csv",
-  csv_columns = c(
-    'ID',
-    'DECDEG_BEGLON_SET',
-    'DECDEG_BEGLAT_SET',
-    'startDate',
-    'CATCHNUM',
-    'COMMON_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(gom, './Data/csvs/standardized/GOMBLL_2020_2023.csv')
-
-#GOP
-gop <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/GOP_092025.csv",
-  csv_columns = c(
-    'ID',
-    'SET_BEGIN_LONG_CONV',
-    'SET_BEGIN_LAT_CONV',
-    'startDate',
-    'NUM_FISH',
-    'SPECIES_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(gop, './Data/csvs/standardized/GOP_2020_2023.csv')
-
-#POP
-pop <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/POP_092025.csv",
-  csv_columns = c(
-    'ID',
-    'LONDD',
-    'LATDD',
-    'startDate',
-    'NUM_FISH',
-    'SPECIES_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(pop, './Data/csvs/standardized/POP_2020_2023.csv')
 ##############################
 
 ##############################
