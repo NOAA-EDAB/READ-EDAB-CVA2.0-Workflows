@@ -356,16 +356,17 @@ for (x in 1:10) {
 ###################################
 ##### BUILD FISHERIES DATA FRAMES #
 ###################################
-
+#load new key document to determine which sources should be used for which species
 source.key <- read.csv('sources.csv')
-source.names <- colnames(source.key)[-1]
-is.obs.key <- c(F, T, F, F, F, F, F, F, F, T, F, F, T, T, T, T, F, F)
+source.names <- colnames(source.key)[-1] #isolate source names
+is.obs.key <- c(F, T, F, F, F, F, F, F, F, T, F, F, T, T, T, T, F, F) #flags which sources are observer based (ie fisheries dependent datasets)
 
+#build argument matrix to pass along to wrapper function through furrr
 args <- NULL
 for(x in 1:nrow(spp.list)){
-  sFlag <- unlist(as.vector(source.key[which(source.key$Common.Name == spp.list$Common.Name[x]),-c(1)]))
-  sSources <- source.names[sFlag]
-  sObs <- is.obs.key[sFlag]
+  sFlag <- unlist(as.vector(source.key[which(source.key$Common.Name == spp.list$Common.Name[x]),-c(1)])) #pull T/F flags from sources key
+  sSources <- source.names[sFlag] #use flags to subset source names
+  sObs <- is.obs.key[sFlag] #use flags to subset obs.key
   altNames <- paste(
     spp.list$Common.Name[x],
     spp.list$COM_NAME[x],
