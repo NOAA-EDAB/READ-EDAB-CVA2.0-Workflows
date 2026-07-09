@@ -8,65 +8,43 @@
 #' @param spp_names a vector containing all possible names for the target species. Must have a length >= 1
 #' @param skip TRUE/FALSE indicating whether to skip creating the raster file if file already exists
 
-#' @return \code{saveRast} returns the range of the rasterBrick returned by \code{build_fisheries_raster}. This should be equal to 0 2 if species is present in dataset, and 0 1 if species is not caught in dataset. This function will also save the resulting rasterBrick as a netcdf file in the species' input_rasters folder
+#' @return \code{save_df_wrapper} returns the range of the data.frame returned by \code{build_fisheries_df}. This should be equal to 0 1 if species is present in dataset, and 0 0 if species is not caught in dataset. This function will also save the resulting data.frame as a csv file in the species' input_csvs folder
 
-save_df_wrapper <- function(csv_name, is_obs, grid, spp, spp_names, skip) {
-  data <- read.csv(paste0('./Data/csvs/standardized/', csv_name, '.csv'))
+
+save_df_wrapper <- function(csv_name, is_obs, grid, spp, spp_names, skip, force_overwrite = FALSE) {
   
-  #open log file
-  sink(file = file.path(getwd(), 'logs', paste0(csv_name, '.log')), append = T)
-  #sink(file = file.path(getwd(), 'logs', paste0(csv_name, '.log')), append = T, type = 'message')
+  # 1. Dynamically route logs to a central file or individual files safely
+  # logger handles multiple parallel processes writing to the same file much better than sink
+  log_path <- file.path(getwd(), 'logs', 'build_dfs.log')
+  log_appender(appender_file(log_path))
   
-  # Ensure the sinks are closed when the function exits, regardless of how it exits.
-  on.exit({
-    #sink(type = "message")
-    sink()
-  })
+  # Define path where output is saved (saved as a variable to prevent typos and duplication)
+  output_file <- file.path(getwd(), spp, 'input_csvs', paste0(csv_name, '.csv'))
   
-  print(paste(csv_name, spp, sep = '-'))
-  print(Sys.time())
+  # 2. Check skip / overwrite logic up front
+  # If force_overwrite is TRUE, we ignore the skip setting completely
+  if (skip && !force_overwrite && file.exists(output_file)) {
+    log_info("{csv_name} - {spp}: File exists and skip == TRUE. Skipping execution.")
+    return(NA)
+  }
   
-  if (skip) {
-    if (
-      file.exists(paste0(
-        file.path(getwd(), spp, 'input_csvs'),
-        '/',
-        csv_name,
-        '.csv'
-      ))
-    ) {
-      print('file exists and skip == T, so skipping this file!')
-      return(NA)
-    } else {
-      nms <- strsplit(spp_names, split = ',')[[1]]
-      rast <- build_fisheries_df(
-        data = data,
-        is_obs = is_obs,
-        grid = grid,
-        all_names = nms
-      )
-      
-      if (is.null(rast)) {
-        print('rast is NULL - minimum conditions not met')
-      } else {
-        print(range(rast$pa))
-        write.csv(
-          rast,
-          file = paste0(
-            file.path(getwd(), spp, 'input_csvs'),
-            '/',
-            csv_name,
-            '.csv'
-          ),
-          row.names = F
-        )
-      }
-      
-      return(range(rast$pa))
-    } #end skip && if file is present
-  } else {
-    #if skip = F, just run it without checking
+  if (force_overwrite && file.exists(output_file)) {
+    log_info("{csv_name} - {spp}: File exists but force_overwrite == TRUE. Re-running.")
+  }
+  
+  log_info("{csv_name} - {spp}: Beginning processing...")
+  
+  # 3. Safe Execution Block using tryCatch
+  result <- tryCatch({
+    
+    # Read the data safely inside the try block
+    data_path <- paste0('./Data/csvs/standardized/', csv_name, '.csv')
+    if(!file.exists(data_path)) stop(paste("Source CSV missing:", data_path))
+    data <- read.csv(data_path)
+    
     nms <- strsplit(spp_names, split = ',')[[1]]
+    
+    # Run core processing
     rast <- build_fisheries_df(
       data = data,
       is_obs = is_obs,
@@ -74,24 +52,28 @@ save_df_wrapper <- function(csv_name, is_obs, grid, spp, spp_names, skip) {
       all_names = nms
     )
     
+    # Handle the output
     if (is.null(rast)) {
-      print('rast is NULL - minimum conditions not met')
+      log_warn("{csv_name} - {spp}: rast is NULL - minimum conditions not met.")
+      return(NULL)
     } else {
-      print(range(rast$pa))
-      write.csv(
-        rast,
-        file = paste0(
-          file.path(getwd(), spp, 'input_csvs'),
-          '/',
-          csv_name,
-          '.csv'
-        ),
-        row.names = F
-      )
+      # Log the range instead of standard printing
+      pa_range <- range(rast$pa, na.rm = TRUE)
+      log_info("{csv_name} - {spp}: Success. PA range: {paste(pa_range, collapse = ' to ')}")
+      
+      # Ensure directories exist before writing
+      dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
+      
+      write.csv(rast, file = output_file, row.names = FALSE)
+      return(pa_range)
     }
     
-    return(range(rast$pa))
-  }
+  }, error = function(e) {
+    # 4. CAPTURE THE CATASTROPHIC ERRORS
+    # If build_fisheries_df crashes, this block catches it and logs exactly why
+    log_error("{csv_name} - {spp}: CRASHED with error: {e$message}")
+    return(NULL) 
+  })
   
-  sink() #close log file
-} #end function
+  return(result)
+}

@@ -17,6 +17,7 @@ library(spatialcva)
 #load additional packages needed for workflows
 library(future)
 library(furrr)
+library(logger)
 
 #create species folders and appropriate subfolders
 spp.list <- read.csv('spp_list.csv')
@@ -421,7 +422,6 @@ args$source <- paste0(args$source, '_1993_2023')
 args$skip = F
 args$grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc"
 
-
 plan(multisession, workers = 8)
 #sink(file = 'rasters.log', append = T)
 checks <- future_pmap(
@@ -439,7 +439,8 @@ checks <- future_pmap(
     spp_names = ..3,
     skip = ..4,
     is_obs = ..5,
-    grid = ..6
+    grid = ..6, 
+    force_overwrite = TRUE
   ),
   .progress = T
 )
