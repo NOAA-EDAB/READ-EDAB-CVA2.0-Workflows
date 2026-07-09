@@ -7,9 +7,9 @@
 #' @param json_url URL pointing to JSON table variable lists for desired MOM6 run type and domain
 #' @param release release code. Must match one of the options in the 'cefi_release' column in provided JSON table
 #' @param init initialization code. Must match one of the options in the 'cefi_init_date' column in provided JSON table. For forecast only
-#' @param ens ensemble member. Must be equal to 1-10. For decadal forecasts, different ensemble members represent slightly different forcing scenarios. For forecast only.
+#' @param spatial.temporal TRUE/FALSE to determine method for normalizing. If TRUE, normalization is spatially and temporally explicit. If FALSE, normalization occurs using averages/standard deviations calculated across space and time
 
-#' @return the output from \code{norm_env} - a list whose length is equal to the number of variables supplied, where each item in the list is a rasterStack of data associated with that variable, with the number of layers equal to the number of time steps available. The function also saves the output from each step - see the package website for necessary directory set up.
+#' @return the output from \code{normalize_model_data} - a list whose length is equal to the number of variables supplied, where each item in the list is a spatRaster of normalized data associated with that variable, with the number of layers equal to the number of time steps available. The function also saves the output from each step - see the package website for necessary directory set up.
 
 get_model_forecast_wrapper <- function(
   var_df,
@@ -18,12 +18,12 @@ get_model_forecast_wrapper <- function(
   json_url,
   release,
   init,
-  ens
+  spatial.temporal
 ) {
   raw <- avg <- sds <- norm <- vector(mode = 'list', length = nrow(var_df))
 
   if (in_par == TRUE) {
-    cluster <- parallel::makeCluster(10, type = 'PSOCK')
+    cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
     doParallel::registerDoParallel(cluster)
     raw <- foreach::foreach(
       x = 1:nrow(var_df),
@@ -37,7 +37,7 @@ get_model_forecast_wrapper <- function(
           short_names = var_df$Short.Name[x],
           release = release,
           init = init,
-          ens = ens
+          spatial.temporal = spatial.temporal
         )
         raw[[x]] <- r
       }
@@ -49,14 +49,13 @@ get_model_forecast_wrapper <- function(
         req_vars = var_df$Long.Name[x],
         short_names = var_df$Short.Name[x],
         release = release,
-        init = init,
-        ens = ens
+        init = init
       )
       raw[[x]] <- r
     }
   }
   names(raw) <- var_df$Short.Name
-  save(raw, file = paste0('./Data/MOM6/raw_MOM6_forecast_ens', ens, '.RData'))
+  save(raw, file = paste0('./Data/MOM6/raw_MOM6_forecast_', release, '_', init, '.RData'))
 
   if (in_par == TRUE) {
     cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
@@ -67,18 +66,22 @@ get_model_forecast_wrapper <- function(
     ) %do%
       {
         #for(x in 1:nrow(var_df)){
-        a <- avg_model_data(raw[[x]])
+        a <- avg_model_data(raw[[x]], spatial.temporal = spatial.temporal)
         avg[[x]] <- a
       }
     parallel::stopCluster(cluster)
   } else {
     for (x in 1:nrow(var_df)) {
-      a <- avg_model_data(raw[[x]])
+      a <- avg_model_data(raw[[x]], spatial.temporal = spatial.temporal)
       avg[[x]] <- a
     }
   }
   names(avg) <- var_df$Short.Name
-  save(avg, file = paste0('./Data/MOM6/avg_MOM6_forecast_ens', ens, '.RData'))
+  if(spatial.temporal){
+    save(avg, file = paste0('./Data/MOM6/avg_MOM6_forecast_', release, '_', init, '.RData'))
+  } else {
+    save(avg, file = paste0('./Data/MOM6/avg_MOM6_forecast_', release, '_', init, '_global.RData'))
+  }
 
   if (in_par == TRUE) {
     cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
@@ -89,21 +92,25 @@ get_model_forecast_wrapper <- function(
     ) %do%
       {
         #for(y in 1:nrow(var_df)){
-        s <- sd_model_data(raw[[y]])
+        s <- sd_model_data(raw[[y]], spatial.temporal = spatial.temporal)
         sds[[y]] <- s
       }
     parallel::stopCluster(cluster)
   } else {
     for (y in 1:nrow(var_df)) {
-      s <- sd_model_data(raw[[y]])
+      s <- sd_model_data(raw[[y]], spatial.temporal = spatial.temporal)
       sds[[y]] <- s
     }
   }
   names(sds) <- var_df$Short.Name
-  save(sds, file = paste0('./Data/MOM6/sd_MOM6_forecast_ens', ens, '.RData'))
+  if(spatial.temporal){
+    save(sds, file = paste0('./Data/MOM6/sd_MOM6_forecast_', release, '_', init, '.RData'))
+  } else {
+    save(sds, file = paste0('./Data/MOM6/sd_MOM6_forecast_', release, '_', init, '_global.RData'))
+  }
 
   if (in_par == TRUE) {
-    cluster <- parallel::makeCluster(cores, type = 'PSOCK')
+    cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
     doParallel::registerDoParallel(cluster)
     norm <- foreach::foreach(
       x = 1:nrow(var_df),
@@ -112,10 +119,10 @@ get_model_forecast_wrapper <- function(
       {
         #for(y in 1:nrow(var_df)){
         n <- normalize_model_data(
-          raw_list = raw[[x]],
-          avg_list = avg[[x]],
-          sd_list = sds[[x]],
-          short_names = var_df$Short.Name[x]
+          raw = raw[[x]],
+          avg = avg[[x]],
+          sd = sds[[x]],
+          spatial.temporal = spatial.temporal
         )
         norm[[x]] <- n
       }
@@ -126,13 +133,17 @@ get_model_forecast_wrapper <- function(
         raw_list = raw[[x]],
         avg_list = avg[[x]],
         sd_list = sds[[x]],
-        short_names = var_df$Short.Name[x]
+        spatial.temporal = spatial.temporal
       )
       norm[[y]] <- n
     }
   }
   names(norm) <- var_df$Short.Name
-  save(norm, file = paste0('./Data/MOM6/norm_MOM6_forecast_ens', ens, '.RData'))
+  if(spatial.temporal){
+    save(norm, file = paste0('./Data/MOM6/norm_MOM6_forecast_', release, '_', init, '.RData'))
+  } else {
+    save(norm, file = paste0('./Data/MOM6/norm_MOM6_forecast_', release, '_', init, '_global.RData'))
+  }
 
   return(norm)
 } #end function

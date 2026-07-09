@@ -6,8 +6,8 @@
 #'
 #' @return \code{combine_rasters_wrapper} returns the range of the rasterBrick returned by \code{merge_fisheries_rasters}. This should be equal to 0 2, or else there are no presences in the dataset and the models will fail. This function will also save the resulting rasterBrick as a netcdf file in the species' input_rasters folder
 
-combine_fisheries_rasters_wrapper <- function(name, skip) {
-  sink(file.path(getwd(), 'logs', 'combineRasters.log'), append = T)
+combine_fisheries_dfs_wrapper <- function(name, skip) {
+  sink(file.path(getwd(), 'logs', 'combineDFs.log'), append = T)
   # Ensure the sinks are closed when the function exits, regardless of how it exits.
   on.exit({
     #sink(type = "message")
@@ -27,67 +27,46 @@ combine_fisheries_rasters_wrapper <- function(name, skip) {
       print('file exists and skip == T, so skipping this file!')
       return(NA)
     } else {
-      flist <- dir(file.path(getwd(), name, 'input_csvs'), full.names = T)
-      dfs <- NULL
-      for (r in 1:length(flist)) {
-        df <- read.csv(flist[r]) 
-        dfs <- rbind(dfs, df)
-        #print(r)
-      }
+      spp_dir <- dir(file.path(getwd(), name, 'input_csvs'), full.names = T)
       
-      combinedRasts <- merge_fisheries_rasters(rasts)
-      print(range(combinedRasts[]))
-      raster::writeRaster(
-        combinedRasts,
-        filename = paste(
-          file.path(getwd(), name, 'input_rasters'),
-          'combined_rasters.nc',
-          sep = '/'
-        ),
-        bylayer = F,
-        overwrite = T
+      combinedDFs <- merge_fisheries_dfs(spp_dir)
+      print(range(combinedDFs$pa))
+      write.csv(combinedDFs, 
+                row.names = F, 
+                file = paste(spp_dir, 
+                             'combined_pa.csv', 
+                             sep = '/')
       )
     } #end else
   } else {
     #if skip = F, do it anyway
     
-    flist <- dir(file.path(getwd(), name, 'input_rasters'), full.names = T)
+    spp_dir <- dir(file.path(getwd(), name, 'input_csvs'), full.names = T)
     if (
       file.exists(paste(
-        file.path(getwd(), name, 'input_rasters'),
-        'combined_rasters.nc',
+        file.path(getwd(), name, 'input_csvs'),
+        'combined_pa.csv',
         sep = '/'
       ))
     ) {
       i <- which(
         flist ==
           paste(
-            file.path(getwd(), name, 'input_rasters'),
-            'combined_rasters.nc',
+            file.path(getwd(), name, 'input_csvs'),
+            'combined_pa.csv',
             sep = '/'
           )
       )
-      flist <- flist[-i]
+      spp_dir <- spp_dir[-i]
     }
-    rasts <- vector(mode = 'list', length = length(flist))
-    for (r in 1:length(flist)) {
-      rast <- raster::brick(flist[r]) #rast
-      rasts[[r]] <- rast
-      #print(r)
-    }
-    
-    combinedRasts <- merge_fisheries_rasters(rasts)
-    print(range(combinedRasts[]))
-    raster::writeRaster(
-      combinedRasts,
-      filename = paste(
-        file.path(getwd(), name, 'input_rasters'),
-        'combined_rasters.nc',
-        sep = '/'
-      ),
-      bylayer = F,
-      overwrite = T
-    )
+    combinedDFs <- merge_fisheries_dfs(spp_dir)
+    print(range(combinedDFs$pa))
+    write.csv(combinedDFs, 
+              row.names = F, 
+              file = paste(spp_dir, 
+                           'combined_pa.csv', 
+                           sep = '/')
+              )
     #sink()
   } #end else
 }

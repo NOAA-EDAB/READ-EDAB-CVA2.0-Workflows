@@ -6,15 +6,17 @@
 #' @param n_cores number of cores used in parallelization. Defaults to 10.
 #' @param json_url URL pointing to JSON table variable lists for desired MOM6 run type and domain
 #' @param release release code. Must match one of the options in the 'cefi_release' column in provided JSON table
+#' @param spatial.temporal TRUE/FALSE to determine method for normalizing. If TRUE, normalization is spatially and temporally explicit. If FALSE, normalization occurs using averages/standard deviations calculated across space and time
 
-#' @return the output from \code{norm_env} - a list whose length is equal to the number of variables supplied, where each item in the list is a rasterStack of data associated with that variable, with the number of layers equal to the number of time steps available. The function also saves the output from each step - see the package website for necessary directory set up.
+#' @return the output from \code{normalize_model_data} - a list whose length is equal to the number of variables supplied, where each item in the list is a spatRaster of data associated with that variable, with the number of layers equal to the number of time steps available. The function also saves the output from each step - see the package website for necessary directory set up.
 
 get_model_hindcast_wrapper <- function(
   var_df,
   in_par = TRUE,
   n_cores,
   json_url,
-  release
+  release, 
+  spatial.temporal
 ) {
   raw <- avg <- sds <- norm <- vector(mode = 'list', length = nrow(var_df))
 
@@ -29,8 +31,7 @@ get_model_hindcast_wrapper <- function(
         #for(x in 1:nrow(var.list)){
         r <- pull_mom6_hindcast(
           var_url = json_url,
-          req_vars = var_df$Long.Name[x],
-          short_names = var_df$Short.Name[x],
+          req_var = var_df$Long.Name[x],
           release = release
         )
         raw[[x]] <- r
@@ -48,7 +49,7 @@ get_model_hindcast_wrapper <- function(
     }
   }
   names(raw) <- var_df$Short.Name
-  save(raw, file = './Data/MOM6/raw_MOM6_hindcast.RData')
+  save(raw, file = paste0('./Data/MOM6/raw_MOM6_hindcast_', release, '.RData'))
 
   if (in_par == TRUE) {
     cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
@@ -59,18 +60,24 @@ get_model_hindcast_wrapper <- function(
     ) %do%
       {
         #for(x in 1:nrow(var.list)){
-        a <- avg_model_data(raw[[x]])
+        a <- avg_model_data(raw[[x]], spatial.temporal = spatial.temporal)
         avg[[x]] <- a
       }
     parallel::stopCluster(cluster)
   } else {
     for (x in 1:nrow(var_df)) {
-      a <- avg_model_data(raw[[x]])
+      a <- avg_model_data(raw[[x]], spatial.temporal = spatial.temporal)
       avg[[x]] <- a
     }
   }
   names(avg) <- var_df$Short.Name
-  save(avg, file = './Data/MOM6/avg_MOM6_hindcast.RData')
+  if(spatial.temporal){
+    save(avg, 
+         file = paste0('./Data/MOM6/avg_MOM6_hindcast_', release, '.RData'))
+  } else {
+    save(avg, 
+         file = paste0('./Data/MOM6/avg_MOM6_hindcast_', release, '_global.RData'))
+  }
 
   if (in_par == TRUE) {
     cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
@@ -81,18 +88,24 @@ get_model_hindcast_wrapper <- function(
     ) %do%
       {
         #for(y in 1:nrow(var.list)){
-        s <- sd_model_data(raw[[y]])
+        s <- sd_model_data(raw[[y]], spatial.temporal = spatial.temporal)
         sds[[y]] <- s
       }
     parallel::stopCluster(cluster)
   } else {
     for (y in 1:nrow(var_df)) {
-      s <- sd_model_data(raw[[y]])
+      s <- sd_model_data(raw[[y]], spatial.temporal = spatial.temporal)
       sds[[y]] <- s
     }
   }
   names(sds) <- var_df$Short.Name
-  save(sds, file = './Data/MOM6/sd_MOM6_hindcast.RData')
+  if(spatial.temporal){
+    save(sds, 
+         file = paste0('./Data/MOM6/sd_MOM6_hindcast_', release, '.RData'))
+  } else {
+    save(sds, 
+         file = paste0('./Data/MOM6/sd_MOM6_hindcast_', release, '_global.RData'))
+  }
 
   if (in_par == TRUE) {
     cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
@@ -104,10 +117,10 @@ get_model_hindcast_wrapper <- function(
       {
         #for(y in 1:nrow(var.list)){
         n <- normalize_model_data(
-          raw_list = raw[[x]],
-          avg_list = avg[[x]],
-          sd_list = sds[[x]],
-          short_names = var_df$Short.Name[x]
+          raw = raw[[x]],
+          avg = avg[[x]],
+          sd = sds[[x]],
+          spatial.temporal = spatial.temporal
         )
         norm[[x]] <- n
       }
@@ -115,16 +128,22 @@ get_model_hindcast_wrapper <- function(
   } else {
     for (y in 1:nrow(var_df)) {
       n <- normalize_model_data(
-        raw_list = raw[[x]],
-        avg_list = avg[[x]],
-        sd_list = sds[[x]],
-        short_names = var_df$Short.Name[x]
+        raw = raw[[x]],
+        avg = avg[[x]],
+        sd = sds[[x]],
+        spatial.temporal = spatial.temporal
       )
       norm[[y]] <- n
     }
   }
   names(norm) <- var_df$Short.Name
-  save(norm, file = './Data/MOM6/norm_MOM6_hindcast.RData')
+  if(spatial.temporal){
+    save(norm, 
+         file = paste0('./Data/MOM6/norm_MOM6_hindcast_', release, '.RData'))
+  } else {
+    save(norm, 
+         file = paste0('./Data/MOM6/norm_MOM6_hindcast_', release, '_global.RData'))
+  }
 
   return(norm)
 } #end function

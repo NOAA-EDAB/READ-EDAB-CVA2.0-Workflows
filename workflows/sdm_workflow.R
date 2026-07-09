@@ -13,6 +13,8 @@ setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs')
 #library(devtools)
 #devtools::load_all('~/ClimateVulnerabilityAssessment2.0/functions/READ-EDAB-CVA2.0')
 library(spatialcva)
+
+#load additional packages needed for workflows
 library(future)
 library(furrr)
 
@@ -367,9 +369,8 @@ normH <- get_model_hindcast_wrapper(
   in_par = T,
   n_cores = 5,
   json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.hindcast.json",
-  release = 'r20230520'
+  release = 'r20250715'
 )
-save('./Data/MOM6/norm_MOM6_082025.RData')
 
 ###decadal forecast
 for (x in 1:10) {
@@ -417,7 +418,7 @@ for(x in 1:nrow(spp.list)){
   args <- rbind(args, a)
 }
 args$source <- paste0(args$source, '_1993_2023')
-args$skip = T
+args$skip = F
 args$grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc"
 
 
@@ -446,50 +447,46 @@ checks <- future_pmap(
 plan(sequential)
 
 
-### put them all together - takes about an hour and a half
+### Combine all source data frames for each species
 args <- tidyr::expand_grid(
-  name = spp.list$Name[37:42],
-  skip = T,
-  pattern = c('1993_2019')
+  name = spp.list$Name,
+  skip = T
 )
 
-#for(x in 2:length(spp.list$Name)){
-#combineSave(spp.list$Name[x], skip = T, pattern = '2020_2024')
-#print(x)
-#}
-options(future.globals.maxSize = Inf)
-plan(multisession, workers = 3)
+plan(multisession, workers = 6)
 combs <- future_pmap(
-  list(..1 = args$name, ..2 = args$skip, ..3 = args$pattern),
-  ~ combineSave(name = ..1, skip = ..2, pattern = ..3),
+  list(..1 = args$name, 
+       ..2 = args$skip),
+  ~ combine_fisheries_dfs_wrapper(name = ..1, 
+                                  skip = ..2),
   .progress = T
 )
 plan(sequential)
 #sink()
 
-###CHECKS BEFORE MOVING ON
+###quick sanity check
 flist <- dir(
   path = getwd(),
-  pattern = 'combined_rasters_1993_2019.nc',
+  pattern = 'combined_pa.csv',
   recursive = T,
   full.names = T
 )
-for (x in c(1, 7, 12, 19, 24, 32)) {
-  r <- brick(flist[x])
-  print(range(r[], na.rm = T))
+for (x in 1:length(flist)) {
+  r <- read.csv(flist[x])
+  print(range(r$pa, na.rm = T))
 }
 
-##############################
+###################################
 
 ##############################
-##### MAKE DATA FRAMES #######
+##### SUBSET DATA FRAMES #####
 ##############################
 
 load('./Data/MOM6/norm_MOM6_092025.RData') #norm
 load('./Data/staticVariables_cropped_normZ.RData')
 
 args <- tidyr::expand_grid(
-  name = spp.list$Name[c(37:42)],
+  name = spp.list$Name,
   skip = F,
   mMin = 1,
   mMax = 12,
