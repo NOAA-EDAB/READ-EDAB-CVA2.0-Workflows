@@ -3,10 +3,11 @@
 #'
 #' @param name Species name to add to log files and save data to correct directory (see vignette for recommended directory set up)
 #' @param skip TRUE/FALSE indicating whether to skip creating the raster file if file already exists
+#' @param force_overwrite TRUE/FALSE designating whether or not to force the function to overwrite the existing file. Overrides skip and sets skip = FALSE. Defaults to FALSE. 
 #'
 #' @return \code{combine_rasters_wrapper} returns the range of the rasterBrick returned by \code{merge_fisheries_rasters}. This should be equal to 0 2, or else there are no presences in the dataset and the models will fail. This function will also save the resulting rasterBrick as a netcdf file in the species' input_rasters folder
 
-combine_fisheries_dfs_wrapper <- function(name, skip) {
+combine_fisheries_dfs_wrapper <- function(name, skip, force_overwrite = FALSE) {
   
   # 1. Dynamically route logs to a central file or individual files safely
   # logger handles multiple parallel processes writing to the same file much better than sink

@@ -7,6 +7,7 @@
 #' @param spp Species name to add to log files and save data to correct directory (see vignette for recommended directory set up)
 #' @param spp_names a vector containing all possible names for the target species. Must have a length >= 1
 #' @param skip TRUE/FALSE indicating whether to skip creating the raster file if file already exists
+#' @param force_overwrite TRUE/FALSE designating whether or not to force the function to overwrite the existing file. Overrides skip and sets skip = FALSE. Defaults to FALSE. 
 
 #' @return \code{save_df_wrapper} returns the range of the data.frame returned by \code{build_fisheries_df}. This should be equal to 0 1 if species is present in dataset, and 0 0 if species is not caught in dataset. This function will also save the resulting data.frame as a csv file in the species' input_csvs folder
 
