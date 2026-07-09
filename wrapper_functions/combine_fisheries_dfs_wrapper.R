@@ -30,7 +30,7 @@ combine_fisheries_rasters_wrapper <- function(name, skip) {
       flist <- dir(file.path(getwd(), name, 'input_csvs'), full.names = T)
       dfs <- NULL
       for (r in 1:length(flist)) {
-        df <- read.csv(flist[r]) #rast
+        df <- read.csv(flist[r]) 
         dfs <- rbind(dfs, df)
         #print(r)
       }
