@@ -52,7 +52,7 @@ save_df_wrapper <- function(csv_name, is_obs, grid, spp, spp_names, skip) {
         print(range(rast$pa))
         write.csv(
           rast,
-          filename = paste0(
+          file = paste0(
             file.path(getwd(), spp, 'input_csvs'),
             '/',
             csv_name,
@@ -80,7 +80,7 @@ save_df_wrapper <- function(csv_name, is_obs, grid, spp, spp_names, skip) {
       print(range(rast$pa))
       write.csv(
         rast,
-        filename = paste0(
+        file = paste0(
           file.path(getwd(), spp, 'input_csvs'),
           '/',
           csv_name,

@@ -10,8 +10,8 @@ setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs')
 #setwd('/home/oneapi/ClimateVulnerabilityAssessment2.0/SDMs')
 
 ### load package
-library(devtools)
-devtools::load_all('~/ClimateVulnerabilityAssessment2.0/functions/READ-EDAB-CVA2.0')
+#library(devtools)
+#devtools::load_all('~/ClimateVulnerabilityAssessment2.0/functions/READ-EDAB-CVA2.0')
 library(spatialcva)
 library(future)
 library(furrr)
@@ -282,6 +282,38 @@ pop <- standardize_fisheries_data(
 )
 write.csv(pop, './Data/csvs/standardized/POP_1993_2023.csv')
 
+#logbooks
+log <- standardize_fisheries_data(
+  data_type = 'CSV',
+  csv = "./Data/csvs/raw/Logbook_122025.csv",
+  csv_columns = c(
+    'TRIPN',
+    'LONDD',
+    'LATDD',
+    'DATE',
+    'BFT_TOTAL',
+    'NAME'
+  ),
+  yr_range = c(1993, 2023)
+)
+write.csv(log, './Data/csvs/standardized/LOGBOOK_1993_2023.csv')
+
+#lps
+lps <- standardize_fisheries_data(
+  data_type = 'CSV',
+  csv = "./Data/csvs/raw/LPS_Oct2025.csv",
+  csv_columns = c(
+    'ID',
+    'decdeg_lat',
+    'decdeg_long',
+    'startDate',
+    'caught',
+    'COMNAME'
+  ),
+  yr_range = c(1993, 2023)
+)
+write.csv(lps, './Data/csvs/standardized/LPS_1993_2023.csv')
+
 ##############################
 
 ##############################
@@ -378,18 +410,18 @@ for(x in 1:nrow(spp.list)){
     sep = ','
   )
   
-  a <- data.frame(spp = spp.list$Common.Name[x], 
+  a <- data.frame(spp = spp.list$Name[x], 
                   is_obs = sObs, 
                   source = sSources, 
                   all_names = altNames)
   args <- rbind(args, a)
 }
 args$source <- paste0(args$source, '_1993_2023')
-args$skip = F
+args$skip = T
 args$grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc"
 
 
-plan(multisession, workers = 5)
+plan(multisession, workers = 8)
 #sink(file = 'rasters.log', append = T)
 checks <- future_pmap(
   list(
@@ -413,21 +445,6 @@ checks <- future_pmap(
 #sink()
 plan(sequential)
 
-for (x in 1:nrow(args)) {
-  saveRast(
-    csvName = args$csvName[x],
-    spp = args$spp[x],
-    sppNames = altNames[x],
-    skip = F,
-    isObs = T
-  )
-  print(x)
-}
-
-#cl <- makeCluster(3)
-#clusterExport(cl, c('saveRast', 'create_rast', 'spp.list', 'sources'))
-#clusterApplyLB(cl, sources, saveRast, spp.list = spp.list, skip = T)
-#stopCluster(cl)
 
 ### put them all together - takes about an hour and a half
 args <- tidyr::expand_grid(
