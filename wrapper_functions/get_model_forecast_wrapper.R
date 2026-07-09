@@ -33,8 +33,7 @@ get_model_forecast_wrapper <- function(
         #for(x in 1:nrow(var.list)){
         r <- pull_mom6_forecast(
           var_url = json_url,
-          req_vars = var_df$Long.Name[x],
-          short_names = var_df$Short.Name[x],
+          req_var = var_df$Long.Name[x],
           release = release,
           init = init,
           spatial.temporal = spatial.temporal
@@ -46,10 +45,10 @@ get_model_forecast_wrapper <- function(
     for (x in 1:nrow(var_df)) {
       r <- pull_mom6_forecast(
         var_url = json_url,
-        req_vars = var_df$Long.Name[x],
-        short_names = var_df$Short.Name[x],
+        req_var = var_df$Long.Name[x],
         release = release,
-        init = init
+        init = init,
+        spatial.temporal = spatial.temporal
       )
       raw[[x]] <- r
     }
