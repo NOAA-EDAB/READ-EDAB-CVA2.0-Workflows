@@ -20,8 +20,10 @@ get_model_data_wrapper <- function(
     init,
     spatial_temporal
 ) {
-  #step 1 - set up logging & suffix
+  #step 0 - set up logging & suffix
   suffix <- if(spatial_temporal) "" else "_global"
+  
+  log_appender(appender_file("./logs/mom6_hindcast_july2026.log"))
   log_info("Starting variable: {short_name} using source: {source}")
   
   # --- Step 1: Dynamic Data Pulling using switch() ---

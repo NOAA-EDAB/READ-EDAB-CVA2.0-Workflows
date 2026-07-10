@@ -546,8 +546,7 @@ var.list <- data.frame(
 )
 
 ####hindcast
-log_appender(appender_file("./logs/mom6_hindcast_july2026.log"))
-plan(multisession, workers = 6)
+plan(multisession, workers = 8)
 mom6_results <- future_map(
   1:nrow(var.list), 
   ~get_model_data_wrapper(
