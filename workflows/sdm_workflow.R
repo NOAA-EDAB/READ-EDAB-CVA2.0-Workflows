@@ -365,16 +365,28 @@ var.list <- data.frame(
 )
 
 ####hindcast
-normH <- get_model_hindcast_wrapper(
-  var_df = var.list,
-  in_par = T,
-  n_cores = 5,
-  json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.hindcast.json",
-  release = 'r20250715'
+log_appender(appender_file("mom6_hindcast.log"))
+
+# Set up the cluster ONCE outside the loop
+plan(multisession, workers = 6)
+norm_results <- future_map(
+  1:nrow(var_df), 
+  ~get_model_data_wrapper(
+    source = 'hindcast',
+    var_name = var.list$Long.Name[.x],
+    short_name = var.list$Short.Name[.x],
+    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.hindcast.json",
+    release = 'r20250715',
+    init = NA,
+    spatial_temporal = FALSE
+  )
 )
+names(norm_results) <- var_df$Short.Name
+
+# Explicitly close cluster when entirely finished
+plan(sequential)
 
 ###decadal forecast
-for (x in 1:10) {
   normF <- get_model_forecast_wrapper(
     var_df = var.list,
     in_par = T,
@@ -384,7 +396,7 @@ for (x in 1:10) {
     init = 'i202001',
     ens = x
   )
-}
+
 ##############################
 
 ###################################
@@ -419,53 +431,42 @@ for(x in 1:nrow(spp.list)){
   args <- rbind(args, a)
 }
 args$source <- paste0(args$source, '_1993_2023')
-args$skip = F
-args$grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc"
 
 plan(multisession, workers = 8)
-#sink(file = 'rasters.log', append = T)
 checks <- future_pmap(
   list(
     ..1 = args$source,
     ..2 = args$spp,
     ..3 = args$all_names,
-    ..4 = args$skip,
-    ..5 = args$is_obs,
-    ..6 = args$grid
+    ..4 = args$is_obs
   ),
   ~ save_df_wrapper(
     csv_name = ..1,
     spp = ..2,
     spp_names = ..3,
-    skip = ..4,
-    is_obs = ..5,
-    grid = ..6, 
+    is_obs = ..4,
+    skip = F,
+    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc", 
     force_overwrite = TRUE
   ),
   .progress = T
 )
-#sink()
 plan(sequential)
 
 
 ### Combine all source data frames for each species
-args <- tidyr::expand_grid(
-  name = spp.list$Name,
-  skip = T
-)
-
-plan(multisession, workers = 6)
-combs <- future_pmap(
-  list(..1 = args$name, 
-       ..2 = args$skip),
-  ~ combine_fisheries_dfs_wrapper(name = ..1, 
-                                  skip = ..2),
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~ combine_fisheries_dfs_wrapper(name = spp.list$Name[.x], 
+                                  skip = F,
+                                  force_overwrite = T),
   .progress = T
 )
 plan(sequential)
-#sink()
 
-###quick sanity check
+
+###quick sanity check because the results can get lost in the log - load each csv in and print range - all should be 0-1
 flist <- dir(
   path = getwd(),
   pattern = 'combined_pa.csv',

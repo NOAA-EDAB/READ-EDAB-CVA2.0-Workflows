@@ -15,49 +15,33 @@ combine_fisheries_dfs_wrapper <- function(name, skip, force_overwrite = FALSE) {
   log_appender(appender_file(log_path))
   
   # Define path where output is saved (saved as a variable to prevent typos and duplication)
-  output_file <- file.path(getwd(), spp, 'input_csvs', 'combined_pa.csv.csv')
+  output_file <- file.path(getwd(), name, 'input_csvs', 'combined_pa.csv.csv')
   
   # 2. Check skip / overwrite logic up front
   # If force_overwrite is TRUE, we ignore the skip setting completely
   if (skip && !force_overwrite && file.exists(output_file)) {
-    log_info("{spp}: File exists and skip == TRUE. Skipping execution.")
+    log_info("{name}: File exists and skip == TRUE. Skipping execution.")
     return(NA)
   }
   
   if (force_overwrite && file.exists(output_file)) {
-    log_info("{spp}: File exists but force_overwrite == TRUE. Re-running.")
+    log_info("{name}: File exists but force_overwrite == TRUE. Re-running.")
   }
   
-  log_info("{spp}: Combining csvs...")
+  log_info("{name}: Combining csvs...")
   
   # 3. Safe Execution Block using tryCatch
   result <- tryCatch({
     
     # Read the data safely inside the try block
-    spp_dir <- dir(file.path(getwd(), name, 'input_csvs'), full.names = T)
-    if (
-      file.exists(paste(
-        file.path(getwd(), name, 'input_csvs'),
-        'combined_pa.csv',
-        sep = '/'
-      ))
-    ) {
-      i <- which(
-        flist ==
-          paste(
-            file.path(getwd(), name, 'input_csvs'),
-            'combined_pa.csv',
-            sep = '/'
-          )
-      )
-      spp_dir <- spp_dir[-i]
-    }
+    spp_dir <- file.path(getwd(), name, 'input_csvs')
+    
     
     combinedDFs <- merge_fisheries_dfs(spp_dir)
     
     # Handle the output
       pa_range <- range(combinedDFs$pa, na.rm = TRUE)
-      log_info("{spp}: Success. PA range: {paste(pa_range, collapse = ' to ')}")
+      log_info("{name}: Success. PA range: {paste(pa_range, collapse = ' to ')}")
       
       write.csv(combinedDFs, 
                 row.names = F, 
@@ -68,7 +52,7 @@ combine_fisheries_dfs_wrapper <- function(name, skip, force_overwrite = FALSE) {
   }, error = function(e) {
     # 4. CAPTURE THE CATASTROPHIC ERRORS
     # If build_fisheries_df crashes, this block catches it and logs exactly why
-    log_error("{spp}: CRASHED with error: {e$message}")
+    log_error("{name}: CRASHED with error: {e$message}")
     return(NULL) 
   })
   return(result)
