@@ -4,67 +4,35 @@
 ##################################
 #####SET UP - LOAD EVERY TIME ####
 ##################################
-
-###load libraries
-library(ncdf4)
-library(caret)
-library(DescTools)
-library(fields)
-library(parallel)
-library(doParallel)
-library(abind)
-library(sf)
-library(sftime)
-library(survdat)
-library(dbutils)
-library(measurements)
-library(lubridate)
-library(raster)
-library(reshape2)
-library(Matrix)
-library(TMB)
-library(sdmTMB)
-library(sdmTMBextra)
-library(future)
-library(ranger)
-library(sp)
-library(akgfmaps)
-library(EFHSDM)
-library(terra)
-library(meteo)
-library(dismo)
-library(gbm)
-library(gamm4)
-library(ROCR)
-library(sftime)
-library(furrr)
-library(maxnet)
-library(gstat)
-
 ### set working directory
 setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs')
 #setwd('/home/oneapi/ClimateVulnerabilityAssessment2.0/SDMs')
 
-### source functions
-targets::tar_source(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/functions"
-) #this + library calls will be replaced by calling the package
-#targets::tar_source("/home/oneapi/ClimateVulnerabilityAssessment2.0/functions")
+### load package
+#library(devtools)
+#devtools::load_all('~/ClimateVulnerabilityAssessment2.0/functions/READ-EDAB-CVA2.0')
+library(spatialcva)
+
+#load additional packages needed for workflows
+library(future)
+library(furrr)
+library(logger)
 
 #create species folders and appropriate subfolders
-#spp.list <- create_spp_list('spp_list.csv')
-
 spp.list <- read.csv('spp_list.csv')
-#spp.list <- spp.list[,c(1:6)]
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
   dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main folder
+  #dir.create(
+  # file.path(getwd(), spp.list$Name[x], 'input_rasters'),
+  #showWarnings = T
+  # ) #input raster folder
   dir.create(
-    file.path(getwd(), spp.list$Name[x], 'input_rasters'),
+    file.path(getwd(), spp.list$Name[x], 'input_csvs'),
     showWarnings = T
-  ) #input raster folder
+  )
   dir.create(
     file.path(getwd(), spp.list$Name[x], 'output_rasters'),
     showWarnings = T
@@ -95,6 +63,7 @@ for (x in 1:nrow(spp.list)) {
   ) #model_output/importance folder
   dir.create(file.path(getwd(), spp.list$Name[x], 'figures'), showWarnings = T) #model_output folder
 }
+
 
 ##################################
 
@@ -577,14 +546,23 @@ var.list <- data.frame(
 )
 
 ####hindcast
-normH <- get_model_hindcast_wrapper(
-  var_df = var.list,
-  in_par = T,
-  n_cores = 5,
-  json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.hindcast.json",
-  release = 'r20230520'
+log_appender(appender_file("./logs/mom6_hindcast_july2026.log"))
+plan(multisession, workers = 6)
+mom6_results <- future_map(
+  1:nrow(var.list), 
+  ~get_model_data_wrapper(
+    var_name = var.list$Long.Name[.x],
+    short_name = var.list$Short.Name[.x],
+    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.hindcast.json",
+    release = "r20250715",
+    init = NA,
+    spatial_temporal = FALSE,
+    source = "hindcast",
+    static_grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/ssh.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc"
+  )
 )
-save('./Data/MOM6/norm_MOM6_082025.RData')
+plan(sequential)
+
 
 ###decadal forecast
 for (x in 1:10) {

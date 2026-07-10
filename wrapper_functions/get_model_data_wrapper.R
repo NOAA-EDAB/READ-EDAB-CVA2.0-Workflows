@@ -44,7 +44,7 @@ get_model_data_wrapper <- function(
                static_grid = static_grid
              )
            },
-           # Default fallback error if you pass a typo (e.g., source = "mmo6")
+           # Default fallback error if you pass a typo 
            stop(paste("Unknown data source specified:", source))
     )
   }, error = function(e) {
