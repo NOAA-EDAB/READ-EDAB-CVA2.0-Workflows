@@ -551,7 +551,7 @@ staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVari
 bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
 
 ####hindcast
-plan(multisession, workers = 8)
+plan(multisession, workers = 3)
 mom6_results <- future_map(
   1:nrow(var.list), 
   ~get_model_data_wrapper(
@@ -573,17 +573,26 @@ plan(sequential)
 
 
 ###decadal forecast
-for (x in 1:10) {
-  normF <- get_model_forecast_wrapper(
-    var_df = var.list,
-    in_par = T,
-    n_cores = 5,
+plan(multisession, workers = 8)
+mom6_results <- future_map(
+  1:nrow(var.list), 
+  ~get_model_data_wrapper(
+    var_name = var.list$Long.Name[.x],
+    short_name = var.list$Short.Name[.x],
     json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
     release = 'r20250925',
-    init = 'i202001',
-    ens = x
-  )
-}
+    init = 'i202501',
+    spatial_temporal = FALSE,
+    source = "forecast",
+    mask_bathy = T,
+    bathy = bathy,
+    bathy_range = c(-1000, 0),
+    force_overwrite = F
+  ),
+  .progress = T
+)
+plan(sequential)
+
 ##############################
 
 ##############################
