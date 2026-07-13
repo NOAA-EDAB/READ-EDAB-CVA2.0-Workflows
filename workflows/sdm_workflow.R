@@ -548,7 +548,7 @@ var.list <- data.frame(
 #load in bathy for masking 
 staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped_terra_reproj.tif')#staticR
 #bathy object = staticR$bathy
-bathy <- terra::wrap(staticR$bathy)
+bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
 
 ####hindcast
 plan(multisession, workers = 8)
