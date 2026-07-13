@@ -545,6 +545,10 @@ var.list <- data.frame(
   )
 )
 
+#load in bathy for masking 
+staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped_terra_reproj.tif')#staticR
+#bathy object = staticR$bathy
+
 ####hindcast
 plan(multisession, workers = 8)
 mom6_results <- future_map(
@@ -557,8 +561,11 @@ mom6_results <- future_map(
     init = NA,
     spatial_temporal = FALSE,
     source = "hindcast",
-    static_grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/ssh.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc"
-  )
+    mask_bathy = T,
+    bathy = staticR$bathy,
+    bathy_range = c(-1000, 0)
+  ),
+  .progress = T
 )
 plan(sequential)
 
