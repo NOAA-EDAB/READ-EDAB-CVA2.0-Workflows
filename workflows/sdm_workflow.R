@@ -548,6 +548,7 @@ var.list <- data.frame(
 #load in bathy for masking 
 staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped_terra_reproj.tif')#staticR
 #bathy object = staticR$bathy
+bathy <- terra::wrap(staticR$bathy)
 
 ####hindcast
 plan(multisession, workers = 8)
@@ -562,8 +563,9 @@ mom6_results <- future_map(
     spatial_temporal = FALSE,
     source = "hindcast",
     mask_bathy = T,
-    bathy = staticR$bathy,
-    bathy_range = c(-1000, 0)
+    bathy = bathy,
+    bathy_range = c(-1000, 0),
+    force_overwrite = F
   ),
   .progress = T
 )

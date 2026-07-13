@@ -24,80 +24,111 @@ get_model_data_wrapper <- function(
     spatial_temporal, 
     mask_bathy, 
     bathy, 
-    bathy_range
+    bathy_range,
+    force_overwrite = FALSE
 ) {
   #step 0 - set up logging & suffix
   suffix <- if(spatial_temporal) "" else "_global"
+  bathy_suffix <- if(mask_bathy) "masked" else ""
   
   log_appender(appender_file("./logs/mom6_hindcast_july2026.log"))
   log_info("Starting variable: {short_name} using source: {source}")
   
-  # --- Step 1: Dynamic Data Pulling using switch() ---
-  raw_data <- tryCatch({
-    switch(tolower(source),
-           "hindcast" = {
-             pull_mom6_hindcast(
-               var_url = json_url,
-               req_var = var_name,
-               release = release
-             )
-           },
-           "forecast" = {
-             pull_mom6_forecast(
-               var_url = json_url,
-               req_var = var_name,
-               release = release,
-               init = init,
-               static_grid = static_grid
-             )
-           },
-           # Default fallback error if you pass a typo 
-           stop(paste("Unknown data source specified:", source))
-    )
-  }, error = function(e) {
-    log_error("Failed to pull data for {short_name} from {source}: {e$message}")
-    return(NULL)
-  })
+  # Define the raw file path up front to check for its existence
+  raw_filename <- paste0('./Data/MOM6/raw_MOM6_', short_name, '_', source, '_', release, suffix, '.tif')
   
-  # If the pull failed completely, exit early before hitting subsequent steps
-  if (is.null(raw_data)){
-    return(NULL)
+  # --- CHECKPOINT CHECK: Skip Pulling if Raw File Exists ---
+  if (file.exists(raw_filename) && !force_overwrite) {
+    log_info("{short_name} ({source}): Raw file already exists. Skipping download/pull step.")
+    
+    raw_data <- tryCatch({
+      terra::rast(raw_filename)
+    }, error = function(e) {
+      log_error("Failed to read existing raw file {raw_filename}: {e$message}. Attempting re-download.")
+      NULL
+    })
   } else {
-    
-    terra::writeRaster(raw_data, 
-                       filename = paste0('./Data/MOM6/raw_MOM6_',  short_name, '_', source, '_',release, suffix, '.tif'),
-                       overwrite = T)
-    log_info("{short_name} raw {source} data saved")
-    
-    #Step 1.5 - mask raw data if necessary 
-    if(mask_bathy){
-      raw_data <- terra::ifel(bathy <= bathy_range[1] | bathy > bathy_range[2], NA, raw_data)
-    }
-    
-    # Step 2 & 3: Avg and SD
-    avg_data <- avg_model_data(raw_data, spatial_temporal = spatial_temporal)
-    sd_data  <- sd_model_data(raw_data, spatial_temporal = spatial_temporal)
-    
-    if (spatial.temporal) {
-      terra::writeRaster(avg_data, filename = paste0('./Data/MOM6/avg_', short_name, '_', source, '_', release, '.tif'), overwrite = TRUE)
-      terra::writeRaster(sd_data,  filename = paste0('./Data/MOM6/sd_', short_name, '_', source, '_', release, '.tif'),  overwrite = TRUE)
-    } else {
-      # If spatial.temporal is FALSE, they are global numeric values/vectors. Save as RDS.
-      saveRDS(avg_data, file = paste0('./Data/MOM6/avg_', short_name, '_', source, '_', release, '_global.rds'))
-      saveRDS(sd_data,  file = paste0('./Data/MOM6/sd_', short_name, '_', source, '_', release, '_global.rds'))
-    }
-    log_info("{short_name} average and standard deviations saved")
-    
-    # Step 4: Normalize
-    norm_data <- normalize_model_data(
-      raw = raw_data,
-      avg = avg_data,
-      sd = sd_data,
-      spatial_temporal = spatial_temporal
-    )
-    terra::writeRaster(norm_data, filename = paste0('./Data/MOM6/norm_', short_name, '_', source, '_', release, suffix, '.tif'), overwrite = TRUE)
-    log_info("{short_name} data normalized and saved")
-    
-    return(norm_data)
+    raw_data <- NULL
   }
+  
+  # --- Step 1: Dynamic Data Pulling (Only runs if file doesn't exist OR force_overwrite = TRUE) ---
+  if (is.null(raw_data)) {
+    if (force_overwrite && file.exists(raw_filename)) {
+      log_info("{short_name} ({source}): Raw file exists, but force_overwrite = TRUE. Re-downloading...")
+    } else {
+      log_info("{short_name} ({source}): Raw file not found. Beginning download...")
+    }
+    raw_data <- tryCatch({
+      switch(tolower(source),
+             "hindcast" = {
+               pull_mom6_hindcast(
+                 var_url = json_url,
+                 req_var = var_name,
+                 release = release
+               )
+             },
+             "forecast" = {
+               pull_mom6_forecast(
+                 var_url = json_url,
+                 req_var = var_name,
+                 release = release,
+                 init = init,
+                 static_grid = static_grid
+               )
+             },
+             # Default fallback error if you pass a typo 
+             stop(paste("Unknown data source specified:", source))
+      )
+    }, error = function(e) {
+      log_error("Failed to pull data for {short_name} from {source}: {e$message}")
+      return(NULL)
+    })
+  
+    # If the pull failed completely, exit early
+    if (is.null(raw_data)) return(NULL)
+    
+    # Save the processed raw raster to disk
+    #dir.create(dirname(raw_filename), recursive = TRUE, showWarnings = FALSE)
+    terra::writeRaster(raw_data, filename = raw_filename, overwrite = TRUE)
+    log_info("{short_name} raw {source} data saved to disk")
+  }
+  
+  # Step 1.5 - mask raw data if necessary BEFORE saving
+  if (mask_bathy) {
+    # CRITICAL FIX: Unwrap the bathymetry raster inside the worker
+    if (inherits(bathy, "PackedSpatRaster")) {
+      bathy <- terra::unwrap(bathy)
+    }
+    
+    raw_data <- terra::ifel(bathy <= bathy_range[1] | bathy > bathy_range[2], NA, raw_data)
+    log_info("{short_name} raw {source} data masked with bathymetry between {bathy_range[1]} and {bathy_range[2]}")
+  }
+  
+  # --- Step 2 & 3: Avg and SD (Will recalculate downstream data using the loaded/pulled raw_data) ---
+  avg_data <- avg_model_data(raw_data, spatial_temporal = spatial_temporal)
+  sd_data  <- sd_model_data(raw_data, spatial_temporal = spatial_temporal)
+  
+  if (spatial_temporal) {
+    terra::writeRaster(avg_data, filename = paste0('./Data/MOM6/avg_', short_name, '_', source, '_', release, '_', bathy_suffix, '.tif'), overwrite = TRUE)
+    terra::writeRaster(sd_data,  filename = paste0('./Data/MOM6/sd_', short_name, '_', source, '_', release, '_', bathy_suffix, '.tif'),  overwrite = TRUE)
+  } else {
+    saveRDS(avg_data, file = paste0('./Data/MOM6/avg_', short_name, '_', source, '_', release, '_', bathy_suffix, '_global', '.rds'))
+    saveRDS(sd_data,  file = paste0('./Data/MOM6/sd_', short_name, '_', source, '_', release, '_', bathy_suffix, '_global', '.rds'))
+  }
+  log_info("{short_name} average and standard deviations saved")
+  
+  # --- Step 4: Normalize ---
+  norm_data <- normalize_model_data(
+    raw = raw_data,
+    avg = avg_data,
+    sd = sd_data,
+    spatial_temporal = spatial_temporal
+  )
+  
+  norm_filename <- paste0('./Data/MOM6/norm_', short_name, '_', source, '_', release, '_', bathy_suffix, suffix, '.tif')
+  terra::writeRaster(norm_data, filename = norm_filename, overwrite = TRUE)
+  log_info("{short_name} data normalized and saved")
+  
+  return(norm_data)
+  
 } #end function
