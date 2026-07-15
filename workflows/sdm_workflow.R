@@ -484,49 +484,79 @@ for (x in 1:length(flist)) {
 ##### PREPARE DATA FRAMES #####
 ###############################
 
-args <- tidyr::expand_grid(
-  name = spp.list$Name,
-  skip = F,
-  mMin = 1,
-  mMax = 12,
-  yMin = 1993,
-  yMax = 2019
-) #create list of arguments for loop
+var.list <- data.frame(
+  Long.Name = c(
+    'Bottom Temperature',
+    'Bottom Oxygen',
+    'Sea Water Salinity at Sea Floor',
+    'Bottom Aragonite Solubility',
+    'Sea Surface Temperature',
+    'Sea Surface Salinity',
+    'Surface pH',
+    'Mixed layer depth (delta rho = 0.03)',
+    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
+    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Small zooplankton nitrogen biomass in upper 100m',
+    'Medium zooplankton nitrogen biomass in upper 100m',
+    'Large zooplankton nitrogen biomass in upper 100m',
+    'Water column net primary production vertical integral',
+    'Downward Flux of Particulate Organic Carbon'
+  ),
+  Short.Name = c(
+    'bottomT',
+    'bottomO2',
+    'bottomS',
+    'bottomArg',
+    'surfaceT',
+    'surfaceS',
+    'surfacepH',
+    'MLD',
+    'diazPP',
+    'smallPP',
+    'mediumPP',
+    'largePP',
+    'smallZoo',
+    'mediumZoo',
+    'largeZoo',
+    'intNPP',
+    'POC'
+  )
+)
+
+statics <- terra::rast('./Data/staticVariables_masked_norm_terra.tif')
+statics <- terra::wrap(statics) #to help with parallelization
+
+feeding <- read.csv('feeding_guilds.csv')
+habitat <- read.csv('habitat_guilds.csv')
 
 options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
-#sink(file = 'rasters.log', append = T)
-dfs <- future_pmap(
-  list(
-    ..1 = args$name,
-    ..2 = args$skip,
-    ..3 = args$mMin,
-    ..4 = args$mMax,
-    ..5 = args$yMin,
-    ..6 = args$yMax
-  ),
-  ~ makeDF(
-    name = ..1,
-    skip = ..2,
-    mMin = ..3,
-    mMax = ..4,
-    yMin = ..5,
-    yMax = ..6
-  ),
-  .progress = T,
-  .options = furrr_options(seed = 2025)
+plan(multisession, workers = 4)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~prepare_dataframe_wrapper(name = spp.list$Name[.x],
+                             source = 'hindcast',
+                             short_names = var.list$Short.Name,
+                             release = 'r20250715',
+                             spatial_temporal = FALSE,
+                             mask_bathy = T,
+                             all_env = F,
+                             spp_key = spp.list,
+                             feed_key = feeding,
+                             hab_key = habitat,
+                             add_static = T,
+                             static_variables = statics,
+                             rm_corr = T, 
+                             training_years = c(1993, 2019),
+                             test_years = c(2020, 2023),
+                             skip = F, 
+                             force_overwrite = F),
+  .progress = T
 )
 #sink()
 plan(sequential)
 
-##checks to make sure that guilds matched correctly
-for (x in c(37:42)) {
-  load(paste(file.path(getwd(), spp.list$Name[x]), 'pa_guild.RData', sep = '/')) #dfG
-  print(names(dfG))
-  print(spp.list$Name[x])
-  print(spp.list$Feeding.Guild[x])
-  print(spp.list$Habitat.Guild[x])
-}
 
 ##############################
 
