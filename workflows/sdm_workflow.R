@@ -480,12 +480,9 @@ for (x in 1:length(flist)) {
 
 ###################################
 
-##############################
-##### SUBSET DATA FRAMES #####
-##############################
-
-load('./Data/MOM6/norm_MOM6_092025.RData') #norm
-load('./Data/staticVariables_cropped_normZ.RData')
+###############################
+##### PREPARE DATA FRAMES #####
+###############################
 
 args <- tidyr::expand_grid(
   name = spp.list$Name,
