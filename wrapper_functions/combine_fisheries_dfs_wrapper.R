@@ -15,7 +15,7 @@ combine_fisheries_dfs_wrapper <- function(name, skip, force_overwrite = FALSE) {
   log_appender(appender_file(log_path))
   
   # Define path where output is saved (saved as a variable to prevent typos and duplication)
-  output_file <- file.path(getwd(), name, 'input_csvs', 'combined_pa.csv.csv')
+  output_file <- file.path(getwd(), name, 'input_csvs', 'combined_pa.csv')
   
   # 2. Check skip / overwrite logic up front
   # If force_overwrite is TRUE, we ignore the skip setting completely
