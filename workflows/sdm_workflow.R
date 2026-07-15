@@ -551,7 +551,7 @@ staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVari
 bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
 
 ####hindcast
-plan(multisession, workers = 3)
+plan(multisession, workers = 8)
 mom6_results <- future_map(
   1:nrow(var.list), 
   ~get_model_data_wrapper(
@@ -573,12 +573,54 @@ plan(sequential)
 
 
 ###decadal forecast
+forecast.list <- data.frame(
+  Long.Name = c(
+    'Sea Water Potential Temperature at Sea Floor',
+    'Bottom Oxygen',
+    'Sea Water Salinity at Sea Floor',
+    'Bottom Aragonite Solubility',
+    'Sea Surface Temperature',
+    'Sea Surface Salinity',
+    'Surface pH',
+    'Mixed layer depth (delta rho = 0.03)',
+    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
+    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Small zooplankton nitrogen biomass in upper 100m',
+    'Medium zooplankton nitrogen biomass in upper 100m',
+    'Large zooplankton nitrogen biomass in upper 100m',
+    'Water column net primary production vertical integral',
+    'Downward Flux of Particulate Organic Carbon'
+  ),
+  Short.Name = c(
+    'bottomT',
+    'bottomO2',
+    'bottomS',
+   'bottomArg',
+    'surfaceT',
+    'surfaceS',
+    'surfacepH',
+    'MLD',
+    'diazPP',
+    'smallPP',
+    'mediumPP',
+    'largePP',
+    'smallZoo',
+    'mediumZoo',
+    'largeZoo',
+    'intNPP',
+    'POC'
+  )
+)
+
+#parallel version
 plan(multisession, workers = 8)
 mom6_results <- future_map(
-  1:nrow(var.list), 
+  1:nrow(forecast.list), 
   ~get_model_data_wrapper(
-    var_name = var.list$Long.Name[.x],
-    short_name = var.list$Short.Name[.x],
+    var_name = forecast.list$Long.Name[.x],
+    short_name = forecast.list$Short.Name[.x],
     json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
     release = 'r20250925',
     init = 'i202501',
@@ -587,12 +629,32 @@ mom6_results <- future_map(
     mask_bathy = T,
     bathy = bathy,
     bathy_range = c(-1000, 0),
-    force_overwrite = F
+    force_overwrite = T
   ),
   .progress = T
 )
 plan(sequential)
 
+#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until the prediction step, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that 
+
+#for(x in 1:nrow(forecast.list)){
+ # print(Sys.time())
+#  get_model_data_wrapper(
+ #   var_name = forecast.list$Long.Name[x],
+  #  short_name = forecast.list$Short.Name[x],
+   # json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+    #release = 'r20250925',
+#    init = 'i202501',
+ #   spatial_temporal = FALSE,
+  #  source = "forecast",
+   # mask_bathy = T,
+    #bathy = bathy,
+#    bathy_range = c(-1000, 0),
+ #   force_overwrite = T
+  #)
+#  print(x)
+ # print(Sys.time())
+#}
 ##############################
 
 ##############################
