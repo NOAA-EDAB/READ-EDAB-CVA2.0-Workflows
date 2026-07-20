@@ -4,6 +4,7 @@
 ##################################
 #####SET UP - LOAD EVERY TIME ####
 ##################################
+
 ### set working directory
 setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs')
 #setwd('/home/oneapi/ClimateVulnerabilityAssessment2.0/SDMs')
@@ -26,9 +27,15 @@ spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
 for (x in 1:nrow(spp.list)) {
   dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main folder
   #dir.create(
+<<<<<<< HEAD
+   # file.path(getwd(), spp.list$Name[x], 'input_rasters'),
+    #showWarnings = T
+ # ) #input raster folder
+=======
   # file.path(getwd(), spp.list$Name[x], 'input_rasters'),
   #showWarnings = T
   # ) #input raster folder
+>>>>>>> dev
   dir.create(
     file.path(getwd(), spp.list$Name[x], 'input_csvs'),
     showWarnings = T
@@ -71,28 +78,28 @@ for (x in 1:nrow(spp.list)) {
 #####GET FISHERIES DATA ######
 ##############################
 
-####1993-2019
+####1993-2023
 #survey data - needs VPN
 surv <- standardize_fisheries_data(
-  data_type = 'Surveys',
+  data_type = 'NESurveys',
   channel = dbutils::connect_to_database(
     server = "NEFSC_pw_oraprod",
     uid = "KGALLAGHER"
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(surv, './Data/csvs/standardized/survey_1993_2019.csv')
+write.csv(surv, './Data/csvs/standardized/Survey_1993_2023.csv')
 
 #observer data - needs VPN
 obs <- standardize_fisheries_data(
-  data_type = 'Observer',
+  data_type = 'NEObserver',
   channel = dbutils::connect_to_database(
     server = "NEFSC_pw_oraprod",
     uid = "KGALLAGHER"
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(obs, './Data/csvs/standardized/observer_1993_2019.csv')
+write.csv(obs, './Data/csvs/standardized/Observer_1993_2023.csv')
 
 ## State run surveys
 #maine/new hampshire
@@ -107,18 +114,18 @@ menh <- standardize_fisheries_data(
     'Number_Caught',
     'Common_Name'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(menh, './Data/csvs/standardized/MENH_1993_2019.csv')
+write.csv(menh, './Data/csvs/standardized/MENH_1993_2023.csv')
 
 #mass
 mass <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = "./Data/csvs/raw/MABottom_Trawl_02_2026.csv",
   csv_columns = c('towID', 'Lon', 'Lat', 'Date', 'Num', 'SCI_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(mass, './Data/csvs/standardized/MA_1993_2019.csv')
+write.csv(mass, './Data/csvs/standardized/MA_1993_2023.csv')
 
 #new jersey
 nj <- standardize_fisheries_data(
@@ -132,9 +139,9 @@ nj <- standardize_fisheries_data(
     'NUMBER',
     'LATIN_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(nj, './Data/csvs/standardized/NJ_1993_2019.csv')
+write.csv(nj, './Data/csvs/standardized/NJ_1993_2023.csv')
 
 #ct
 ct <- standardize_fisheries_data(
@@ -148,18 +155,18 @@ ct <- standardize_fisheries_data(
     'TotalCount',
     'name'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(ct, './Data/csvs/standardized/CT_1993_2019.csv')
+write.csv(ct, './Data/csvs/standardized/CT_1993_2023.csv')
 
 #delaware
 de <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = "./Data/csvs/raw/DE_Tow_Catch_2025-07-18.csv",
   csv_columns = c('towID', 'LONDD', 'LATDD', 'date', 'number', 'SCI_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(de, './Data/csvs/standardized/DE_1993_2019.csv')
+write.csv(de, './Data/csvs/standardized/DE_1993_2023.csv')
 
 #neamap
 neamap <- standardize_fisheries_data(
@@ -173,18 +180,18 @@ neamap <- standardize_fisheries_data(
     'present_absent',
     'SCI_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(neamap, './Data/csvs/standardized/NEAMAP_1993_2019.csv')
+write.csv(neamap, './Data/csvs/standardized/NEAMAP_1993_2023.csv')
 
 #ny
 ny <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = "./Data/csvs/raw/NYDEC_Tow_Catch_Feb2026.csv",
   csv_columns = c('STATION', 'LONDD', 'LATDD', 'time', 'Presence', 'COM_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(ny, './Data/csvs/standardized/NY_1993_2019.csv')
+write.csv(ny, './Data/csvs/standardized/NY_1993_2023.csv')
 
 ####pull in older NEAMAP & MA w/bft
 #neamap
@@ -199,27 +206,27 @@ neamapBFT <- standardize_fisheries_data(
     'present_absent',
     'SCI_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(neamapBFT, './Data/csvs/standardized/NEAMAP-BFT_1993_2019.csv')
+write.csv(neamapBFT, './Data/csvs/standardized/NEAMAP.BFT_1993_2023.csv')
 
 #mass
 massBFT <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = "./Data/csvs/raw/MABottom_Trawl_2025-08-6-wBFT.csv",
   csv_columns = c('towID', 'Lon', 'Lat', 'Date', 'Num', 'SCI_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(massBFT, './Data/csvs/standardized/MA-BFT_1993_2019.csv')
+write.csv(massBFT, './Data/csvs/standardized/MA.BFT_1993_2023.csv')
 
 ###additional smooth dogfish presences from HMS
 hmsSD <- standardize_fisheries_data(
   data_type = 'CSV',
   csv = './Data/csvs/raw/HMS_SmoothDogfish_09-12-25.csv',
   csv_columns = c('id', 'LON', 'LAT', 'date', 'pa', 'SCI_NAME'),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(hmsSD, './Data/csvs/standardized/HMS-SD_1993_2019.csv')
+write.csv(hmsSD, './Data/csvs/standardized/HMS_1993_2023.csv')
 
 ##shrimp survey
 shrimp <- standardize_fisheries_data(
@@ -233,9 +240,9 @@ shrimp <- standardize_fisheries_data(
     'EXPCATCHNUM',
     'SCINAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(shrimp, './Data/csvs/standardized/shrimp_1993_2019.csv')
+write.csv(shrimp, './Data/csvs/standardized/Shrimp_1993_2023.csv')
 
 #gom bll
 gom <- standardize_fisheries_data(
@@ -249,9 +256,9 @@ gom <- standardize_fisheries_data(
     'CATCHNUM',
     'COMMON_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(gom, './Data/csvs/standardized/GOMBLL_1993_2019.csv')
+write.csv(gom, './Data/csvs/standardized/GOM.LL_1993_2023.csv')
 
 #GOP
 gop <- standardize_fisheries_data(
@@ -265,9 +272,9 @@ gop <- standardize_fisheries_data(
     'NUM_FISH',
     'SPECIES_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(gop, './Data/csvs/standardized/GOP_1993_2019.csv')
+write.csv(gop, './Data/csvs/standardized/GOP_1993_2023.csv')
 
 #POP
 pop <- standardize_fisheries_data(
@@ -281,223 +288,42 @@ pop <- standardize_fisheries_data(
     'NUM_FISH',
     'SPECIES_NAME'
   ),
-  yr_range = c(1993, 2019)
+  yr_range = c(1993, 2023)
 )
-write.csv(pop, './Data/csvs/standardized/POP_1993_2019.csv')
+write.csv(pop, './Data/csvs/standardized/POP_1993_2023.csv')
 
-###2020-2023
-#survey data - needs VPN
-surv <- standardize_fisheries_data(
-  data_type = 'Surveys',
-  channel = dbutils::connect_to_database(
-    server = "NEFSC_pw_oraprod",
-    uid = "KGALLAGHER"
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(surv, './Data/csvs/standardized/survey_2020_2023.csv')
-
-#observer data - needs VPN
-obs <- standardize_fisheries_data(
-  data_type = 'Observer',
-  channel = dbutils::connect_to_database(
-    server = "NEFSC_pw_oraprod",
-    uid = "KGALLAGHER"
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(obs, './Data/csvs/standardized/observer_2020_2023.csv')
-
-## State run surveys
-#maine/new hampshire
-menh <- standardize_fisheries_data(
+#logbooks
+log <- standardize_fisheries_data(
   data_type = 'CSV',
-  csv = "./Data/csvs/raw/MaineDMR_Trawl_Survey_Tow_Catch_2025-07-17.csv",
+  csv = "./Data/csvs/raw/Logbook_122025.csv",
   csv_columns = c(
-    'towID',
-    'Start_Longitude',
-    'Start_Latitude',
-    'Start_Date',
-    'Number_Caught',
-    'Common_Name'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(menh, './Data/csvs/standardized/MENH_2020_2023.csv')
-
-#mass
-mass <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/MABottom_Trawl_02_2026.csv",
-  csv_columns = c('towID', 'Lon', 'Lat', 'Date', 'Num', 'SCI_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(mass, './Data/csvs/standardized/MA_2020_2023.csv')
-
-#new jersey
-nj <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/NJOT_Tow_Catch_2025-07-01.csv",
-  csv_columns = c(
-    'TOW_ID',
-    'START_LON',
-    'START_LAT',
-    'DATE.FORMAT',
-    'NUMBER',
-    'LATIN_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(nj, './Data/csvs/standardized/NJ_2020_2023.csv')
-
-#ct
-ct <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/CT_Tow_Catch_Feb_2026.csv",
-  csv_columns = c(
-    'Sample.Number',
-    'Longitude',
-    'Latitude',
-    'Date',
-    'TotalCount',
-    'name'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(ct, './Data/csvs/standardized/CT_2020_2023.csv')
-
-#delaware
-de <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/DE_Tow_Catch_2025-07-18.csv",
-  csv_columns = c('towID', 'LONDD', 'LATDD', 'date', 'number', 'SCI_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(de, './Data/csvs/standardized/DE_2020_2023.csv')
-
-#neamap
-neamap <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/NEAMAP_Tow_Catch_Feb2026.csv",
-  csv_columns = c(
-    'station',
-    'lon',
-    'lat',
-    'date',
-    'present_absent',
-    'SCI_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(neamap, './Data/csvs/standardized/NEAMAP_2020_2023.csv')
-
-#ny
-ny <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/NYDEC_Tow_Catch_Feb2026.csv",
-  csv_columns = c('STATION', 'LONDD', 'LATDD', 'time', 'Presence', 'COM_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(ny, './Data/csvs/standardized/NY_2020_2023.csv')
-
-####pull in older NEAMAP & MA w/bft
-#neamap
-neamapBFT <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/NEAMAP_Tow_Catch_2025-09-15-wBFT.csv",
-  csv_columns = c(
-    'station',
-    'lon',
-    'lat',
-    'date',
-    'present_absent',
-    'SCI_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(neamapBFT, './Data/csvs/standardized/NEAMAP-BFT_2020_2023.csv')
-
-#mass
-massBFT <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/MABottom_Trawl_2025-08-6-wBFT.csv",
-  csv_columns = c('towID', 'Lon', 'Lat', 'Date', 'Num', 'SCI_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(massBFT, './Data/csvs/standardized/MA-BFT_2020_2023.csv')
-
-###additional smooth dogfish presences from HMS
-hmsSD <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = './Data/csvs/raw/HMS_SmoothDogfish_09-12-25.csv',
-  csv_columns = c('id', 'LON', 'LAT', 'date', 'pa', 'SCI_NAME'),
-  yr_range = c(2020, 2023)
-)
-write.csv(hmsSD, './Data/csvs/standardized/HMS-SD_2020_2023.csv')
-
-##shrimp survey
-shrimp <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = './Data/csvs/raw/NEFSC_NShrimp_092025.csv',
-  csv_columns = c(
-    'towID',
-    'DECDEG_BEGLON',
-    'DECDEG_BEGLAT',
-    'BEGIN_EST_TOWDATE',
-    'EXPCATCHNUM',
-    'SCINAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(shrimp, './Data/csvs/standardized/shrimp_2020_2023.csv')
-
-#gom bll
-gom <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/GOM_BLLS_092025.csv",
-  csv_columns = c(
-    'ID',
-    'DECDEG_BEGLON_SET',
-    'DECDEG_BEGLAT_SET',
-    'startDate',
-    'CATCHNUM',
-    'COMMON_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(gom, './Data/csvs/standardized/GOMBLL_2020_2023.csv')
-
-#GOP
-gop <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/GOP_092025.csv",
-  csv_columns = c(
-    'ID',
-    'SET_BEGIN_LONG_CONV',
-    'SET_BEGIN_LAT_CONV',
-    'startDate',
-    'NUM_FISH',
-    'SPECIES_NAME'
-  ),
-  yr_range = c(2020, 2023)
-)
-write.csv(gop, './Data/csvs/standardized/GOP_2020_2023.csv')
-
-#POP
-pop <- standardize_fisheries_data(
-  data_type = 'CSV',
-  csv = "./Data/csvs/raw/POP_092025.csv",
-  csv_columns = c(
-    'ID',
+    'TRIPN',
     'LONDD',
     'LATDD',
-    'startDate',
-    'NUM_FISH',
-    'SPECIES_NAME'
+    'DATE',
+    'BFT_TOTAL',
+    'NAME'
   ),
-  yr_range = c(2020, 2023)
+  yr_range = c(1993, 2023)
 )
-write.csv(pop, './Data/csvs/standardized/POP_2020_2023.csv')
+write.csv(log, './Data/csvs/standardized/LOGBOOK_1993_2023.csv')
+
+#lps
+lps <- standardize_fisheries_data(
+  data_type = 'CSV',
+  csv = "./Data/csvs/raw/LPS_Oct2025.csv",
+  csv_columns = c(
+    'ID',
+    'decdeg_lat',
+    'decdeg_long',
+    'startDate',
+    'caught',
+    'COMNAME'
+  ),
+  yr_range = c(1993, 2023)
+)
+write.csv(lps, './Data/csvs/standardized/LPS_1993_2023.csv')
+
 ##############################
 
 ##############################
@@ -551,6 +377,74 @@ staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVari
 bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
 
 ####hindcast
+<<<<<<< HEAD
+log_appender(appender_file("mom6_hindcast.log"))
+
+# Set up the cluster ONCE outside the loop
+plan(multisession, workers = 6)
+norm_results <- future_map(
+  1:nrow(var_df), 
+  ~get_model_data_wrapper(
+    source = 'hindcast',
+    var_name = var.list$Long.Name[.x],
+    short_name = var.list$Short.Name[.x],
+    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.hindcast.json",
+    release = 'r20250715',
+    init = NA,
+    spatial_temporal = FALSE
+  )
+)
+names(norm_results) <- var_df$Short.Name
+
+# Explicitly close cluster when entirely finished
+plan(sequential)
+
+###decadal forecast
+  normF <- get_model_forecast_wrapper(
+    var_df = var.list,
+    in_par = T,
+    n_cores = 5,
+    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+    release = 'r20250925',
+    init = 'i202001',
+    ens = x
+  )
+
+##############################
+
+###################################
+##### BUILD FISHERIES DATA FRAMES #
+###################################
+#load new key document to determine which sources should be used for which species
+source.key <- read.csv('sources.csv')
+source.names <- colnames(source.key)[-1] #isolate source names
+is.obs.key <- c(F, T, F, F, F, F, F, F, F, T, F, F, T, T, T, T, F, F) #flags which sources are observer based (ie fisheries dependent datasets)
+
+#build argument matrix to pass along to wrapper function through furrr
+args <- NULL
+for(x in 1:nrow(spp.list)){
+  sFlag <- unlist(as.vector(source.key[which(source.key$Common.Name == spp.list$Common.Name[x]),-c(1)])) #pull T/F flags from sources key
+  sSources <- source.names[sFlag] #use flags to subset source names
+  sObs <- is.obs.key[sFlag] #use flags to subset obs.key
+  altNames <- paste(
+    spp.list$Common.Name[x],
+    spp.list$COM_NAME[x],
+    spp.list$Scientific.Name[x],
+    spp.list$Alternate.Name[x],
+    spp.list$SCI_NAME[x],
+    spp.list$SCI_NAME_ALT[x],
+    spp.list$SCI_NAME_ALT2[x],
+    sep = ','
+  )
+  
+  a <- data.frame(spp = spp.list$Name[x], 
+                  is_obs = sObs, 
+                  source = sSources, 
+                  all_names = altNames)
+  args <- rbind(args, a)
+}
+args$source <- paste0(args$source, '_1993_2023')
+=======
 plan(multisession, workers = 8)
 mom6_results <- future_map(
   1:nrow(var.list), 
@@ -656,194 +550,133 @@ plan(sequential)
  # print(Sys.time())
 #}
 ##############################
+>>>>>>> dev
 
-##############################
-##### BUILD FISHERIES RASTERS#
-##############################
-
-#build rasters seperately for each source - takes about 24 hours in parallel
-sources <- c(
-  'survey',
-  'MENH',
-  'MA',
-  'NJ',
-  'CT',
-  #  "CT_2020_2023",
-  "DE",
-  'NEAMAP',
-  # 'NEAMAP_2020_2023'
-  #   'observer'
-  #'MA-BFT',
-  #'NEAMAP-BFT',
-  'NY',
-  'shrimp'
-  #  'GOMBLL',
-  #  'GOP',
-  #'POP'
-  # "LPS"
-)
-
-#sources <- paste0(sources, '_2020_2023') # if using for 2020-2024 data
-
-#skip = F #overwrite existing files
-
-#for(y in 1:length(sources)){
-#saveRast(csvName = sources[y], spp.list = spp.list, skip = T)
-#}
-
-args <- tidyr::expand_grid(
-  csvName = sources,
-  isObs = F,
-  spp = spp.list$Name[37:42],
-  skip = F,
-  grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20230520/sos.nwa.full.hcast.monthly.regrid.r20230520.199301-201912.nc"
-)
-#args$isObs <- replace(args$isObs, args$csvName == 'POP' | args$csvName == 'GOP', TRUE)
-#args$skip <- replace(args$skip, args$csvName == 'GOMBLL', TRUE)
-
-args2 <- merge(
-  x = args,
-  y = spp.list[, c(1:7, 11)],
-  by.x = 'spp',
-  by.y = 'Name'
-)
-
-altNames <- paste(
-  args2$Common.Name,
-  args2$COM_NAME,
-  args2$Scientific.Name,
-  args2$Alternate.Name,
-  args2$SCI_NAME,
-  args2$SCI_NAME_ALT,
-  args2$SCI_NAME_ALT2,
-  sep = ','
-)
-
-plan(multisession, workers = 5)
-#sink(file = 'rasters.log', append = T)
+plan(multisession, workers = 8)
 checks <- future_pmap(
   list(
-    ..1 = args2$csvName,
-    ..2 = args2$spp,
-    ..3 = altNames,
-    ..4 = args2$skip,
-    ..5 = args2$isObs,
-    ..6 = args2$grid
+    ..1 = args$source,
+    ..2 = args$spp,
+    ..3 = args$all_names,
+    ..4 = args$is_obs
   ),
-  ~ saveRast(
-    csvName = ..1,
+  ~ save_df_wrapper(
+    csv_name = ..1,
     spp = ..2,
-    sppNames = ..3,
-    skip = ..4,
-    isObs = ..5,
-    grid = ..6
+    spp_names = ..3,
+    is_obs = ..4,
+    skip = F,
+    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc", 
+    force_overwrite = TRUE
   ),
   .progress = T
 )
-#sink()
 plan(sequential)
 
-for (x in 1:nrow(args)) {
-  saveRast(
-    csvName = args$csvName[x],
-    spp = args$spp[x],
-    sppNames = altNames[x],
-    skip = F,
-    isObs = T
-  )
-  print(x)
-}
 
-#cl <- makeCluster(3)
-#clusterExport(cl, c('saveRast', 'create_rast', 'spp.list', 'sources'))
-#clusterApplyLB(cl, sources, saveRast, spp.list = spp.list, skip = T)
-#stopCluster(cl)
-
-### put them all together - takes about an hour and a half
-args <- tidyr::expand_grid(
-  name = spp.list$Name[37:42],
-  skip = T,
-  pattern = c('1993_2019')
-)
-
-#for(x in 2:length(spp.list$Name)){
-#combineSave(spp.list$Name[x], skip = T, pattern = '2020_2024')
-#print(x)
-#}
-options(future.globals.maxSize = Inf)
-plan(multisession, workers = 3)
-combs <- future_pmap(
-  list(..1 = args$name, ..2 = args$skip, ..3 = args$pattern),
-  ~ combineSave(name = ..1, skip = ..2, pattern = ..3),
+### Combine all source data frames for each species
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~ combine_fisheries_dfs_wrapper(name = spp.list$Name[.x], 
+                                  skip = F,
+                                  force_overwrite = T),
   .progress = T
 )
 plan(sequential)
-#sink()
 
-###CHECKS BEFORE MOVING ON
+
+###quick sanity check because the results can get lost in the log - load each csv in and print range - all should be 0-1
 flist <- dir(
   path = getwd(),
-  pattern = 'combined_rasters_1993_2019.nc',
+  pattern = 'combined_pa.csv',
   recursive = T,
   full.names = T
 )
-for (x in c(1, 7, 12, 19, 24, 32)) {
-  r <- brick(flist[x])
-  print(range(r[], na.rm = T))
+for (x in 1:length(flist)) {
+  r <- read.csv(flist[x])
+  print(range(r$pa, na.rm = T))
 }
 
-##############################
+###################################
 
-##############################
-##### MAKE DATA FRAMES #######
-##############################
+###############################
+##### PREPARE DATA FRAMES #####
+###############################
 
-load('./Data/MOM6/norm_MOM6_092025.RData') #norm
-load('./Data/staticVariables_cropped_normZ.RData')
+var.list <- data.frame(
+  Long.Name = c(
+    'Bottom Temperature',
+    'Bottom Oxygen',
+    'Sea Water Salinity at Sea Floor',
+    'Bottom Aragonite Solubility',
+    'Sea Surface Temperature',
+    'Sea Surface Salinity',
+    'Surface pH',
+    'Mixed layer depth (delta rho = 0.03)',
+    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
+    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Small zooplankton nitrogen biomass in upper 100m',
+    'Medium zooplankton nitrogen biomass in upper 100m',
+    'Large zooplankton nitrogen biomass in upper 100m',
+    'Water column net primary production vertical integral',
+    'Downward Flux of Particulate Organic Carbon'
+  ),
+  Short.Name = c(
+    'bottomT',
+    'bottomO2',
+    'bottomS',
+    'bottomArg',
+    'surfaceT',
+    'surfaceS',
+    'surfacepH',
+    'MLD',
+    'diazPP',
+    'smallPP',
+    'mediumPP',
+    'largePP',
+    'smallZoo',
+    'mediumZoo',
+    'largeZoo',
+    'intNPP',
+    'POC'
+  )
+)
 
-args <- tidyr::expand_grid(
-  name = spp.list$Name[c(37:42)],
-  skip = F,
-  mMin = 1,
-  mMax = 12,
-  yMin = 1993,
-  yMax = 2019
-) #create list of arguments for loop
+statics <- terra::rast('./Data/staticVariables_masked_norm_terra.tif')
+statics <- terra::wrap(statics) #to help with parallelization
+
+feeding <- read.csv('feeding_guilds.csv')
+habitat <- read.csv('habitat_guilds.csv')
 
 options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
-#sink(file = 'rasters.log', append = T)
-dfs <- future_pmap(
-  list(
-    ..1 = args$name,
-    ..2 = args$skip,
-    ..3 = args$mMin,
-    ..4 = args$mMax,
-    ..5 = args$yMin,
-    ..6 = args$yMax
-  ),
-  ~ makeDF(
-    name = ..1,
-    skip = ..2,
-    mMin = ..3,
-    mMax = ..4,
-    yMin = ..5,
-    yMax = ..6
-  ),
-  .progress = T,
-  .options = furrr_options(seed = 2025)
+plan(multisession, workers = 4)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~prepare_dataframe_wrapper(name = spp.list$Name[.x],
+                             source = 'hindcast',
+                             short_names = var.list$Short.Name,
+                             release = 'r20250715',
+                             spatial_temporal = FALSE,
+                             mask_bathy = T,
+                             all_env = F,
+                             spp_key = spp.list,
+                             feed_key = feeding,
+                             hab_key = habitat,
+                             add_static = T,
+                             static_variables = statics,
+                             rm_corr = T, 
+                             training_years = c(1993, 2019),
+                             test_years = c(2020, 2023),
+                             skip = F, 
+                             force_overwrite = F),
+  .progress = T
 )
 #sink()
 plan(sequential)
 
-##checks to make sure that guilds matched correctly
-for (x in c(37:42)) {
-  load(paste(file.path(getwd(), spp.list$Name[x]), 'pa_guild.RData', sep = '/')) #dfG
-  print(names(dfG))
-  print(spp.list$Name[x])
-  print(spp.list$Feeding.Guild[x])
-  print(spp.list$Habitat.Guild[x])
-}
 
 ##############################
 

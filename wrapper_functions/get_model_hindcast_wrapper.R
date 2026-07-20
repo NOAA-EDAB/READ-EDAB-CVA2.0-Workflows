@@ -1,23 +1,21 @@
-#' @title Pull, Average, and Normalize MOM6 Forecast Data
-#' @description A wrapper function that pulls, averages, and normalizes the MOM6 forecast data using the \code{pull_forecast}, \code{avg_env}, \code{sd_env}, and \code{norm_env} functions, and saves the output from each step. This function adds log functionality to help with batch runs and running the encompassing functions in parallel. Note that unlike similar functions, there is no skip functionality since this function is meant to only be run once.
+#' @title Pull MOM6 Hindcast Data
+#' @description \code{getMOM6Hindcast} is a wrapper function that pulls, averages, and normalizes the MOM6 hindcast data using the \code{pull_hind}, \code{avg_env}, \code{sd_env}, and \code{norm_env} functions, and saves the output from each step. This function adds log functionality to help with batch runs and running the encompassing functions in parallel. Note that unlike similar functions, there is no skip functionality since this function is meant to only be run once.
 
 #' @param var_df a data.frame with the columns Long.Name and Short.Name to be used as reqVars and shortNames, respectively
 #' @param in_par TRUE/FALSE to determine if data pulls and averaging should be conducted in parallel with dopar
 #' @param n_cores number of cores used in parallelization. Defaults to 10.
 #' @param json_url URL pointing to JSON table variable lists for desired MOM6 run type and domain
 #' @param release release code. Must match one of the options in the 'cefi_release' column in provided JSON table
-#' @param init initialization code. Must match one of the options in the 'cefi_init_date' column in provided JSON table. For forecast only
 #' @param spatial.temporal TRUE/FALSE to determine method for normalizing. If TRUE, normalization is spatially and temporally explicit. If FALSE, normalization occurs using averages/standard deviations calculated across space and time
 
-#' @return the output from \code{normalize_model_data} - a list whose length is equal to the number of variables supplied, where each item in the list is a spatRaster of normalized data associated with that variable, with the number of layers equal to the number of time steps available. The function also saves the output from each step - see the package website for necessary directory set up.
+#' @return the output from \code{normalize_model_data} - a list whose length is equal to the number of variables supplied, where each item in the list is a spatRaster of data associated with that variable, with the number of layers equal to the number of time steps available. The function also saves the output from each step - see the package website for necessary directory set up.
 
-get_model_forecast_wrapper <- function(
+get_model_hindcast_wrapper <- function(
   var_df,
   in_par = TRUE,
-  n_cores = 10,
+  n_cores,
   json_url,
-  release,
-  init,
+  release, 
   spatial.temporal
 ) {
   raw <- avg <- sds <- norm <- vector(mode = 'list', length = nrow(var_df))
@@ -31,30 +29,27 @@ get_model_forecast_wrapper <- function(
     ) %dopar%
       {
         #for(x in 1:nrow(var.list)){
-        r <- pull_mom6_forecast(
+        r <- pull_mom6_hindcast(
           var_url = json_url,
           req_var = var_df$Long.Name[x],
-          release = release,
-          init = init,
-          spatial.temporal = spatial.temporal
+          release = release
         )
         raw[[x]] <- r
       }
     parallel::stopCluster(cluster)
   } else {
     for (x in 1:nrow(var_df)) {
-      r <- pull_mom6_forecast(
+      r <- pull_mom6_hindcast(
         var_url = json_url,
-        req_var = var_df$Long.Name[x],
-        release = release,
-        init = init,
-        spatial.temporal = spatial.temporal
+        req_vars = var_df$Long.Name[x],
+        short_names = var_df$Short.Name[x],
+        release = release
       )
       raw[[x]] <- r
     }
   }
   names(raw) <- var_df$Short.Name
-  save(raw, file = paste0('./Data/MOM6/raw_MOM6_forecast_', release, '_', init, '.RData'))
+  save(raw, file = paste0('./Data/MOM6/raw_MOM6_hindcast_', release, '.RData'))
 
   if (in_par == TRUE) {
     cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
@@ -64,7 +59,7 @@ get_model_forecast_wrapper <- function(
       .packages = c("ncdf4", 'raster', 'jsonlite')
     ) %do%
       {
-        #for(x in 1:nrow(var_df)){
+        #for(x in 1:nrow(var.list)){
         a <- avg_model_data(raw[[x]], spatial.temporal = spatial.temporal)
         avg[[x]] <- a
       }
@@ -77,9 +72,11 @@ get_model_forecast_wrapper <- function(
   }
   names(avg) <- var_df$Short.Name
   if(spatial.temporal){
-    save(avg, file = paste0('./Data/MOM6/avg_MOM6_forecast_', release, '_', init, '.RData'))
+    save(avg, 
+         file = paste0('./Data/MOM6/avg_MOM6_hindcast_', release, '.RData'))
   } else {
-    save(avg, file = paste0('./Data/MOM6/avg_MOM6_forecast_', release, '_', init, '_global.RData'))
+    save(avg, 
+         file = paste0('./Data/MOM6/avg_MOM6_hindcast_', release, '_global.RData'))
   }
 
   if (in_par == TRUE) {
@@ -90,7 +87,7 @@ get_model_forecast_wrapper <- function(
       .packages = c("ncdf4", 'raster', 'jsonlite')
     ) %do%
       {
-        #for(y in 1:nrow(var_df)){
+        #for(y in 1:nrow(var.list)){
         s <- sd_model_data(raw[[y]], spatial.temporal = spatial.temporal)
         sds[[y]] <- s
       }
@@ -103,9 +100,11 @@ get_model_forecast_wrapper <- function(
   }
   names(sds) <- var_df$Short.Name
   if(spatial.temporal){
-    save(sds, file = paste0('./Data/MOM6/sd_MOM6_forecast_', release, '_', init, '.RData'))
+    save(sds, 
+         file = paste0('./Data/MOM6/sd_MOM6_hindcast_', release, '.RData'))
   } else {
-    save(sds, file = paste0('./Data/MOM6/sd_MOM6_forecast_', release, '_', init, '_global.RData'))
+    save(sds, 
+         file = paste0('./Data/MOM6/sd_MOM6_hindcast_', release, '_global.RData'))
   }
 
   if (in_par == TRUE) {
@@ -116,7 +115,7 @@ get_model_forecast_wrapper <- function(
       .packages = c("ncdf4", 'raster', 'jsonlite', 'abind')
     ) %dopar%
       {
-        #for(y in 1:nrow(var_df)){
+        #for(y in 1:nrow(var.list)){
         n <- normalize_model_data(
           raw = raw[[x]],
           avg = avg[[x]],
@@ -129,9 +128,9 @@ get_model_forecast_wrapper <- function(
   } else {
     for (y in 1:nrow(var_df)) {
       n <- normalize_model_data(
-        raw_list = raw[[x]],
-        avg_list = avg[[x]],
-        sd_list = sds[[x]],
+        raw = raw[[x]],
+        avg = avg[[x]],
+        sd = sds[[x]],
         spatial.temporal = spatial.temporal
       )
       norm[[y]] <- n
@@ -139,9 +138,11 @@ get_model_forecast_wrapper <- function(
   }
   names(norm) <- var_df$Short.Name
   if(spatial.temporal){
-    save(norm, file = paste0('./Data/MOM6/norm_MOM6_forecast_', release, '_', init, '.RData'))
+    save(norm, 
+         file = paste0('./Data/MOM6/norm_MOM6_hindcast_', release, '.RData'))
   } else {
-    save(norm, file = paste0('./Data/MOM6/norm_MOM6_forecast_', release, '_', init, '_global.RData'))
+    save(norm, 
+         file = paste0('./Data/MOM6/norm_MOM6_hindcast_', release, '_global.RData'))
   }
 
   return(norm)
