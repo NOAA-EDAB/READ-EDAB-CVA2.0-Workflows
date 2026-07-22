@@ -717,7 +717,9 @@ var.list <- data.frame(
   )
 )
 
+#running each model type seperately to help with troubleshooting if needed; plus sdmtmb needs more memory to using less cores in parallel
 #going in increasing order of time needed to run 
+
 #RF 
 #started: 12:12 PM 7/22 
 #ended: 
@@ -741,6 +743,9 @@ combs <- future_map(
 plan(sequential)
 
 #GAM 
+#started: 
+#ended: 
+#runtime: 
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
@@ -760,6 +765,9 @@ combs <- future_map(
 plan(sequential)
 
 #BRT 
+#started: 
+#ended: 
+#runtime: 
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
@@ -779,6 +787,9 @@ combs <- future_map(
 plan(sequential)
 
 #sdmtmb 
+#started: 
+#ended: 
+#runtime: 
 plan(multisession, workers = 4)
 combs <- future_map(
   1:nrow(spp.list),
@@ -799,6 +810,9 @@ plan(sequential)
 
 #maxent 
 #predictions may not work in parallel so be prepared to write it out
+#started: 
+#ended: 
+#runtime: 
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
