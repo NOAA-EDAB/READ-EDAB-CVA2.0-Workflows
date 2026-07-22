@@ -26,16 +26,6 @@ spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
   dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main folder
-  #dir.create(
-<<<<<<< HEAD
-   # file.path(getwd(), spp.list$Name[x], 'input_rasters'),
-    #showWarnings = T
- # ) #input raster folder
-=======
-  # file.path(getwd(), spp.list$Name[x], 'input_rasters'),
-  #showWarnings = T
-  # ) #input raster folder
->>>>>>> dev
   dir.create(
     file.path(getwd(), spp.list$Name[x], 'input_csvs'),
     showWarnings = T
@@ -684,159 +674,148 @@ plan(sequential)
 ##### MAKE MODELS  ###########
 ##############################
 
-models <- c('gam', 'maxent', 'rf', 'brt')
+statics <- terra::wrap(terra::rast('./Data/staticVariables_masked_norm_terra.tif'))
 
-load('norm_MOM6_082025.RData') #norm
-
-args <- tidyr::expand_grid(model = models, spp = spp.list$Name[37:42], skip = F)
-
-plan(multisession, workers = 4)
-#sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
-  list(..1 = args$spp, ..2 = args$model, ..3 = args$skip),
-  ~ makeMods(spp = ..1, model = ..2, skip = ..3),
-  .progress = T,
-  .options = furrr_options(seed = 2025)
+var.list <- data.frame(
+  Long.Name = c(
+    'Bottom Temperature',
+    'Bottom Oxygen',
+    'Sea Water Salinity at Sea Floor',
+    'Bottom Aragonite Solubility',
+    'Sea Surface Temperature',
+    'Sea Surface Salinity',
+    'Surface pH',
+    'Mixed layer depth (delta rho = 0.03)',
+    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
+    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Small zooplankton nitrogen biomass in upper 100m',
+    'Medium zooplankton nitrogen biomass in upper 100m',
+    'Large zooplankton nitrogen biomass in upper 100m',
+    'Water column net primary production vertical integral',
+    'Downward Flux of Particulate Organic Carbon'
+  ),
+  Short.Name = c(
+    'bottomT',
+    'bottomO2',
+    'bottomS',
+    'bottomArg',
+    'surfaceT',
+    'surfaceS',
+    'surfacepH',
+    'MLD',
+    'diazPP',
+    'smallPP',
+    'mediumPP',
+    'largePP',
+    'smallZoo',
+    'mediumZoo',
+    'largeZoo',
+    'intNPP',
+    'POC'
+  )
 )
-#sink()
+
+#going in increasing order of time needed to run 
+#RF 
+#started: 12:12 PM 7/22 
+#ended: 
+#runtime: 
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~component_sdms_wrapper(spp = spp.list$Name[.x],
+                          model = 'rf',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T, 
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          skip = F),
+  .progress = T
+)
 plan(sequential)
 
-### run sdmtmb in sequence, step by step because it doesn't like makeMods for some reason
-for (x in 37:nrow(spp.list)) {
-  sink(file = file.path(getwd(), 'logs', paste0('sdmtmb', '.log')), append = T)
-  print(Sys.time())
-  print(spp.list$Name[x])
+#GAM 
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~component_sdms_wrapper(spp = spp.list$Name[.x],
+                          model = 'gam',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T, 
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          skip = F),
+  .progress = T
+)
+plan(sequential)
 
-  load(paste(file.path(getwd(), spp.list$Name[x]), 'pa_clean.RData', sep = '/')) #load data - dfC
-  print(paste0(spp.list$Name[x], '- making model - ', Sys.time()))
-  mod <- make_sdm(
-    se = dfC,
-    pa_col = 'value',
-    xy_col = c('x', 'y'),
-    month_col = 'month',
-    year_col = 'year',
-    model = 'sdmtmb'
-  )
-  save(
-    mod,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-      '/',
-      toupper('sdmtmb'),
-      '.RData'
-    )
-  )
-  rm(mod)
-  gc(reset = T) #help clean up memory so hopefully this can run sequentially?
-}
+#BRT 
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~component_sdms_wrapper(spp = spp.list$Name[.x],
+                          model = 'brt',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T, 
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          skip = F),
+  .progress = T
+)
+plan(sequential)
 
-for (x in 40:nrow(spp.list)) {
-  # s <- makeMods(spp = spp.list$Name[x], model = 'sdmtmb', skip = T)
-  sink(file = file.path(getwd(), 'logs', paste0('sdmtmb', '.log')), append = T)
-  print(Sys.time())
-  print(spp.list$Name[x])
+#sdmtmb 
+plan(multisession, workers = 4)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~component_sdms_wrapper(spp = spp.list$Name[.x],
+                          model = 'sdmtmb',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T, 
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          skip = F),
+  .progress = T
+)
+plan(sequential)
 
-  # load(paste(file.path(getwd(),spp.list$Name[x]), 'pa_clean.RData', sep = '/')) #load data - dfC
-
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-    '/',
-    toupper('sdmtmb'),
-    '.RData'
-  )) #mod
-
-  if (class(mod) == 'sdmTMB') {
-    #CV
-    # print(paste0(spp.list$Name[x], '- performing CV - ', Sys.time()))
-
-    # cv <- sdm_cv(mod = mod, se = dfC, pa_col = 'value', xy_col = c('x', 'y'), month_col = 'month', year_col = 'year', model = 'sdmtmb')
-    # save(cv, file = paste0(file.path(getwd(),spp.list$Name[x], 'model_output', 'cvs'), '/', toupper('sdmtmb'), '.RData'))
-
-    load(paste0(
-      file.path(getwd(), spp.list$Name[x], 'model_output', 'cvs'),
-      '/',
-      toupper('sdmtmb'),
-      '.RData'
-    )) #cv
-    print(paste0(spp.list$Name[x], '- Getting Preds - ', Sys.time()))
-    preds <- sdm_preds(cv = cv, model = 'sdmtmb')
-    save(
-      preds,
-      file = paste0(
-        file.path(getwd(), spp.list$Name[x], 'model_output', 'preds'),
-        '/',
-        toupper('sdmtmb'),
-        '.RData'
-      )
-    )
-
-    print(paste0(spp.list$Name[x], '- Evaluating Model - ', Sys.time()))
-    ev <- sdm_eval(preds = preds, metric = 'auc', model = 'sdmtmb')
-    save(
-      ev,
-      file = paste0(
-        file.path(getwd(), spp.list$Name[x], 'model_output', 'eval_metrics'),
-        '/',
-        toupper('sdmtmb'),
-        '.RData'
-      )
-    )
-    rm(cv)
-    rm(preds)
-    rm(ev) #remove objects after they've been saved to help with memory (hopefully)
-  } else {
-    #end if
-    print('model did not converge. cannot perform cv')
-  } #end else
-  gc(reset = T) #help clean up memory so hopefully this can run sequentially?
-  print(x)
-  print(Sys.time())
-  sink()
-}
-
-for (x in 37:nrow(spp.list)) {
-  # s <- makeMods(spp = spp.list$Name[x], model = 'sdmtmb', skip = T)
-  sink(file = file.path(getwd(), 'logs', paste0('sdmtmb', '.log')), append = T)
-  print(Sys.time())
-  print(spp.list$Name[x])
-
-  load(paste(file.path(getwd(), spp.list$Name[x]), 'pa_clean.RData', sep = '/')) #load data - dfC
-
-  print(paste0(
-    spp.list$Name[x],
-    '- Getting Variable Importance - ',
-    Sys.time()
-  ))
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-    '/',
-    toupper('sdmtmb'),
-    '.RData'
-  ))
-  imp <- sdm_importance(
-    mod = mod,
-    se = dfC,
-    pa_col = 'value',
-    xy_col = c('x', 'y'),
-    month_col = 'month',
-    year_col = 'year',
-    model = 'sdmtmb'
-  )
-  save(
-    imp,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'model_output', 'importance'),
-      '/',
-      toupper('sdmtmb'),
-      '.RData'
-    )
-  )
-  rm(imp)
-  gc(reset = T) #help clean up memory so hopefully this can run sequentially?
-  print(x)
-  print(Sys.time())
-  sink()
-}
+#maxent 
+#predictions may not work in parallel so be prepared to write it out
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~component_sdms_wrapper(spp = spp.list$Name[.x],
+                          model = 'maxent',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T, 
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          skip = F),
+  .progress = T
+)
+plan(sequential)
 
 ##############################
 
