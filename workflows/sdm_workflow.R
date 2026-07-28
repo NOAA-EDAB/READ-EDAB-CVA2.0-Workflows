@@ -314,6 +314,23 @@ lps <- standardize_fisheries_data(
 )
 write.csv(lps, './Data/csvs/standardized/LPS_1993_2023.csv')
 
+##clam survey
+clam <- standardize_fisheries_data(
+  data_type = 'CSV',
+  csv = './Data/csvs/raw/NEFSC_Clam_072026.csv',
+  csv_columns = c(
+    'towID',
+    'DECDEG_BEGLON',
+    'DECDEG_BEGLAT',
+    'BEGIN_EST_TOWDATE',
+    'EXPCATCHNUM',
+    'SCI_NAME'
+  ),
+  yr_range = c(1993, 2023)
+)
+write.csv(clam, './Data/csvs/standardized/Clam_1993_2023.csv')
+
+
 ##############################
 
 ##############################
@@ -408,7 +425,7 @@ plan(sequential)
 #load new key document to determine which sources should be used for which species
 source.key <- read.csv('sources.csv')
 source.names <- colnames(source.key)[-1] #isolate source names
-is.obs.key <- c(F, T, F, F, F, F, F, F, F, T, F, F, T, T, T, T, F, F) #flags which sources are observer based (ie fisheries dependent datasets)
+is.obs.key <- c(F, T, F, F, F, F, F, F, F, T, F, F, T, T, T, T, F, F, F) #flags which sources are observer based (ie fisheries dependent datasets)
 
 #build argument matrix to pass along to wrapper function through furrr
 args <- NULL
@@ -434,7 +451,7 @@ for(x in 1:nrow(spp.list)){
   args <- rbind(args, a)
 }
 args$source <- paste0(args$source, '_1993_2023')
-=======
+#=======
 plan(multisession, workers = 8)
 mom6_results <- future_map(
   1:nrow(var.list), 
@@ -540,7 +557,7 @@ plan(sequential)
  # print(Sys.time())
 #}
 ##############################
->>>>>>> dev
+#>>>>>>> dev
 
 plan(multisession, workers = 8)
 checks <- future_pmap(
@@ -563,6 +580,24 @@ checks <- future_pmap(
 )
 plan(sequential)
 
+###example of just one - adding clam dredge survey 
+args <- args[args$source == 'Clam_1993_2023',]
+
+plan(multisession, workers = 8)
+checks <- future_map(
+  1:nrow(args),
+  ~ save_df_wrapper(
+    csv_name = 'Clam_1993_2023',
+    spp = args$spp[.x],
+    spp_names = args$all_names[.x],
+    is_obs = F,
+    skip = F,
+    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc", 
+    force_overwrite = TRUE
+  ),
+  .progress = T
+)
+plan(sequential)
 
 ### Combine all source data frames for each species
 plan(multisession, workers = 8)
@@ -585,7 +620,7 @@ flist <- dir(
 )
 for (x in 1:length(flist)) {
   r <- read.csv(flist[x])
-  print(range(r$pa, na.rm = T))
+  print(table(r$pa))
 }
 
 ###################################
@@ -722,8 +757,9 @@ var.list <- data.frame(
 
 #RF 
 #started: 12:12 PM 7/22 
-#ended: 
-#runtime: 
+#ended: 3:58 PM 7/22
+#runtime: 3 hrs 46 min  = average 40 min per species
+#notes: softshell clam failed due to lack of presence data
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
@@ -743,9 +779,10 @@ combs <- future_map(
 plan(sequential)
 
 #GAM 
-#started: 
-#ended: 
-#runtime: 
+#started: 4:55 PM 7/22
+#ended: 7:45 AM 7/26
+#runtime: 86.8 hrs (3.6 days) = average 14.2 hrs per species but a lot of variability 
+#softshell clam also failed here.
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
@@ -765,7 +802,7 @@ combs <- future_map(
 plan(sequential)
 
 #BRT 
-#started: 
+#started: 8:42 AM 7/27
 #ended: 
 #runtime: 
 plan(multisession, workers = 8)
