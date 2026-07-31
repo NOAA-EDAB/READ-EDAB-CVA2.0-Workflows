@@ -681,7 +681,6 @@ plan(multisession, workers = 4)
 combs <- future_map(
   1:nrow(spp.list),
   ~prepare_dataframe_wrapper(name = spp.list$Name[.x],
-                             source = 'hindcast',
                              short_names = var.list$Short.Name,
                              release = 'r20250715',
                              spatial_temporal = FALSE,
@@ -755,6 +754,10 @@ var.list <- data.frame(
 #running each model type seperately to help with troubleshooting if needed; plus sdmtmb needs more memory to using less cores in parallel
 #going in increasing order of time needed to run 
 
+### can pass spp.list$Name directly to future_map, or a subsetted list of names like below to run just a few species
+## this subset was made to re-run groundfish and benthic species after the addition of the clam survey dataset
+sppnames <- spp.list$Name[which(spp.list$Habitat.Guild == 'Groundfish' | spp.list$Habitat.Guild == "Benthic")]
+
 #RF 
 #started: 12:12 PM 7/22 
 #ended: 3:58 PM 7/22
@@ -762,8 +765,8 @@ var.list <- data.frame(
 #notes: softshell clam failed due to lack of presence data
 plan(multisession, workers = 8)
 combs <- future_map(
-  1:nrow(spp.list),
-  ~component_sdms_wrapper(spp = spp.list$Name[.x],
+  1:length(sppnames),
+  ~component_sdms_wrapper(spp = sppnames[.x],
                           model = 'rf',
                           dyn_names = var.list$Short.Name,
                           release = 'r20250715',
@@ -778,16 +781,16 @@ combs <- future_map(
 )
 plan(sequential)
 
-#GAM 
-#started: 4:55 PM 7/22
-#ended: 7:45 AM 7/26
-#runtime: 86.8 hrs (3.6 days) = average 14.2 hrs per species but a lot of variability 
-#softshell clam also failed here.
+
+#BRT 
+#started: 8:42 AM 7/27
+#ended: (approx) 13:00 PM 7/28 (stopped with one model left to go due to adding clam survey)
+#runtime: (approx 28 hrs) 
 plan(multisession, workers = 8)
 combs <- future_map(
-  1:nrow(spp.list),
-  ~component_sdms_wrapper(spp = spp.list$Name[.x],
-                          model = 'gam',
+  1:length(sppnames),
+  ~component_sdms_wrapper(spp = sppnames[.x],
+                          model = 'brt',
                           dyn_names = var.list$Short.Name,
                           release = 'r20250715',
                           spatial_temporal = FALSE,
@@ -801,15 +804,17 @@ combs <- future_map(
 )
 plan(sequential)
 
-#BRT 
-#started: 8:42 AM 7/27
-#ended: 
-#runtime: 
+
+#GAM 
+#started: 4:55 PM 7/22
+#ended: 7:45 AM 7/26
+#runtime: 86.8 hrs (3.6 days) = average 14.2 hrs per species but a lot of variability 
+#softshell clam also failed here.
 plan(multisession, workers = 8)
 combs <- future_map(
-  1:nrow(spp.list),
-  ~component_sdms_wrapper(spp = spp.list$Name[.x],
-                          model = 'brt',
+  1:length(sppnames),
+  ~component_sdms_wrapper(spp = sppnames[.x],
+                          model = 'gam',
                           dyn_names = var.list$Short.Name,
                           release = 'r20250715',
                           spatial_temporal = FALSE,
