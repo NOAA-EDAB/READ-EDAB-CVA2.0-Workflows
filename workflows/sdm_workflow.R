@@ -378,7 +378,7 @@ var.list <- data.frame(
   )
 )
 
-#load in bathy for masking 
+#load in bathy for masking
 staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped_terra_reproj.tif')#staticR
 #bathy object = staticR$bathy
 bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
@@ -390,7 +390,7 @@ log_appender(appender_file("mom6_hindcast.log"))
 # Set up the cluster ONCE outside the loop
 plan(multisession, workers = 6)
 norm_results <- future_map(
-  1:nrow(var_df), 
+  1:nrow(var_df),
   ~get_model_data_wrapper(
     source = 'hindcast',
     var_name = var.list$Long.Name[.x],
@@ -443,10 +443,10 @@ for(x in 1:nrow(spp.list)){
     spp.list$SCI_NAME_ALT2[x],
     sep = ','
   )
-  
-  a <- data.frame(spp = spp.list$Name[x], 
-                  is_obs = sObs, 
-                  source = sSources, 
+
+  a <- data.frame(spp = spp.list$Name[x],
+                  is_obs = sObs,
+                  source = sSources,
                   all_names = altNames)
   args <- rbind(args, a)
 }
@@ -454,7 +454,7 @@ args$source <- paste0(args$source, '_1993_2023')
 #=======
 plan(multisession, workers = 8)
 mom6_results <- future_map(
-  1:nrow(var.list), 
+  1:nrow(var.list),
   ~get_model_data_wrapper(
     var_name = var.list$Long.Name[.x],
     short_name = var.list$Short.Name[.x],
@@ -518,7 +518,7 @@ forecast.list <- data.frame(
 #parallel version
 plan(multisession, workers = 8)
 mom6_results <- future_map(
-  1:nrow(forecast.list), 
+  1:nrow(forecast.list),
   ~get_model_data_wrapper(
     var_name = forecast.list$Long.Name[.x],
     short_name = forecast.list$Short.Name[.x],
@@ -536,7 +536,7 @@ mom6_results <- future_map(
 )
 plan(sequential)
 
-#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until the prediction step, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that 
+#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until the prediction step, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
 
 #for(x in 1:nrow(forecast.list)){
  # print(Sys.time())
@@ -573,14 +573,14 @@ checks <- future_pmap(
     spp_names = ..3,
     is_obs = ..4,
     skip = F,
-    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc", 
+    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc",
     force_overwrite = TRUE
   ),
   .progress = T
 )
 plan(sequential)
 
-###example of just one - adding clam dredge survey 
+###example of just one - adding clam dredge survey
 args <- args[args$source == 'Clam_1993_2023',]
 
 plan(multisession, workers = 8)
@@ -592,7 +592,7 @@ checks <- future_map(
     spp_names = args$all_names[.x],
     is_obs = F,
     skip = F,
-    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc", 
+    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc",
     force_overwrite = TRUE
   ),
   .progress = T
@@ -603,7 +603,7 @@ plan(sequential)
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
-  ~ combine_fisheries_dfs_wrapper(name = spp.list$Name[.x], 
+  ~ combine_fisheries_dfs_wrapper(name = spp.list$Name[.x],
                                   skip = F,
                                   force_overwrite = T),
   .progress = T
@@ -691,10 +691,10 @@ combs <- future_map(
                              hab_key = habitat,
                              add_static = T,
                              static_variables = statics,
-                             rm_corr = T, 
+                             rm_corr = T,
                              training_years = c(1993, 2019),
                              test_years = c(2020, 2023),
-                             skip = F, 
+                             skip = F,
                              force_overwrite = F),
   .progress = T
 )
@@ -752,14 +752,14 @@ var.list <- data.frame(
 )
 
 #running each model type seperately to help with troubleshooting if needed; plus sdmtmb needs more memory to using less cores in parallel
-#going in increasing order of time needed to run 
+#going in increasing order of time needed to run
 
 ### can pass spp.list$Name directly to future_map, or a subsetted list of names like below to run just a few species
 ## this subset was made to re-run groundfish and benthic species after the addition of the clam survey dataset
 sppnames <- spp.list$Name[which(spp.list$Habitat.Guild == 'Groundfish' | spp.list$Habitat.Guild == "Benthic")]
 
-#RF 
-#started: 12:12 PM 7/22 
+#RF
+#started: 12:12 PM 7/22
 #ended: 3:58 PM 7/22
 #runtime: 3 hrs 46 min  = average 40 min per species
 #notes: softshell clam failed due to lack of presence data
@@ -772,7 +772,7 @@ combs <- future_map(
                           release = 'r20250715',
                           spatial_temporal = FALSE,
                           mask_bathy = T,
-                          rm_corr = T, 
+                          rm_corr = T,
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
@@ -782,10 +782,10 @@ combs <- future_map(
 plan(sequential)
 
 
-#BRT 
+#BRT
 #started: 8:42 AM 7/27
 #ended: (approx) 13:00 PM 7/28 (stopped with one model left to go due to adding clam survey)
-#runtime: (approx 28 hrs) 
+#runtime: (approx 28 hrs)
 plan(multisession, workers = 8)
 combs <- future_map(
   1:length(sppnames),
@@ -795,7 +795,7 @@ combs <- future_map(
                           release = 'r20250715',
                           spatial_temporal = FALSE,
                           mask_bathy = T,
-                          rm_corr = T, 
+                          rm_corr = T,
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
@@ -805,10 +805,10 @@ combs <- future_map(
 plan(sequential)
 
 
-#GAM 
+#GAM
 #started: 4:55 PM 7/22
 #ended: 7:45 AM 7/26
-#runtime: 86.8 hrs (3.6 days) = average 14.2 hrs per species but a lot of variability 
+#runtime: 86.8 hrs (3.6 days) = average 14.2 hrs per species but a lot of variability
 #softshell clam also failed here.
 plan(multisession, workers = 8)
 combs <- future_map(
@@ -819,7 +819,7 @@ combs <- future_map(
                           release = 'r20250715',
                           spatial_temporal = FALSE,
                           mask_bathy = T,
-                          rm_corr = T, 
+                          rm_corr = T,
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
@@ -828,10 +828,10 @@ combs <- future_map(
 )
 plan(sequential)
 
-#sdmtmb 
-#started: 
-#ended: 
-#runtime: 
+#sdmtmb
+#started:
+#ended:
+#runtime:
 plan(multisession, workers = 4)
 combs <- future_map(
   1:nrow(spp.list),
@@ -841,7 +841,7 @@ combs <- future_map(
                           release = 'r20250715',
                           spatial_temporal = FALSE,
                           mask_bathy = T,
-                          rm_corr = T, 
+                          rm_corr = T,
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
@@ -850,11 +850,11 @@ combs <- future_map(
 )
 plan(sequential)
 
-#maxent 
+#maxent
 #predictions may not work in parallel so be prepared to write it out
-#started: 
-#ended: 
-#runtime: 
+#started:
+#ended:
+#runtime:
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
@@ -864,7 +864,7 @@ combs <- future_map(
                           release = 'r20250715',
                           spatial_temporal = FALSE,
                           mask_bathy = T,
-                          rm_corr = T, 
+                          rm_corr = T,
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
@@ -872,6 +872,28 @@ combs <- future_map(
   .progress = T
 )
 plan(sequential)
+
+#ENSEMBLE
+#started:
+#ended:
+#runtime:
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~ensemble_sdms_wrapper(spp = spp.list$Name[.x],
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T,
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          skip = F),
+  .progress = T
+)
+plan(sequential)
+
 
 ##############################
 
