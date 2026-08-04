@@ -536,7 +536,7 @@ mom6_results <- future_map(
 )
 plan(sequential)
 
-#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until the prediction step, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
+#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
 
 #for(x in 1:nrow(forecast.list)){
  # print(Sys.time())
@@ -756,7 +756,7 @@ var.list <- data.frame(
 
 ### can pass spp.list$Name directly to future_map, or a subsetted list of names like below to run just a few species
 ## this subset was made to re-run groundfish and benthic species after the addition of the clam survey dataset
-sppnames <- spp.list$Name[which(spp.list$Habitat.Guild == 'Groundfish' | spp.list$Habitat.Guild == "Benthic")]
+#sppnames <- spp.list$Name[which(spp.list$Habitat.Guild == 'Groundfish' | spp.list$Habitat.Guild == "Benthic")]
 
 #RF
 #started: 12:12 PM 7/22
@@ -776,6 +776,7 @@ combs <- future_map(
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
                           skip = F),
   .progress = T
 )
@@ -799,6 +800,7 @@ combs <- future_map(
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
                           skip = F),
   .progress = T
 )
@@ -823,18 +825,19 @@ combs <- future_map(
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
                           skip = F),
   .progress = T
 )
 plan(sequential)
 
 #sdmtmb
-#started:
+#started: 8/4/26 9:41 AM
 #ended:
 #runtime:
 plan(multisession, workers = 4)
 combs <- future_map(
-  1:nrow(spp.list),
+  3:nrow(spp.list), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one 
   ~component_sdms_wrapper(spp = spp.list$Name[.x],
                           model = 'sdmtmb',
                           dyn_names = var.list$Short.Name,
@@ -845,7 +848,8 @@ combs <- future_map(
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
-                          skip = F),
+                          all_years = c(1993, 2035),
+                          skip = T),
   .progress = T
 )
 plan(sequential)
@@ -868,6 +872,7 @@ combs <- future_map(
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
                           skip = F),
   .progress = T
 )
@@ -889,6 +894,7 @@ combs <- future_map(
                           static_variables = statics,
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
+                         all_years = c(1993, 2035),
                           skip = F),
   .progress = T
 )
