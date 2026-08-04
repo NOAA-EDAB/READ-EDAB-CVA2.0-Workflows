@@ -4,6 +4,7 @@
 #' @param spp Species name to add to log files and save data to correct directory (see vignette for recommended directory set up)
 #' @param model Component model name. One of the following: gam, maxent, rf, brt, sdmtmb
 #' @param training_years,test_years vectors with lengths equal to 2, indicating the maximum and minimum years that identify the desired training and test datasets
+#' @param all_years vectors with lengths equal to 2, indicating the maximum and minimum years that will be used in training, testing, and future predictions. Used to build 'sdmtmb' models and passed to \code{build_sdm] via the \code{year_range} argument
 #' @param short_names a vector of shorthand names for variable to help pull desired environmental data based on naming convention
 #' @param release release code for MOM6 data. Helps pull correct training/test dataset associated with the MOM6 data with the same name
 #' @param spatial_temporal TRUE/FALSE to determine method for normalizing. Helps pull correct training/test dataset associated with the MOM6 data with the same name
@@ -14,7 +15,7 @@
 
 #' @return returns the AUC of the produced model. Outputs from the subsequent functions called within are saved within specific directories. See the vignette for recommended directory set up.
 
-component_sdms_wrapper <- function(spp, model, training_years, test_years, dyn_names, release, spatial_temporal, mask_bathy, rm_corr, static_variables, skip = TRUE) {
+component_sdms_wrapper <- function(spp, model, training_years, test_years, all_years, dyn_names, release, spatial_temporal, mask_bathy, rm_corr, static_variables, skip = TRUE) {
   # ==========================================================
   # STEP 0: Set Up
   # ==========================================================
@@ -74,7 +75,8 @@ component_sdms_wrapper <- function(spp, model, training_years, test_years, dyn_n
     mod <- tryCatch({
       build_sdm(
         se = dfT, pa_col = 'pa', xy_col = c("grid.lon", "grid.lat"),
-        month_col = 'month', year_col = 'year', model = model, var_names = var_names
+        month_col = 'month', year_col = 'year', model = model, var_names = var_names,
+        year_range = all_years
       )
     }, error = function(e) {
       log_error("Failed to build model for {spp}: {e$message}")
