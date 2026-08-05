@@ -15,6 +15,10 @@
 #' @return returns the AUC of the produced model. Outputs from the subsequent functions called within are saved within specific directories. See the vignette for recommended directory set up.
 
 ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, release, spatial_temporal, mask_bathy, rm_corr, static_variables, skip = TRUE) {
+  # Wrap the entire wrapper function execution in a outer tryCatch
+  # to guarantee no error kills the parallel worker thread.
+  tryCatch({
+    
   # ==========================================================
   # STEP 0: Set Up
   # ==========================================================
@@ -117,8 +121,11 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
       )
     }, error = function(e) {
       log_error("Failed to build ensemble for {spp}: {e$message}")
-      stop(e)
+      return(NULL)
     })
+    
+    # If model creation failed, return early
+    if (is.null(mod)) return(NULL)
 
     save(mod, file = model_path)
     log_info("Ensemble successfully saved to {model_path}")
@@ -155,11 +162,11 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
       )
 
     }, error = function(e) {
-      log_error("Failed to predict ensemble for {spp}: {e$message}")
-      stop(e)
+      log_error("Failed to predict {model} for {spp}: {e$message}")
+      return(NULL)
     })
 
-
+    if (is.null(preds)) return(NULL)
 
     terra::writeRaster(preds, file = predictions_path, overwrite = T)
     log_info("{model} predictions for {spp} successfully saved to {predictions_path}")
@@ -189,12 +196,19 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
       )
     }, error = function(e) {
       log_error("Failed to evaluate ensemble for {spp}: {e$message}")
-      stop(e)
+      return(NULL)
     })
 
+    if (is.null(ev)) return(NULL)
+    
     save(ev, file = evaluation_path)
     log_info("Ensemble evaluation for {spp} successfully saved to {evaluation_path}")
   }
 
   return(ev)
+  }, error = function(e) {
+    # Catches any unexpected base R errors not caught inside individual steps
+    log_error("Unexpected error in wrapper for {spp}: {e$message}")
+    return(NULL)
+  })
 }
