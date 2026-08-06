@@ -837,7 +837,7 @@ plan(sequential)
 #runtime:
 plan(multisession, workers = 4)
 combs <- future_map(
-  3:nrow(spp.list), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one 
+  5:nrow(spp.list), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one 
   ~component_sdms_wrapper(spp = spp.list$Name[.x],
                           model = 'sdmtmb',
                           dyn_names = var.list$Short.Name,
