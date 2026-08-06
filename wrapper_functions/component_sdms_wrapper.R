@@ -5,7 +5,7 @@
 #' @param model Component model name. One of the following: gam, maxent, rf, brt, sdmtmb
 #' @param training_years,test_years vectors with lengths equal to 2, indicating the maximum and minimum years that identify the desired training and test datasets
 #' @param all_years vectors with lengths equal to 2, indicating the maximum and minimum years that will be used in training, testing, and future predictions. Used to build 'sdmtmb' models and passed to \code{build_sdm] via the \code{year_range} argument
-#' @param short_names a vector of shorthand names for variable to help pull desired environmental data based on naming convention
+#' @param dyn_names a vector of shorthand names for variable to help isolate desired environmental data
 #' @param release release code for MOM6 data. Helps pull correct training/test dataset associated with the MOM6 data with the same name
 #' @param spatial_temporal TRUE/FALSE to determine method for normalizing. Helps pull correct training/test dataset associated with the MOM6 data with the same name
 #' @param mask_bathy TRUE/FALSE indicating whether or not bathymetry data was used as a mask for raw data before normalization. Helps pull correct training/test dataset associated with the MOM6 data with the same name
@@ -45,7 +45,7 @@ component_sdms_wrapper <- function(spp, model, training_years, test_years, all_y
     test_name     <- file.path(spp_dir, paste0('test_', test_years[1], '_', test_years[2], '_', corr_suffix, '_hindcast_', release, '_', bathy_suffix, suffix, '.csv'))
     
     if (!file.exists(training_name) | !file.exists(test_name)) {
-      log_error("Data file missing for species: {spp}. Skipping worker.")
+      log_error("Data file missing for species: {spp}.")
       return(NULL) # Exit function gracefully
     }
     
