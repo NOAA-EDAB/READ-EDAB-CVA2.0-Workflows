@@ -3,68 +3,47 @@
 #data quality is included in sensitivity_workflow
 #model confidence is included in sdm_workflow
 
+library(spatialcva)
+
 ##############################
 ####### DIRECTIONALITY #######
 ##############################
-### STILL A DRAFT ##
-## THIS CODE HASN'T BEEN TESTED BUT SHOULD WORK
 
 setwd(
   "/home/kgallagher/ClimateVulnerabilityAssessment2.0/AdditionalMetrics/Directionality"
 )
-#knowing that directionality isn't input into the portal, it is more likely going to be set up like model confidence, so we will need to combine csvs
 
 #create combined data.frame
 flist <- dir('./raw_csvs', pattern = '.csv')
+scorers <- sub(".*/NECVA2.0_Directional_Scores_(.*)\\.csv$", "\\1", flist)
 direct <- NULL
 #this presumes a similar set up and naming scheme to the model confidence spreadsheets
-for (x in 1:length(flist)) {
+for(x in 1:length(flist)){
   #load in data frame & clean
   f <- read.csv(flist[x], skip = 2) #remove header when loading in
-  f <- f[, 1:3] #remove key in later columns
+
   #add scorer column in case you want that information
-  fname <- gsub('.csv', '', flist[x])
-  f$Scorer <- paste(
-    str_split(fname, "_")[[1]][4],
-    str_split(fname, "_")[[1]][5],
-    sep = '.'
-  )
+  f$Scorer <- scorers[x]
 
   #append to data.frame
-  direct <- direct(modConf, f)
+  direct <- rbind(direct, f)
 }
 write.csv(direct, file = 'combined_directionality.csv') #save for prosperity (the above should be quick but just in case)
 
 #now we calculate metric similar to sensitivity
 species.data.list <- split(direct, direct$Species)
 species.direct <- lapply(species.data.list, directionality, bootstrap = F) #calculate sensitivity w/o bootstrap
-direct.bootstrap <- lapply(species.data.list, directionality, bootstrap = T) #we have ~1/2 of the species as 1.0 so in theory this should take ~30 minutes in sequence or ~10 in parallel based on above tests
-
-#here's the parallel option if you want it
-#parallel option - takes ~20 minutes on container
-# Create a PSOCK cluster with 4 cores
-cl <- makeCluster(4, type = "PSOCK")
-# Export data and functions to the workers (essential step!)
-clusterExport(cl, c("species.data.list", "directionality"))
-# Run the parallel lapply
-direct.bootstrap <- parLapply(
-  cl,
-  species.data.list,
-  directionality,
-  bootstrap = T
-)
-# Stop the cluster when done
-stopCluster(cl)
+direct.bootstrap <- lapply(species.data.list, directionality, bootstrap = T) #this only takes ~5 minutes for 42 species
 
 #get certainty
 direct.certainty <- mapply(
-  directionality.certainty,
+  calculate_directionality_certainty,
   direct.bootstrap,
   species.direct,
   SIMPLIFY = F
 )
-directDF <- do.call(rbind, direct.certainty)
-directDF$Species <- rownames(directDF)
+directDF <- as.data.frame(do.call(rbind, direct.certainty))
+directDF$Certainty <- as.numeric(directDF$Certainty)
 write.csv(directDF, 'directionality_scores.csv') #save results
 
 
