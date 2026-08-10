@@ -4,15 +4,13 @@
 #####SET UP - LOAD EVERY TIME ####
 ##################################
 
-setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/Exposure')
+setwd('V:/Exposure')
 ### source functions
-targets::tar_source(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/functions"
-) #this will eventually be replaced with loading the package
+library(spatialcva)
 
 #load species list for loops
 spp.list <- read.csv(
-  '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/spp_list.csv'
+  'V:/SDMs/spp_list.csv'
 )
 #spp.list <- spp.list[,c(1:6)]
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name) #make clean names to make folders if necessary/match to folder names
@@ -501,6 +499,48 @@ for (x in 1:length(expRanked)) {
   print(x)
 }
 ##################################
+
+
+##################################
+### create stock polygons for all species
+##################################
+#similar to calculating raw exposure, this should only need to happen once as it saves the shp files
+setwd("V:/shpfiles/species_stock_areas")
+
+#get species/stocks/polygons lists
+#NEFMC list
+nefmc <- read.csv('NEFMC_species_stock_assessment_areas.csv')
+#fix some names to match spp.list since that is what the directories are based out of
+nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'American sea scallop', 'Atlantic sea scallop')
+nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Atlantic menhaden', 'Atlantic Menhaden')
+nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Atlantic surf clam', 'Atlantic surfclam')
+nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Blueline Tilefish', 'Blueline tilefish')
+nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Atlantic chub mackerel', 'Chub mackerel')
+nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Red drum', 'Red Drum')
+nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Northern shortfin squid', 'Shortfin squid')
+nefmc <- nefmc[-which(nefmc$COMMON_NAME == 'Black seabass'),]
+nefmc$Name <- gsub(' ', '', nefmc$COMMON_NAME)
+
+#Black Sea Bass from MAFMC
+bsb <- read.csv('BSB_Assessment_StockAreas.csv')
+#add/rename columns to bsb to match nefmc
+bsb$Name <- 'Blackseabass'
+bsb$AREA <- bsb$STOCK_AREA
+bsb$ASSESSMENT_STOCK_AREA <- bsb$STOCK_ABBREV
+
+#combine all stock keys
+stock_key <- rbind(nefmc[,c('Name', "ASSESSMENT_STOCK_AREA", 'AREA')],
+                   bsb[,c('Name', "ASSESSMENT_STOCK_AREA", 'AREA')])
+#remove species with UNIT stocks  or with NAs as a result of the match; both indicate that there are no subunits
+stock_key <- stock_key[-which(stock_key$ASSESSMENT_STOCK_AREA == 'UNIT' | is.na(stock_key$ASSESSMENT_STOCK_AREA)),]
+
+#merge with spp.list to subset to just species list
+stock_key <- merge(stock_key, spp.list, by = 'Name', all.x = F, all.y = T)
+
+##load in CAM polygons
+stat_areas <- terra::vect('V:/shpfiles/NEFSC_GIS/Statistical_Areas_2010_withNames.shp')
+
+make_stock_polygons(key = stock_key, species_col = 'Name', stock_col = 'ASSESSMENT_STOCK_AREA', id_col = 'AREA', polygons = stat_areas, poly_id = 'Id' )
 
 ##################################
 ### create species-specific averages for all variables
