@@ -4,7 +4,7 @@
 #' @param spp species name. Used to pull correct data and save outputs in species-specific folders.
 #' @param present_time,future_time character strings indicating the present and future time series to compare. Example: '1993-2019'. Used to pull correct ranked exposure values and save the data properly
 #'
-#' @return Nothing is returned. The outputs from \code{make_variable_exposure(type = 'map')} and \code{make_variable_exposure(type = 'timeseries')} are saved in the appropriate folders
+#' @return Nothing is returned. The outputs from \code{make_total_exposure(type = 'map')} and \code{make_total_exposure(type = 'timeseries')} are saved in the appropriate folders
 
 total_exposures_wrapper <- function(
     spp,
