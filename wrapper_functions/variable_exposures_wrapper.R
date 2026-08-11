@@ -70,16 +70,17 @@ variable_exposures_wrapper <- function(
     ranked_exposure = expRanked,
     sdm_raster = avgHSM
   )
-  save(
-    mapExp,
-    file = paste0(
+  terra::writeRaster(
+    x = mapExp,
+    filename = paste0(
       file.path(getwd(), spp, 'Data'),
       '/',
       present_time,
       ' vs ',
       future_time,
-      '/variable_exposure_maps.RData'
-    )
+      '/variable_exposure_maps.tif'
+    ),
+    overwrite = TRUE
   )
 
   log_info('spatial variable exposures for {spp} complete.')
@@ -92,7 +93,7 @@ variable_exposures_wrapper <- function(
     stocks <- terra::vect(paste0('./shpfiles/species_stock_areas/', spp, '.shp'))
   } else {
     stocks <- NULL
-    log_info('No stock shpfiles found for {spp}. Only calculating global exposure timeseries')
+    log_info('No stock shpfiles found for {spp}. Only calculating global variable exposure timeseries')
   }
 
   #timeseries
@@ -110,7 +111,7 @@ variable_exposures_wrapper <- function(
       present_time,
       ' vs ',
       future_time,
-      '/variable_exposure_timeseries.RData'
+      '/variable_exposure_timeseries.rds'
     )
   )
 
