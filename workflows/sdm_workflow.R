@@ -835,10 +835,11 @@ plan(sequential)
 #started: 8/4/26 9:41 AM
 #ended:
 #runtime:
+sppnames <- spp.list$Name[c(7:12,22,32)]
 plan(multisession, workers = 4)
 combs <- future_map(
-  5:nrow(spp.list), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one 
-  ~component_sdms_wrapper(spp = spp.list$Name[.x],
+ 1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one 
+  ~component_sdms_wrapper(spp = sppnames[.x],
                           model = 'sdmtmb',
                           dyn_names = var.list$Short.Name,
                           release = 'r20250715',
