@@ -1,4 +1,4 @@
-#' @title Make Timeseries and Maps of Species-Specific Exposure for each variable
+#' @title Make Timeseries and Maps of Variable Exposure
 #' @description A wrapper function for \code{make_variable_exposure} that handles object loading, and generating mean SDMs from timeseries, and produces both maps and timeseries
 #'
 #' @param spp species name. Used to pull correct data and save outputs in species-specific folders.
@@ -32,8 +32,7 @@ variable_exposures_wrapper <- function(
   bathy_suffix <- if(mask_bathy) "masked" else ""
 
   # Define standard paths
-  spp_dir        <- file.path(getwd(), spp)
-  predictions_path <- file.path(spp_dir, 'output_rasters', paste0('ENSEMBLE_hindcast_', release, '_', bathy_suffix, suffix, '.tif'))
+  predictions_path <- file.path('./SDMs/', spp, 'output_rasters', paste0('ENSEMBLE_hindcast_', release, '_', bathy_suffix, suffix, '.tif'))
 
   # ==========================================================
   # STEP 1: Load in Data
@@ -63,7 +62,7 @@ variable_exposures_wrapper <- function(
   )) #expRanked
 
   # ==========================================================
-  # STEP 2: Calculate Exposures Spatially
+  # STEP 2: Calculate Exposures Across Space
   # ==========================================================
   #map
   mapExp <- make_variable_exposure(
