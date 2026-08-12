@@ -65,6 +65,11 @@ total_exposures_wrapper <- function(
       load(flist[x])
       imp_list[[x]] <- imp
     }
+    names(imp_list) <- gsub('.rds', '', dir(
+      file.path('./SDMs/', spp, 'model_output/importance'),
+      full.names = F,
+      pattern = 'rds'
+    ))
 
     #pull variable names from mapexp
     dyn_vars <- names(mapExp)
