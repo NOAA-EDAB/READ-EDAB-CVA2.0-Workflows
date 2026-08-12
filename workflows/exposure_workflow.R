@@ -567,51 +567,6 @@ plan(sequential)
 ##################################
 ### Make Total Exposure
 ##################################
-#create weights & save
-staticVars <- c('year', 'month', 'bathy', 'rugosity', 'dist2coast') #the variables to exclude from dynamic variable weights, since these will not chance
-for (x in 1:nrow(spp.list)) {
-  #load in necessary things
-  #make list of importance files
-  iFlist <- dir(
-    path = paste0(
-      '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-      spp.list$Name[x],
-      '/model_output/importance'
-    ),
-    full.names = T
-  )
-
-  #load in weights
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/model_output/ensemble_weights.RData'
-  )) #weights
-
-  #load in data frame to get names of variables
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/pa_clean.RData'
-  )) #dfC
-  iv <- which(names(dfC) == 'x' | names(dfC) == 'y' | names(dfC) == 'value')
-  vars <- names(dfC)[-iv] #exclude space and value (presence/absence)
-
-  cW <- combineWeights(
-    vars = vars,
-    ensWeights = weights,
-    impFlist = iFlist,
-    staticNames = staticVars
-  )
-  save(
-    cW,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/combined_variable_weights.RData'
-    )
-  )
-  print(x)
-}
 
 #2009-2019 v 2025 - 2035
 plan(multisession, workers = 8)
