@@ -383,75 +383,6 @@ staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVari
 #bathy object = staticR$bathy
 bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
 
-####hindcast
-<<<<<<< HEAD
-log_appender(appender_file("mom6_hindcast.log"))
-
-# Set up the cluster ONCE outside the loop
-plan(multisession, workers = 6)
-norm_results <- future_map(
-  1:nrow(var_df),
-  ~get_model_data_wrapper(
-    source = 'hindcast',
-    var_name = var.list$Long.Name[.x],
-    short_name = var.list$Short.Name[.x],
-    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.hindcast.json",
-    release = 'r20250715',
-    init = NA,
-    spatial_temporal = FALSE
-  )
-)
-names(norm_results) <- var_df$Short.Name
-
-# Explicitly close cluster when entirely finished
-plan(sequential)
-
-###decadal forecast
-  normF <- get_model_forecast_wrapper(
-    var_df = var.list,
-    in_par = T,
-    n_cores = 5,
-    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
-    release = 'r20250925',
-    init = 'i202001',
-    ens = x
-  )
-
-##############################
-
-###################################
-##### BUILD FISHERIES DATA FRAMES #
-###################################
-#load new key document to determine which sources should be used for which species
-source.key <- read.csv('sources.csv')
-source.names <- colnames(source.key)[-1] #isolate source names
-is.obs.key <- c(F, T, F, F, F, F, F, F, F, T, F, F, T, T, T, T, F, F, F) #flags which sources are observer based (ie fisheries dependent datasets)
-
-#build argument matrix to pass along to wrapper function through furrr
-args <- NULL
-for(x in 1:nrow(spp.list)){
-  sFlag <- unlist(as.vector(source.key[which(source.key$Common.Name == spp.list$Common.Name[x]),-c(1)])) #pull T/F flags from sources key
-  sSources <- source.names[sFlag] #use flags to subset source names
-  sObs <- is.obs.key[sFlag] #use flags to subset obs.key
-  altNames <- paste(
-    spp.list$Common.Name[x],
-    spp.list$COM_NAME[x],
-    spp.list$Scientific.Name[x],
-    spp.list$Alternate.Name[x],
-    spp.list$SCI_NAME[x],
-    spp.list$SCI_NAME_ALT[x],
-    spp.list$SCI_NAME_ALT2[x],
-    sep = ','
-  )
-
-  a <- data.frame(spp = spp.list$Name[x],
-                  is_obs = sObs,
-                  source = sSources,
-                  all_names = altNames)
-  args <- rbind(args, a)
-}
-args$source <- paste0(args$source, '_1993_2023')
-#=======
 plan(multisession, workers = 8)
 mom6_results <- future_map(
   1:nrow(var.list),
@@ -498,7 +429,7 @@ forecast.list <- data.frame(
     'bottomT',
     'bottomO2',
     'bottomS',
-   'bottomArg',
+    'bottomArg',
     'surfaceT',
     'surfaceS',
     'surfacepH',
@@ -539,46 +470,58 @@ plan(sequential)
 #because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
 
 #for(x in 1:nrow(forecast.list)){
- # print(Sys.time())
+# print(Sys.time())
 #  get_model_data_wrapper(
- #   var_name = forecast.list$Long.Name[x],
-  #  short_name = forecast.list$Short.Name[x],
-   # json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
-    #release = 'r20250925',
+#   var_name = forecast.list$Long.Name[x],
+#  short_name = forecast.list$Short.Name[x],
+# json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+#release = 'r20250925',
 #    init = 'i202501',
- #   spatial_temporal = FALSE,
-  #  source = "forecast",
-   # mask_bathy = T,
-    #bathy = bathy,
+#   spatial_temporal = FALSE,
+#  source = "forecast",
+# mask_bathy = T,
+#bathy = bathy,
 #    bathy_range = c(-1000, 0),
- #   force_overwrite = T
-  #)
+#   force_overwrite = T
+#)
 #  print(x)
- # print(Sys.time())
+# print(Sys.time())
 #}
-##############################
-#>>>>>>> dev
 
-plan(multisession, workers = 8)
-checks <- future_pmap(
-  list(
-    ..1 = args$source,
-    ..2 = args$spp,
-    ..3 = args$all_names,
-    ..4 = args$is_obs
-  ),
-  ~ save_df_wrapper(
-    csv_name = ..1,
-    spp = ..2,
-    spp_names = ..3,
-    is_obs = ..4,
-    skip = F,
-    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc",
-    force_overwrite = TRUE
-  ),
-  .progress = T
-)
-plan(sequential)
+##############################
+
+###################################
+##### BUILD FISHERIES DATA FRAMES #
+###################################
+#load new key document to determine which sources should be used for which species
+source.key <- read.csv('sources.csv')
+source.names <- colnames(source.key)[-1] #isolate source names
+is.obs.key <- c(F, T, F, F, F, F, F, F, F, T, F, F, T, T, T, T, F, F, F) #flags which sources are observer based (ie fisheries dependent datasets)
+
+#build argument matrix to pass along to wrapper function through furrr
+args <- NULL
+for(x in 1:nrow(spp.list)){
+  sFlag <- unlist(as.vector(source.key[which(source.key$Common.Name == spp.list$Common.Name[x]),-c(1)])) #pull T/F flags from sources key
+  sSources <- source.names[sFlag] #use flags to subset source names
+  sObs <- is.obs.key[sFlag] #use flags to subset obs.key
+  altNames <- paste(
+    spp.list$Common.Name[x],
+    spp.list$COM_NAME[x],
+    spp.list$Scientific.Name[x],
+    spp.list$Alternate.Name[x],
+    spp.list$SCI_NAME[x],
+    spp.list$SCI_NAME_ALT[x],
+    spp.list$SCI_NAME_ALT2[x],
+    sep = ','
+  )
+  
+  a <- data.frame(spp = spp.list$Name[x],
+                  is_obs = sObs,
+                  source = sSources,
+                  all_names = altNames)
+  args <- rbind(args, a)
+}
+args$source <- paste0(args$source, '_1993_2023')
 
 ###example of just one - adding clam dredge survey
 args <- args[args$source == 'Clam_1993_2023',]
