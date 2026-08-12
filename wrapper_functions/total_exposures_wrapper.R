@@ -24,7 +24,7 @@ total_exposures_wrapper <- function(
   # ==========================================================
   # STEP 1: Load in Data
   # ==========================================================
-  #model weights
+  #ensemble weights
   weights <- load(file.path('./SDMs/', spp, 'model_output',
             'ensemble_weights.rds'))
 
@@ -50,6 +50,35 @@ total_exposures_wrapper <- function(
       '/variable_exposure_timeseries.rds'
     )
   ) #vecExp
+
+  #normalized variable importance; load if file exists, make it if it doesn't
+  if(!file.exists(file.path('./SDMs/', spp, 'model_output',
+                            'normalized_variable_importance.rds'))){
+    #read in variable importance outputs & create list
+    flist <- dir(
+      file.path('./SDMs/', spp, 'model_output/importance'),
+      full.names = T,
+      pattern = 'rds'
+    )
+    imp_list <- vector(mode = 'list', length = length(flist))
+    for(x in 1:length(flist)){
+      load(flist[x])
+      imp_list[[x]] <- imp
+    }
+
+    #pull variable names from mapexp
+    dyn_vars <- names(mapExp)
+
+    #create variable importance
+    var_imp <- normalize_variable_importance(vars = dyn_vars, ens_weights = weights, imp_list = imp_list)
+
+    #save
+    save(var_imp, file = file.path('./SDMs/', spp, 'model_output',
+                                   'normalized_variable_importance.rds'))
+  } else {
+    var_imp <- load(file.path('./SDMs/', spp, 'model_output',
+                              'normalized_variable_importance.rds'))
+  }
 
   # ==========================================================
   # STEP 2: Calculate Exposures Across Space
@@ -81,7 +110,7 @@ total_exposures_wrapper <- function(
     type = 'map',
     variable_exposure = mapExp,
     count_all = T,
-    weights = weights,
+    weights = var_imp[nrow(var_imp),], #last row is always the weighted average of the ensemble
     weights_threshold = 0.1
   )
   terra::writeRaster(
@@ -166,7 +195,7 @@ total_exposures_wrapper <- function(
     type = 'timeseries',
     variable_exposure = vecExp,
     count_all = T,
-    weights = weights,
+    weights = var_imp[nrow(var_imp),], #last row is always the weighted average of the ensemble
     weights_threshold = 0.1
   )
   save(
