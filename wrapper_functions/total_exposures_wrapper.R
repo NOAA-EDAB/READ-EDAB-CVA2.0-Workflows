@@ -53,7 +53,7 @@ total_exposures_wrapper <- function(
 
   #normalized variable importance; load if file exists, make it if it doesn't
   if(!file.exists(file.path('./SDMs/', spp, 'model_output',
-                            'normalized_variable_importance.rds'))){
+                            'normalized_dynamic_variable_importance.rds'))){
     #read in variable importance outputs & create list
     flist <- dir(
       file.path('./SDMs/', spp, 'model_output/importance'),
@@ -79,10 +79,10 @@ total_exposures_wrapper <- function(
 
     #save
     save(var_imp, file = file.path('./SDMs/', spp, 'model_output',
-                                   'normalized_variable_importance.rds'))
+                                   'normalized_dynamic_variable_importance.rds'))
   } else {
     var_imp <- load(file.path('./SDMs/', spp, 'model_output',
-                              'normalized_variable_importance.rds'))
+                              'normalized_dynamic_variable_importance.rds'))
   }
 
   # ==========================================================
