@@ -54,7 +54,6 @@ for (x in 1:nrow(spp.list)) {
 ##################################
 ### calculate & rank exposure
 ##################################
-###############step 1 - calculate exposure
 
 #load in variables
 var.names <- c(
@@ -85,7 +84,6 @@ bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra h
 
 #only needs to be done once for each time period
 #2014-2023 v 2025-2035
-
 for (x in var.names) {
   hindcast_path <- paste0('../SDMs/Data/MOM6/raw_MOM6_', x, '_hindcast_r20250715_global.tif')
   hindcast <- terra::rast(hindcast_path)
@@ -201,90 +199,6 @@ for (x in 1:length(mPres)) {
 
 ##don't need to plot SD again since we did it already - figures copied to this folder for consistency
 
-########################step 2 - rank exposure
-#1993-08 v 2009-2019
-load('./RawExposure/Data/1993_2008_v_2009_2019_exposure.RData') #load raw exposure (exp9309)
-expRanked <- rankExposure(
-  exp9309,
-  flip = T,
-  noflipList = c('bottomT', 'surfaceT', 'bottomArg', 'MLD')
-)
-save(
-  expRanked,
-  file = './RawExposure/Data/1993_2008_v_2009_2019_exposure_ranked.RData'
-)
-
-#make and save nice plots of each variable
-for (x in 1:length(expRanked)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/1993-2008 vs 2009-19/',
-      names(expRanked[x]),
-      '_exposure_ranked.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(expRanked[[x]], main = month.abb)
-  dev.off()
-  print(x)
-}
-
-#2009-2019 v 2020-30
-load('./RawExposure/Data/2009_2019_v_2020_2030_exposure.RData') #load raw exposure (exp0920)
-expRanked <- rankExposure(
-  exp0920,
-  flip = T,
-  noflipList = c('bottomT', 'surfaceT', 'bottomArg', 'MLD')
-)
-save(
-  expRanked,
-  file = './RawExposure/Data/2009_2019_v_2020_2030_exposure_ranked.RData'
-)
-
-#make and save nice plots of each variable
-for (x in 1:length(expRanked)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/2009-19 vs 2020-30/',
-      names(expRanked[x]),
-      '_exposure_ranked.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(expRanked[[x]], main = month.abb)
-  dev.off()
-  print(x)
-}
-
-#2009-2019 v 2025-35
-load('./RawExposure/Data/2009_2019_v_2025_2035_exposure.RData') #load raw exposure (exp0925)
-expRanked <- rankExposure(
-  exp0925,
-  flip = T,
-  noflipList = c('bottomT', 'surfaceT', 'bottomArg', 'MLD')
-)
-save(
-  expRanked,
-  file = './RawExposure/Data/2009_2019_v_2025_2035_exposure_ranked.RData'
-)
-
-#make and save nice plots of each variable
-for (x in 1:length(expRanked)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/2009-19 vs 2025-35/',
-      names(expRanked[x]),
-      '_exposure_ranked.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(expRanked[[x]], main = month.abb)
-  dev.off()
-  print(x)
-}
 ##################################
 
 ##################################
