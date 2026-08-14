@@ -31,23 +31,15 @@ total_exposures_wrapper <- function(
   #variable maps
   mapExp <- terra::rast(paste0(
     file.path(getwd(), spp, 'Data'),
-    '/',
-    present_time,
-    ' vs ',
-    future_time,
-    '/variable_exposure_maps.tif'
+    '/variable_exposure_maps_r20250925_i202501_r20250715_20142023.tif'
     )
-  ) # mapExp - will change when naming convention does
+  ) # mapExp
 
   #variable timeseries
   load(
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/variable_exposure_timeseries.rds'
+      '/variable_exposure_timeseries_r20250925_i202501_r20250715_20142023.rds'
     )
   ) #vecExp
 
@@ -101,11 +93,7 @@ total_exposures_wrapper <- function(
    x = mapTot,
     filename = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/total_exposure_map_all_var.tif'
+      '/total_exposure_map_all_var_r20250925_i202501_r20250715_20142023.tif'
     ),
    overwrite = TRUE
   )
@@ -122,11 +110,7 @@ total_exposures_wrapper <- function(
     x = mapImp,
     filename = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/total_exposure_map_imp_var.tif'
+      '/total_exposure_map_imp_var_r20250925_i202501_r20250715_20142023.tif'
     ),
     overwrite = TRUE
   )
@@ -164,11 +148,7 @@ total_exposures_wrapper <- function(
     expAvg,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/total_exposure_map_averages.rds'
+      '/total_exposure_map_averages_r20250925_i202501_r20250715_20142023.rds'
     )
   )
   # ==========================================================
@@ -187,11 +167,7 @@ total_exposures_wrapper <- function(
     vecAll,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/total_exposure_timeseries_all_var.rds'
+      '/total_exposure_timeseries_all_var_r20250925_i202501_r20250715_20142023.rds'
     )
   )
 
@@ -207,11 +183,7 @@ total_exposures_wrapper <- function(
     vecImp,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/total_exposure_timeseries_imp_var.rds'
+      '/total_exposure_timeseries_imp_var_r20250925_i202501_r20250715_20142023.rds'
     )
   )
 

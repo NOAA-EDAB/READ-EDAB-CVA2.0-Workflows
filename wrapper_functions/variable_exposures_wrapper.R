@@ -14,8 +14,7 @@ variable_exposures_wrapper <- function(
   spp,
   spatial_temporal, mask_bathy, release,
   sdm_threshold = 0.1,
-  present_time,
-  future_time
+  dyn_vars
 ) {
 
   # ==========================================================
@@ -52,14 +51,18 @@ variable_exposures_wrapper <- function(
   avgHSM<- terra::ifel(avgHSM <= sdm_threshold, NA, avgHSM)
 
   #ranked exposure data
-  #load in ranked data
-  load(paste0(
-    './RawExposure/Data/',
-    present_time,
-    ' vs ',
-    future_time,
-    '_exposure_ranked.RData'
-  )) #expRanked
+  exp_rasters <- vector(mode = 'list', length = length(dyn_vars))
+  for (x in seq_along(dyn_vars)) {
+    raster_path <- paste0('./RawExposure/Data/',
+                          dyn_vars[x],
+                          '_rankedexposure_r20250925_i202501_r20250715_20142023_global.tif')
+    if (!file.exists(raster_path)) {
+      log_error("Missing upstream raster for {spp}: {raster_path}")
+      return(NULL)
+    }
+    exp_rasters[[x]] <- terra::rast(raster_path)
+  }
+  names(exp_rasters) <- d_names
 
   # ==========================================================
   # STEP 2: Calculate Exposures Across Space
@@ -67,18 +70,14 @@ variable_exposures_wrapper <- function(
   #map
   mapExp <- make_variable_exposure(
     type = 'map',
-    ranked_exposure = expRanked,
+    ranked_exposure = exp_rasters,
     sdm_raster = avgHSM
   )
   terra::writeRaster(
     x = mapExp,
     filename = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/variable_exposure_maps.tif'
+      '/variable_exposure_maps_r20250925_i202501_r20250715_20142023.tif'
     ),
     overwrite = TRUE
   )
@@ -99,7 +98,7 @@ variable_exposures_wrapper <- function(
   #timeseries
   vecExp <- make_variable_exposure(
     type = 'timeseries',
-    ranked_exposure = expRanked,
+    ranked_exposure = exp_rasters,
     sdm_raster = avgHSM,
     stock_polys = stocks
   )
@@ -107,11 +106,7 @@ variable_exposures_wrapper <- function(
     vecExp,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/variable_exposure_timeseries.rds'
+      '/variable_exposure_timeseries_r20250925_i202501_r20250715_20142023.rds'
     )
   )
 
