@@ -779,7 +779,7 @@ plan(sequential)
 sppnames <- spp.list$Name[c(7,8,12,22,32)]
 plan(multisession, workers = 4)
 combs <- future_map(
- 1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one 
+  1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one 
   ~component_sdms_wrapper(spp = sppnames[.x],
                           model = 'sdmtmb',
                           dyn_names = var.list$Short.Name,
@@ -850,16 +850,16 @@ plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
   ~ensemble_sdms_wrapper(spp = spp.list$Name[.x],
-                          dyn_names = var.list$Short.Name,
-                          release = 'r20250715',
-                          spatial_temporal = FALSE,
-                          mask_bathy = T,
-                          rm_corr = T,
-                          static_variables = statics,
-                          training_years = c(1993, 2019),
-                          test_years = c(2020, 2023),
+                         dyn_names = var.list$Short.Name,
+                         release = 'r20250715',
+                         spatial_temporal = FALSE,
+                         mask_bathy = T,
+                         rm_corr = T,
+                         static_variables = statics,
+                         training_years = c(1993, 2019),
+                         test_years = c(2020, 2023),
                          all_years = c(1993, 2035),
-                          skip = F),
+                         skip = F),
   .progress = T
 )
 plan(sequential)
@@ -867,16 +867,16 @@ plan(sequential)
 #run on the "side" as models finish up remotely 
 sppnames <- spp.list$Name[c(2,3,9,10,14,16,20,21,25,26,31)]
 for(x in 1:length(sppnames)){
-ensemble_sdms_wrapper(spp = sppnames[x],
-                      dyn_names = var.list$Short.Name,
-                      release = 'r20250715',
-                      spatial_temporal = FALSE,
-                      mask_bathy = T,
-                      rm_corr = T,
-                      static_variables = statics,
-                      training_years = c(1993, 2019),
-                      test_years = c(2020, 2023),
-                      skip = F)
+  ensemble_sdms_wrapper(spp = sppnames[x],
+                        dyn_names = var.list$Short.Name,
+                        release = 'r20250715',
+                        spatial_temporal = FALSE,
+                        mask_bathy = T,
+                        rm_corr = T,
+                        static_variables = statics,
+                        training_years = c(1993, 2019),
+                        test_years = c(2020, 2023),
+                        skip = F)
 }
 
 
@@ -1485,7 +1485,7 @@ for (x in 1:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
-
+  
   #avg ensemble HSM
   avgHSM <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -1495,9 +1495,9 @@ for (x in 1:nrow(spp.list)) {
   } #end for
   avgHSM <- stack(avgHSM)
   names(avgHSM) <- month.abb
-
+  
   avgHSM <- replace(avgHSM, abs(bathyR) > 1000, NA)
-
+  
   pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
@@ -1533,7 +1533,7 @@ for (x in 1:nrow(spp.list)) {
     col = cmocean('matter')(64)
   )
   dev.off()
-
+  
   print(x)
 }
 
@@ -1544,7 +1544,7 @@ for (x in 1:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_2020_2029.RData'
   )) #abund
-
+  
   #avg ensemble HSM
   avgHSM <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -1554,9 +1554,9 @@ for (x in 1:nrow(spp.list)) {
   } #end for
   avgHSM <- stack(avgHSM)
   names(avgHSM) <- month.abb
-
+  
   avgHSM <- replace(avgHSM, abs(bathyR) > 1000, NA)
-
+  
   pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
@@ -1592,7 +1592,7 @@ for (x in 1:nrow(spp.list)) {
     col = cmocean('matter')(64)
   )
   dev.off()
-
+  
   print(x)
 }
 
@@ -1603,7 +1603,7 @@ for (x in 1:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_2025_2034.RData'
   )) #abund
-
+  
   #avg ensemble HSM
   avgHSM <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -1613,9 +1613,9 @@ for (x in 1:nrow(spp.list)) {
   } #end for
   avgHSM <- stack(avgHSM)
   names(avgHSM) <- month.abb
-
+  
   avgHSM <- replace(avgHSM, abs(bathyR) > 1000, NA)
-
+  
   pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
@@ -1651,7 +1651,7 @@ for (x in 1:nrow(spp.list)) {
     col = cmocean('matter')(64)
   )
   dev.off()
-
+  
   print(x)
 }
 
@@ -1663,10 +1663,10 @@ for (x in 1:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
-
+  
   abund93 <- abund[1:192]
   abund09 <- abund[193:324]
-
+  
   #avg ensemble HSM
   avg93 <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -1676,7 +1676,7 @@ for (x in 1:nrow(spp.list)) {
   } #end for
   avg93 <- stack(avg93)
   names(avg93) <- month.abb
-
+  
   #avg ensemble HSM
   avg09 <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -1686,10 +1686,10 @@ for (x in 1:nrow(spp.list)) {
   } #end for
   avg09 <- stack(avg09)
   names(avg09) <- month.abb
-
+  
   diffHSM <- avg09 - avg93
   diffHSM <- replace(diffHSM, abs(bathyR) > 1000, NA)
-
+  
   pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
@@ -1725,7 +1725,7 @@ for (x in 1:nrow(spp.list)) {
     col = cmocean('balance')(64)
   )
   dev.off()
-
+  
   print(x)
   #print(quantile(avg09[] - avg93[], na.rm = T, seq(0,1,0.1)))
 }
@@ -1737,7 +1737,7 @@ for (x in 1:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
-
+  
   #avg ensemble HSM
   avgHSM <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -1748,13 +1748,13 @@ for (x in 1:nrow(spp.list)) {
   avgHSM <- stack(avgHSM)
   names(avgHSM) <- month.abb
   pHSM <- avgHSM
-
+  
   load(paste0(
     '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_2020_2029.RData'
   )) #abund
-
+  
   #avg ensemble HSM
   avgHSM <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -1765,10 +1765,10 @@ for (x in 1:nrow(spp.list)) {
   avgHSM <- stack(avgHSM)
   names(avgHSM) <- month.abb
   fHSM <- avgHSM
-
+  
   diffHSM <- fHSM - pHSM
   diffHSM <- replace(diffHSM, abs(bathyR) > 1000, NA)
-
+  
   pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
@@ -1804,7 +1804,7 @@ for (x in 1:nrow(spp.list)) {
     col = cmocean('balance')(64)
   )
   dev.off()
-
+  
   print(x)
   #print(quantile(fHSM[]-pHSM[], na.rm = T, seq(0,1,0.1)))
 }
@@ -1816,7 +1816,7 @@ for (x in 1:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
-
+  
   #avg ensemble HSM
   avgHSM <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -1827,13 +1827,13 @@ for (x in 1:nrow(spp.list)) {
   avgHSM <- stack(avgHSM)
   names(avgHSM) <- month.abb
   pHSM <- avgHSM
-
+  
   load(paste0(
     '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_2025_2034.RData'
   )) #abund
-
+  
   #avg ensemble HSM
   avgHSM <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -1844,10 +1844,10 @@ for (x in 1:nrow(spp.list)) {
   avgHSM <- stack(avgHSM)
   names(avgHSM) <- month.abb
   fHSM <- avgHSM
-
+  
   diffHSM <- fHSM - pHSM
   diffHSM <- replace(diffHSM, abs(bathyR) > 1000, NA)
-
+  
   pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
@@ -1883,7 +1883,7 @@ for (x in 1:nrow(spp.list)) {
     col = cmocean('balance')(64)
   )
   dev.off()
-
+  
   print(x)
 }
 
@@ -1914,12 +1914,12 @@ for (s in 37:nrow(spp.list)) {
     ),
     full.names = F
   )
-
+  
   #set up data frame
   vars <- names(dfC)[-c(1:3)]
   dfI <- as.data.frame(matrix(nrow = length(flist), ncol = length(vars)))
   colnames(dfI) <- vars
-
+  
   for (x in 1:length(flist)) {
     load(flist[x]) #imp
     if (class(imp) == 'data.frame') {
@@ -1942,19 +1942,19 @@ for (s in 37:nrow(spp.list)) {
     }
     #print(x)
   }
-
+  
   rownames(dfI) <- gsub('.RData', '', flistClean)
-
+  
   dfI <- replace(dfI, is.na(dfI), 0)
-
+  
   dfI <- t(apply(dfI, 1, FUN = function(x) {
     x / sum(x)
   }))
-
+  
   dfI <- rbind(rep(max(dfI, na.rm = T), ncol(dfI)), rep(0, ncol(dfI)), dfI)
-
+  
   pal <- brewer.pal(n = 5, 'Set1')
-
+  
   pdf(
     paste0(
       file.path(getwd(), spp.list$Name[s], 'figures'),
@@ -2015,23 +2015,23 @@ for (x in 37:nrow(spp.list)) {
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
   abund <- stack(abund)
-
+  
   #observations
   obs <- stack(paste0(
     '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
     spp.list$Name[x],
     '/input_rasters/combined_rasters_1993_2019.nc'
   ))
-
+  
   #manipulate obs a bit to clean it up
   names(obs) <- names(abund)
   obsC <- crop(obs, extent(abund))
   obsC[obsC == 0] <- NA
   obsC[obsC == 1] <- 0
   obsC[obsC == 2] <- 1
-
+  
   resids <- obsC - abund
-
+  
   #avg residuals
   avgR <- vector(mode = 'list', length = 12)
   for (y in 1:12) {
@@ -2041,7 +2041,7 @@ for (x in 37:nrow(spp.list)) {
   } #end for
   avgR <- stack(avgR)
   names(avgR) <- month.abb
-
+  
   pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
@@ -2072,7 +2072,7 @@ for (x in 37:nrow(spp.list)) {
     col = cmocean('balance')(64)
   )
   dev.off()
-
+  
   pdf(
     paste0(
       file.path(getwd(), spp.list$Name[x], 'figures'),
@@ -2083,7 +2083,7 @@ for (x in 37:nrow(spp.list)) {
   )
   hist(resids[], main = '', xlab = 'Residuals')
   dev.off()
-
+  
   print(x)
 }
 
@@ -2093,7 +2093,7 @@ metrics$Name <- gsub(' ', '', metrics$Common.Name)
 
 for (x in 37:nrow(metrics)) {
   m <- as.matrix(metrics[x, c(12:16)])
-
+  
   pdf(
     paste0(
       file.path(getwd(), metrics$Name[x], 'figures'),
@@ -2111,7 +2111,7 @@ for (x in 37:nrow(metrics)) {
   )
   box()
   dev.off()
-
+  
   aucs <- as.matrix(metrics[x, c(7:11)])
   pdf(
     paste0(
@@ -2130,7 +2130,7 @@ for (x in 37:nrow(metrics)) {
   )
   box()
   dev.off()
-
+  
   print(x)
   # print(m)
 }
@@ -2145,10 +2145,10 @@ for (x in 37:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
-
+  
   abund <- stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
-
+  
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
       plot(
@@ -2185,7 +2185,7 @@ for (x in 37:nrow(spp.list)) {
       '/mean_SDM_1993_2019.gif'
     )
   )
-
+  
   print(x)
 }
 
@@ -2196,10 +2196,10 @@ for (x in 37:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_2025_2034.RData'
   )) #abund
-
+  
   abund <- stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
-
+  
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
       plot(
@@ -2236,7 +2236,7 @@ for (x in 37:nrow(spp.list)) {
       '/mean_SDM_2025_2034.gif'
     )
   )
-
+  
   print(x)
 }
 
@@ -2275,10 +2275,10 @@ for (x in 37:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
-
+  
   abund <- stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
-
+  
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
       plot(
@@ -2315,7 +2315,7 @@ for (x in 37:nrow(spp.list)) {
       '/mean_SDM_1993_2019.gif'
     )
   )
-
+  
   print(x)
 }
 
@@ -2326,10 +2326,10 @@ for (x in 37:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_2025_2034.RData'
   )) #abund
-
+  
   abund <- stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
-
+  
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
       plot(
@@ -2366,7 +2366,7 @@ for (x in 37:nrow(spp.list)) {
       '/mean_SDM_2025_2034.gif'
     )
   )
-
+  
   print(x)
 }
 
@@ -2472,7 +2472,7 @@ for (x in 1:length(flist)) {
     str_split(fname, "_")[[1]][5],
     sep = '.'
   )
-
+  
   #append to data.frame
   modConf <- rbind(modConf, f)
 }
@@ -2500,10 +2500,10 @@ for (x in 1:nrow(speciesMC)) {
   m <- speciesMC[x, 'meanConfidence']
   s <- speciesMC[x, 'sdConfidence']
   sp <- speciesMC[x, 'Species']
-
+  
   #use species.data.list to subset since that's already done and the list is in the same order as the summary stats spreadsheet
   spDF <- species.data.list[[x]]
-
+  
   #plot histogram
   hist(
     spDF$Scores,
