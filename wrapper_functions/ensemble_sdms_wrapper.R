@@ -18,7 +18,7 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
   # Wrap the entire wrapper function execution in a outer tryCatch
   # to guarantee no error kills the parallel worker thread.
   tryCatch({
-    
+
   # ==========================================================
   # STEP 0: Set Up
   # ==========================================================
@@ -123,7 +123,7 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
       log_error("Failed to build ensemble for {spp}: {e$message}")
       return(NULL)
     })
-    
+
     # If model creation failed, return early
     if (is.null(mod)) return(NULL)
 
@@ -162,14 +162,14 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
       )
 
     }, error = function(e) {
-      log_error("Failed to predict {model} for {spp}: {e$message}")
+      log_error("Failed to predict ensemble for {spp}: {e$message}")
       return(NULL)
     })
 
     if (is.null(preds)) return(NULL)
 
     terra::writeRaster(preds, file = predictions_path, overwrite = T)
-    log_info("{model} predictions for {spp} successfully saved to {predictions_path}")
+    log_info("ensemble predictions for {spp} successfully saved to {predictions_path}")
   }
 
 
@@ -200,7 +200,7 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
     })
 
     if (is.null(ev)) return(NULL)
-    
+
     save(ev, file = evaluation_path)
     log_info("Ensemble evaluation for {spp} successfully saved to {evaluation_path}")
   }
