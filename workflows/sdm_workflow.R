@@ -775,10 +775,8 @@ combs <- future_map(
 plan(sequential)
 
 #sdmtmb
-#started: 8/4/26 9:41 AM
-#ended:
 #runtime:
-sppnames <- spp.list$Name[c(7:12,22,32)]
+sppnames <- spp.list$Name[c(7,8,12,22,32)]
 plan(multisession, workers = 4)
 combs <- future_map(
  1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one 
@@ -799,9 +797,6 @@ combs <- future_map(
 plan(sequential)
 
 #maxent
-#predictions may not work in parallel so be prepared to write it out
-#started:
-#ended:
 #runtime:
 plan(multisession, workers = 8)
 combs <- future_map(
@@ -822,9 +817,34 @@ combs <- future_map(
 )
 plan(sequential)
 
+##combined approach to get both sdmtmb finished and maxtent started 
+sppnames <- spp.list$Name[c(7,8,12,22,32)]
+sdmtmb <- data.frame(spp = sppnames, mod = 'sdmtmb')
+
+maxent <- data.frame(spp = spp.list$Name, mod = 'maxent')
+
+runs <- rbind(sdmtmb, maxent)
+
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(runs),
+  ~component_sdms_wrapper(spp = runs$spp[.x],
+                          model = runs$mod[.x],
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T,
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
+                          skip = T),
+  .progress = T
+)
+plan(sequential)
+
 #ENSEMBLE
-#started:
-#ended:
 #runtime:
 plan(multisession, workers = 8)
 combs <- future_map(
@@ -843,6 +863,21 @@ combs <- future_map(
   .progress = T
 )
 plan(sequential)
+
+#run on the "side" as models finish up remotely 
+sppnames <- spp.list$Name[c(2,3,9,10,14,16,20,21,25,26,31)]
+for(x in 1:length(sppnames)){
+ensemble_sdms_wrapper(spp = sppnames[x],
+                      dyn_names = var.list$Short.Name,
+                      release = 'r20250715',
+                      spatial_temporal = FALSE,
+                      mask_bathy = T,
+                      rm_corr = T,
+                      static_variables = statics,
+                      training_years = c(1993, 2019),
+                      test_years = c(2020, 2023),
+                      skip = F)
+}
 
 
 ##############################
