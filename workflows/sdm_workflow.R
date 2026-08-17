@@ -404,90 +404,6 @@ mom6_results <- future_map(
 plan(sequential)
 
 
-###decadal forecast
-forecast.list <- data.frame(
-  Long.Name = c(
-    'Sea Water Potential Temperature at Sea Floor',
-    'Bottom Oxygen',
-    'Sea Water Salinity at Sea Floor',
-    'Bottom Aragonite Solubility',
-    'Sea Surface Temperature',
-    'Sea Surface Salinity',
-    'Surface pH',
-    'Mixed layer depth (delta rho = 0.03)',
-    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
-    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
-    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
-    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
-    'Small zooplankton nitrogen biomass in upper 100m',
-    'Medium zooplankton nitrogen biomass in upper 100m',
-    'Large zooplankton nitrogen biomass in upper 100m',
-    'Water column net primary production vertical integral',
-    'Downward Flux of Particulate Organic Carbon'
-  ),
-  Short.Name = c(
-    'bottomT',
-    'bottomO2',
-    'bottomS',
-    'bottomArg',
-    'surfaceT',
-    'surfaceS',
-    'surfacepH',
-    'MLD',
-    'diazPP',
-    'smallPP',
-    'mediumPP',
-    'largePP',
-    'smallZoo',
-    'mediumZoo',
-    'largeZoo',
-    'intNPP',
-    'POC'
-  )
-)
-
-#parallel version
-plan(multisession, workers = 8)
-mom6_results <- future_map(
-  1:nrow(forecast.list),
-  ~get_model_data_wrapper(
-    var_name = forecast.list$Long.Name[.x],
-    short_name = forecast.list$Short.Name[.x],
-    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
-    release = 'r20250925',
-    init = 'i202501',
-    spatial_temporal = FALSE,
-    source = "forecast",
-    mask_bathy = T,
-    bathy = bathy,
-    bathy_range = c(-1000, 0),
-    force_overwrite = T
-  ),
-  .progress = T
-)
-plan(sequential)
-
-#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
-
-#for(x in 1:nrow(forecast.list)){
-# print(Sys.time())
-#  get_model_data_wrapper(
-#   var_name = forecast.list$Long.Name[x],
-#  short_name = forecast.list$Short.Name[x],
-# json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
-#release = 'r20250925',
-#    init = 'i202501',
-#   spatial_temporal = FALSE,
-#  source = "forecast",
-# mask_bathy = T,
-#bathy = bathy,
-#    bathy_range = c(-1000, 0),
-#   force_overwrite = T
-#)
-#  print(x)
-# print(Sys.time())
-#}
-
 ##############################
 
 ###################################
@@ -865,7 +781,7 @@ combs <- future_map(
 plan(sequential)
 
 #run on the "side" as models finish up remotely 
-sppnames <- spp.list$Name[c(2,3,9,10,14,16,20,21,25,26,31,37)]
+sppnames <- spp.list$Name[c(27)]
 for(x in 1:length(sppnames)){
   ensemble_sdms_wrapper(spp = sppnames[x],
                         dyn_names = var.list$Short.Name,
@@ -897,9 +813,145 @@ make_evaluation_csv(spp_list = spp.list,
 ##########################################
 
 #first, pull forecast data
+###decadal forecast
+forecast.list <- data.frame(
+  Long.Name = c(
+    'Sea Water Potential Temperature at Sea Floor',
+    'Bottom Oxygen',
+    'Sea Water Salinity at Sea Floor',
+    'Bottom Aragonite Solubility',
+    'Sea Surface Temperature',
+    'Sea Surface Salinity',
+    'Surface pH',
+    'Mixed layer depth (delta rho = 0.03)',
+    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
+    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Small zooplankton nitrogen biomass in upper 100m',
+    'Medium zooplankton nitrogen biomass in upper 100m',
+    'Large zooplankton nitrogen biomass in upper 100m',
+    'Water column net primary production vertical integral',
+    'Downward Flux of Particulate Organic Carbon'
+  ),
+  Short.Name = c(
+    'bottomT',
+    'bottomO2',
+    'bottomS',
+    'bottomArg',
+    'surfaceT',
+    'surfaceS',
+    'surfacepH',
+    'MLD',
+    'diazPP',
+    'smallPP',
+    'mediumPP',
+    'largePP',
+    'smallZoo',
+    'mediumZoo',
+    'largeZoo',
+    'intNPP',
+    'POC'
+  )
+)
+
+#parallel version
+plan(multisession, workers = 8)
+mom6_results <- future_map(
+  1:nrow(forecast.list),
+  ~get_model_data_wrapper(
+    var_name = forecast.list$Long.Name[.x],
+    short_name = forecast.list$Short.Name[.x],
+    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+    release = 'r20250925',
+    init = 'i202501',
+    spatial_temporal = FALSE,
+    source = "forecast",
+    mask_bathy = T,
+    bathy = bathy,
+    bathy_range = c(-1000, 0),
+    force_overwrite = T
+  ),
+  .progress = T
+)
+plan(sequential)
+
+#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
+
+#for(x in 1:nrow(forecast.list)){
+# print(Sys.time())
+#  get_model_data_wrapper(
+#   var_name = forecast.list$Long.Name[x],
+#  short_name = forecast.list$Short.Name[x],
+# json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+#release = 'r20250925',
+#    init = 'i202501',
+#   spatial_temporal = FALSE,
+#  source = "forecast",
+# mask_bathy = T,
+#bathy = bathy,
+#    bathy_range = c(-1000, 0),
+#   force_overwrite = T
+#)
+#  print(x)
+# print(Sys.time())
+#}
+
 #second, normalize forecast data to HINDCAST MEAN/SD
-#third, predict component models
-#fourth, create ensemble 
+norm_forecast <- vector(mode = 'list', length = length(forecast.list$Short.Name))
+for(x in 1:length(forecast.list$Short.Name)){
+  raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global.tif')
+  hind_avg <- load('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
+  hind_sd <- load('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
+  
+  norm <- (raw - avg) / sd
+  terra::writeRaster(norm, filename = './Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif')
+  
+  norm_forecast[[x]] <- norm
+}
+
+#third, predict models
+statics <- terra::wrap(terra::rast('./Data/staticVariables_masked_norm_terra.tif'))
+mods <- c("GAM", "MAXENT", "SDMTMB", "RF", "BRT")
+
+for(x in 1:nrow(spp.list)){
+#load in training data for each species (needed to predict some models)
+ dfT <- read.csv(file.path(getwd(), spp.list$Name[x], 'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'))
+ preds <- vector(mode = 'list', length = length(mods))
+ #predict component models 
+ for(m in 1:length(mods)){
+   mod <- load(file.path(getwd(), spp.list$Name[x], 'model_output', 'models', paste0(mods[m], '.rds')))
+   p <- make_sdm_predictions(
+      mod = mod,
+      model = tolower(mods[m]),
+      rasts = norm_forecast,
+      static_variables = terra::unwrap(static_variables),
+      se = dfT,
+      pa_col = 'pa',
+      month_col = 'month',
+      year_col = 'year',
+      xy_col = c("grid.lon", "grid.lat")
+    )
+   #save prediction
+   terra::writeRaster(p, file = file.path(getwd(), spp.list$Name[x], 'output_rasters', paste0(mods[m], '_forecast_r20250925_i202501.tif')), overwrite = TRUE)
+   #and add to list
+   preds[[m]] <- p
+ } #end m
+ 
+ #now predict ensemble 
+ #load in weights 
+ weights <- load(file.path(getwd(), spp.list$Name[x], 'model_output',
+                      'ensemble_weights.rds'))
+ #predict
+ ens <- make_sdm_predictions(
+   model = 'ensemble',
+   rasts = preds,
+   weights = weights 
+ )
+ #save
+ terra::writeRaster(ens, file = file.path(getwd(), spp.list$Name[x], 'output_rasters', 'ENSEMBLE_forecast_r20250925_i202501.tif'), overwrite = TRUE)
+} #end x
+
 
 ##############################
 
