@@ -900,13 +900,19 @@ plan(sequential)
 #second, normalize forecast data to HINDCAST MEAN/SD
 norm_forecast <- vector(mode = 'list', length = length(forecast.list$Short.Name))
 for(x in 1:length(forecast.list$Short.Name)){
-  raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global.tif')
-  hind_avg <- load('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
-  hind_sd <- load('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
-  
-  norm <- (raw - avg) / sd
-  terra::writeRaster(norm, filename = './Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif')
-  
+  if(!file.exists(paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))){
+    #if the normalized file doesn't exist, make it
+    raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global.tif')
+    hind_avg <- load('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
+    hind_sd <- load('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
+    
+    norm <- (raw - avg) / sd
+    terra::writeRaster(norm, filename = paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))
+  } else{
+    #if it does exist, load it in
+    norm <- terra::rast(paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))
+  }
+  #add to big list to pass to predictions
   norm_forecast[[x]] <- norm
 }
 
@@ -950,10 +956,10 @@ for(x in 1:nrow(spp.list)){
  )
  #save
  terra::writeRaster(ens, file = file.path(getwd(), spp.list$Name[x], 'output_rasters', 'ENSEMBLE_forecast_r20250925_i202501.tif'), overwrite = TRUE)
-} #end x
+} #end p
 
 
-##############################
+##########################################
 
 ##############################
 ##### PLOT MODEL RESULTS  ####
