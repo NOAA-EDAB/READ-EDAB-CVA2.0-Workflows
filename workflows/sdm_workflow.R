@@ -399,7 +399,8 @@ mom6_results <- future_map(
     bathy_range = c(-1000, 0),
     force_overwrite = F
   ),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
@@ -454,7 +455,8 @@ checks <- future_map(
     grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc",
     force_overwrite = TRUE
   ),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
@@ -555,7 +557,8 @@ combs <- future_map(
                              test_years = c(2020, 2023),
                              skip = F,
                              force_overwrite = F),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 #sink()
 plan(sequential)
@@ -637,7 +640,8 @@ combs <- future_map(
                           test_years = c(2020, 2023),
                           all_years = c(1993, 2035),
                           skip = F),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
@@ -661,7 +665,8 @@ combs <- future_map(
                           test_years = c(2020, 2023),
                           all_years = c(1993, 2035),
                           skip = F),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
@@ -686,7 +691,8 @@ combs <- future_map(
                           test_years = c(2020, 2023),
                           all_years = c(1993, 2035),
                           skip = F),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
@@ -708,7 +714,8 @@ combs <- future_map(
                           test_years = c(2020, 2023),
                           all_years = c(1993, 2035),
                           skip = T),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
@@ -729,16 +736,15 @@ combs <- future_map(
                           test_years = c(2020, 2023),
                           all_years = c(1993, 2035),
                           skip = F),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
 ##combined approach to get both sdmtmb finished and maxtent started 
-sppnames <- spp.list$Name[c(7,8,12,22,32)]
-sdmtmb <- data.frame(spp = sppnames, mod = 'sdmtmb')
 
-maxent <- data.frame(spp = spp.list$Name, mod = 'maxent')
-
+sdmtmb <- data.frame(spp = spp.list$Name[c(7,8,12,22,32)], mod = 'sdmtmb')
+maxent <- data.frame(spp = spp.list$Name[c(1,5:7,13,18:19,23:24,28:30,33:36)], mod = 'maxent')
 runs <- rbind(sdmtmb, maxent)
 
 plan(multisession, workers = 8)
@@ -756,7 +762,8 @@ combs <- future_map(
                           test_years = c(2020, 2023),
                           all_years = c(1993, 2035),
                           skip = T),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
@@ -776,7 +783,8 @@ combs <- future_map(
                          test_years = c(2020, 2023),
                          all_years = c(1993, 2035),
                          skip = F),
-  .progress = T
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
@@ -900,13 +908,19 @@ plan(sequential)
 #second, normalize forecast data to HINDCAST MEAN/SD
 norm_forecast <- vector(mode = 'list', length = length(forecast.list$Short.Name))
 for(x in 1:length(forecast.list$Short.Name)){
-  raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global.tif')
-  hind_avg <- load('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
-  hind_sd <- load('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
-  
-  norm <- (raw - avg) / sd
-  terra::writeRaster(norm, filename = './Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif')
-  
+  if(!file.exists(paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))){
+    #if the normalized file doesn't exist, make it
+    raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global.tif')
+    hind_avg <- load('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
+    hind_sd <- load('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
+    
+    norm <- normalize_model_data(raw = raw, avg = hind_avg, sd = hind_sd, spatial_temporal = F)
+    terra::writeRaster(norm, filename = paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))
+  } else{
+    #if it does exist, load it in
+    norm <- terra::rast(paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))
+  }
+  #add to big list to pass to predictions
   norm_forecast[[x]] <- norm
 }
 
@@ -950,10 +964,10 @@ for(x in 1:nrow(spp.list)){
  )
  #save
  terra::writeRaster(ens, file = file.path(getwd(), spp.list$Name[x], 'output_rasters', 'ENSEMBLE_forecast_r20250925_i202501.tif'), overwrite = TRUE)
-} #end x
+} #end p
 
 
-##############################
+##########################################
 
 ##############################
 ##### PLOT MODEL RESULTS  ####
