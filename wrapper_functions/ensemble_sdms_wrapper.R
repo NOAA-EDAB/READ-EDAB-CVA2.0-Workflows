@@ -103,9 +103,11 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
       load(evalFlist[y])
       eval[y] <- ev
     }
+    #rescale using gini index to get scores between 0-1 rather than 0.5 and 1
+    gini <- (2*eval) -1
 
     #generate weights
-    weights <- eval / sum(eval) #we need to make weights like this since AUC bigger = better; whereas RMSE smaller = better
+    weights <- gini / sum(gini) #we need to make weights like this since AUC bigger = better; whereas RMSE smaller = better
     save(
       weights,
       file = file.path(getwd(), spp, 'model_output',
