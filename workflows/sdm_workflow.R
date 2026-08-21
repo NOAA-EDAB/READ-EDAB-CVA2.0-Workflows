@@ -431,7 +431,7 @@ for(x in 1:nrow(spp.list)){
     spp.list$SCI_NAME_ALT2[x],
     sep = ','
   )
-  
+
   a <- data.frame(spp = spp.list$Name[x],
                   is_obs = sObs,
                   source = sSources,
@@ -701,7 +701,7 @@ plan(sequential)
 sppnames <- spp.list$Name[c(7,8,12,22,32)]
 plan(multisession, workers = 4)
 combs <- future_map(
-  1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one 
+  1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one
   ~component_sdms_wrapper(spp = sppnames[.x],
                           model = 'sdmtmb',
                           dyn_names = var.list$Short.Name,
@@ -741,7 +741,7 @@ combs <- future_map(
 )
 plan(sequential)
 
-##combined approach to get both sdmtmb finished and maxtent started 
+##combined approach to get both sdmtmb finished and maxtent started
 
 sdmtmb <- data.frame(spp = spp.list$Name[c(7,8,12,22,32)], mod = 'sdmtmb')
 maxent <- data.frame(spp = spp.list$Name[c(1,5:7,13,18:19,23:24,28:30,33:36)], mod = 'maxent')
@@ -788,8 +788,8 @@ combs <- future_map(
 )
 plan(sequential)
 
-#run on the "side" as models finish up remotely 
-sppnames <- spp.list$Name[c(27)]
+#run on the "side" as models finish up remotely
+sppnames <- spp.list$Name[c(8,17,20:21,23,25:27,31:32,37:41)]
 for(x in 1:length(sppnames)){
   ensemble_sdms_wrapper(spp = sppnames[x],
                         dyn_names = var.list$Short.Name,
@@ -800,7 +800,7 @@ for(x in 1:length(sppnames)){
                         static_variables = statics,
                         training_years = c(1993, 2019),
                         test_years = c(2020, 2023),
-                        skip = T)
+                        skip = F)
 }
 
 #evalulate ensemble and combine statistics for model reports
@@ -811,7 +811,7 @@ make_evaluation_csv(spp_list = spp.list,
                     spatial_temporal = FALSE,
                     mask_bathy = T,
                     rm_corr = T,
-                    add_data = F, 
+                    add_data = F,
                     additional_data = NULL)
 
 ##############################
@@ -913,7 +913,7 @@ for(x in 1:length(forecast.list$Short.Name)){
     raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global.tif')
     hind_avg <- load('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
     hind_sd <- load('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
-    
+
     norm <- normalize_model_data(raw = raw, avg = hind_avg, sd = hind_sd, spatial_temporal = F)
     terra::writeRaster(norm, filename = paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))
   } else{
@@ -932,7 +932,7 @@ for(x in 1:nrow(spp.list)){
 #load in training data for each species (needed to predict some models)
  dfT <- read.csv(file.path(getwd(), spp.list$Name[x], 'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'))
  preds <- vector(mode = 'list', length = length(mods))
- #predict component models 
+ #predict component models
  for(m in 1:length(mods)){
    mod <- load(file.path(getwd(), spp.list$Name[x], 'model_output', 'models', paste0(mods[m], '.rds')))
    p <- make_sdm_predictions(
@@ -951,16 +951,16 @@ for(x in 1:nrow(spp.list)){
    #and add to list
    preds[[m]] <- p
  } #end m
- 
- #now predict ensemble 
- #load in weights 
+
+ #now predict ensemble
+ #load in weights
  weights <- load(file.path(getwd(), spp.list$Name[x], 'model_output',
                       'ensemble_weights.rds'))
  #predict
  ens <- make_sdm_predictions(
    model = 'ensemble',
    rasts = preds,
-   weights = weights 
+   weights = weights
  )
  #save
  terra::writeRaster(ens, file = file.path(getwd(), spp.list$Name[x], 'output_rasters', 'ENSEMBLE_forecast_r20250925_i202501.tif'), overwrite = TRUE)
@@ -1001,10 +1001,10 @@ for (x in 37:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_1993_2019.RData'
   )) #abund
-  
+
   abund <- stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
-  
+
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
       plot(
@@ -1041,7 +1041,7 @@ for (x in 37:nrow(spp.list)) {
       '/mean_SDM_1993_2019.gif'
     )
   )
-  
+
   print(x)
 }
 
@@ -1052,10 +1052,10 @@ for (x in 37:nrow(spp.list)) {
     spp.list$Name[x],
     '/output_rasters/ENSEMBLE_2025_2034.RData'
   )) #abund
-  
+
   abund <- stack(abund)
   abund <- replace(abund, abs(bathyR) > 1000, NA)
-  
+
   save_gif(
     expr = for (y in 1:nlayers(abund)) {
       plot(
@@ -1092,7 +1092,7 @@ for (x in 37:nrow(spp.list)) {
       '/mean_SDM_2025_2034.gif'
     )
   )
-  
+
   print(x)
 }
 
@@ -1198,7 +1198,7 @@ for (x in 1:length(flist)) {
     str_split(fname, "_")[[1]][5],
     sep = '.'
   )
-  
+
   #append to data.frame
   modConf <- rbind(modConf, f)
 }
@@ -1226,10 +1226,10 @@ for (x in 1:nrow(speciesMC)) {
   m <- speciesMC[x, 'meanConfidence']
   s <- speciesMC[x, 'sdConfidence']
   sp <- speciesMC[x, 'Species']
-  
+
   #use species.data.list to subset since that's already done and the list is in the same order as the summary stats spreadsheet
   spDF <- species.data.list[[x]]
-  
+
   #plot histogram
   hist(
     spDF$Scores,
