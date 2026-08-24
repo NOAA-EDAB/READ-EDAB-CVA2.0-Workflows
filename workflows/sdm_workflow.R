@@ -2405,6 +2405,8 @@ sourceDF <- data.frame(
     'SEFSC Pelagic Observer Program',
     'SEFSC Logbook Program',
     'NMFS Large Pelagics Survey',
+    'Northeast Area Monitoring and Assessment Program (NEAMAP) & Chesapeake Bay Multispecies Monitoring and Assessment Program (ChesMMAP)',
+    'Massachusetts Division of Marine Fisheries Bottom Trawl Survey',
     'NEFSC Atlantic Surfclam and Ocean Quahog Survey'
   ),
   Short.Name = c(
@@ -2424,6 +2426,8 @@ sourceDF <- data.frame(
     'POP',
     "LOGBOOK",
     "LPS",
+    'NEAMAP-BFT',
+    'MA-BFT',
     "Clam"
   )
 )
@@ -2437,14 +2441,15 @@ statics <- terra::rast('staticVariables_cropped_terra_reproj.tif')
 bathy <- statics$bathy
 
 #load in source key
-source.key <- read.csv('sources.csv')
+sources <- read.csv('sources.csv')
 
 #plots are made above - this just pulls them in and renders the report (original function also handled plotting)
 make_sdm_reports(
-  species_list = spp.list,
-  yr_min = 1993,
-  yr_max = 2019,
+  species_list = spp.list[1,],
+  release = 'r20250715',
   model_metrics = metrics,
+  sources = sources,
+  source_key = sourceDF,
   feeding_key = feeding,
   habitat_key = habitat,
   variable_key = varDF,
