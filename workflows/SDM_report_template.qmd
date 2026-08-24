@@ -75,46 +75,27 @@ if(file.exists(params$resid_map)) {
 
 \newpage
 
-## Ensemble Model Performance & Variable Importance
+## Variable Importance
 
-\\begin{minipage}\[t\]{0.28\textwidth} AUCs for the final
-`r params$species_name` ensemble model were calculated using fisheries
-and MOM6 model data from 2020-2023. Component models (and thus the final
-ensemble) were built using fisheries and MOM6 data from 1993-2019. The
-closer the AUC is to 1, the better the model predictions are. An AUC of
-0.5 or less indicates that the model is essentially guessing when it
-attempts to classify presence vs absence.
-
-````{=tex}
-\begin{itemize}
-```{r}
-#| echo: false
-#| results: asis
-
-# We define the strings here to keep the LaTeX command clean
-item2 <- paste0("\\item \\footnotesize AUC\\textsubscript{2020--2023} = \\textbf{", params$auc, "}")
-
-cat(item2)
-```
-\end{itemize}
-````
-
-\\end{minipage} \hfill
-
-````{=tex}
-\begin{minipage}[c]{0.68\textwidth}
-\centering
-```{r}
-#| echo: false
-#| results: asis
+```{r, echo=FALSE, out.width="75%", fig.align='center'}
 if(file.exists(params$imp_plot_pdf)) {
   cat(paste0("\\includegraphics[width=\\textwidth]{", params$imp_plot_pdf, "}"))
 } else {
   cat("Plot not found.")
 }
 ```
-\end{minipage}
-````
+
+## Ensemble Model Performance
+
+AUCs for the ensemble model were calculated using a leave-one-out
+approach. Models were built with fisheries and MOM6 data from 1993-2019
+and data from 2020-2023 were used to evaluate the model performance
+using the AUC. The closer the AUC is to 1, the better the model
+predictions are. An AUC of 0.5 or less indicates that the model is
+essentially guessing when it attempts to classify presence vs absence.
+
+The AUC for the **`r params$species_name`** ensemble was
+**`r params$auc`**.
 
 \newpage
 
@@ -125,7 +106,8 @@ if(file.exists(params$imp_plot_pdf)) {
 A total of **`r params$n_pres`** presences and **`r params$n_abs`**
 absences were used to build the **`r params$species_name`** model.
 
-Presence/absence data was collected from the following datasets: 
+Presence/absence data was collected from the following datasets:
+
 ```{r}
 #| echo: false
 #| output: asis
@@ -140,7 +122,6 @@ if (length(items) > 0) {
   cat("\\end{itemize}\n")
 }
 ```
-
 
 ### MOM6 Data
 
