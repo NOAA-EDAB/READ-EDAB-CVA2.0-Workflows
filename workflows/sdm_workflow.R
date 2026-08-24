@@ -2204,24 +2204,71 @@ for (x in 37:nrow(spp.list)) {
 ##############################
 ##### PLOT ENSEMBLE - NEW  ###
 ##############################
-######average ensembles
-load(
-  "~/ClimateVulnerabilityAssessment2.0/Exposure/RawExposure/Data/coastline.RData"
-)
-load(
-  "~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped.RData"
-)
-bathyR <- staticVars$bathy
+
+#get bathymetry for plotting
+statics <- terra::rast('./Data/staticVariables_cropped_terra_reproj.tif')
+bathy <- statics$bathy
+
+#get coastline for plotting
+land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+landNE <- terra::crop(land, bathy)
 
 metrics <- read.csv('species_evaluation_metrics.csv')
 
-plot_SDMS(
-  species = spp.list$Name,
-  yrStart = 1993,
-  yrEnd = 2019,
-  coastline = coastCropped,
-  bathy = bathyR,
-  model.metrics = metrics
+
+var.list <- data.frame(
+  Long.Name = c(
+    'Bottom Temperature',
+    'Bottom Oxygen',
+    'Sea Water Salinity at Sea Floor',
+    'Bottom Aragonite Solubility',
+    'Sea Surface Temperature',
+    'Sea Surface Salinity',
+    'Surface pH',
+    'Mixed layer depth (delta rho = 0.03)',
+    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
+    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Small zooplankton nitrogen biomass in upper 100m',
+    'Medium zooplankton nitrogen biomass in upper 100m',
+    'Large zooplankton nitrogen biomass in upper 100m',
+    'Water column net primary production vertical integral',
+    'Downward Flux of Particulate Organic Carbon'
+  ),
+  Short.Name = c(
+    'bottomT',
+    'bottomO2',
+    'bottomS',
+    'bottomArg',
+    'surfaceT',
+    'surfaceS',
+    'surfacepH',
+    'MLD',
+    'diazPP',
+    'smallPP',
+    'mediumPP',
+    'largePP',
+    'smallZoo',
+    'mediumZoo',
+    'largeZoo',
+    'intNPP',
+    'POC'
+  )
+)
+
+
+make_sdm_plots(
+  species = spp.list$Name[1],
+  type = c('importance'),
+  release = 'r20250715',
+  spatial_temporal = F,
+  mask_bathy = T,
+  rm_corr = T,
+  training_years = c(1993, 2019),
+  coastline = landNE,
+  model_metrics = metrics,
+  var_names = var.list$Short.Name
 )
 
 ##gifs - same as above, if desired, they can be integrated into the plotting function
@@ -2431,14 +2478,6 @@ sourceDF <- data.frame(
     "Clam"
   )
 )
-
-#get coastline for plotting
-land <- vect('~/shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
-landNE <- terra::crop(land, rasts)
-
-#get bathymetry for plotting
-statics <- terra::rast('staticVariables_cropped_terra_reproj.tif')
-bathy <- statics$bathy
 
 #load in source key
 sources <- read.csv('sources.csv')
