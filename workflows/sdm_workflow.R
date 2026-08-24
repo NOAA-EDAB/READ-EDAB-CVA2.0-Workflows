@@ -371,7 +371,7 @@ var.list <- data.frame(
   )
 )
 
-#load in bathy for masking 
+#load in bathy for masking
 staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped_terra_reproj.tif')#staticR
 #bathy object = staticR$bathy
 bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
@@ -383,7 +383,7 @@ log_appender(appender_file("mom6_hindcast.log"))
 # Set up the cluster ONCE outside the loop
 plan(multisession, workers = 6)
 norm_results <- future_map(
-  1:nrow(var_df), 
+  1:nrow(var_df),
   ~get_model_data_wrapper(
     source = 'hindcast',
     var_name = var.list$Long.Name[.x],
@@ -436,10 +436,10 @@ for(x in 1:nrow(spp.list)){
     spp.list$SCI_NAME_ALT2[x],
     sep = ','
   )
-  
-  a <- data.frame(spp = spp.list$Name[x], 
-                  is_obs = sObs, 
-                  source = sSources, 
+
+  a <- data.frame(spp = spp.list$Name[x],
+                  is_obs = sObs,
+                  source = sSources,
                   all_names = altNames)
   args <- rbind(args, a)
 }
@@ -447,7 +447,7 @@ args$source <- paste0(args$source, '_1993_2023')
 =======
 plan(multisession, workers = 8)
 mom6_results <- future_map(
-  1:nrow(var.list), 
+  1:nrow(var.list),
   ~get_model_data_wrapper(
     var_name = var.list$Long.Name[.x],
     short_name = var.list$Short.Name[.x],
@@ -511,7 +511,7 @@ forecast.list <- data.frame(
 #parallel version
 plan(multisession, workers = 8)
 mom6_results <- future_map(
-  1:nrow(forecast.list), 
+  1:nrow(forecast.list),
   ~get_model_data_wrapper(
     var_name = forecast.list$Long.Name[.x],
     short_name = forecast.list$Short.Name[.x],
@@ -529,7 +529,7 @@ mom6_results <- future_map(
 )
 plan(sequential)
 
-#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until the prediction step, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that 
+#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until the prediction step, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
 
 #for(x in 1:nrow(forecast.list)){
  # print(Sys.time())
@@ -566,7 +566,7 @@ checks <- future_pmap(
     spp_names = ..3,
     is_obs = ..4,
     skip = F,
-    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc", 
+    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc",
     force_overwrite = TRUE
   ),
   .progress = T
@@ -578,7 +578,7 @@ plan(sequential)
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
-  ~ combine_fisheries_dfs_wrapper(name = spp.list$Name[.x], 
+  ~ combine_fisheries_dfs_wrapper(name = spp.list$Name[.x],
                                   skip = F,
                                   force_overwrite = T),
   .progress = T
@@ -667,10 +667,10 @@ combs <- future_map(
                              hab_key = habitat,
                              add_static = T,
                              static_variables = statics,
-                             rm_corr = T, 
+                             rm_corr = T,
                              training_years = c(1993, 2019),
                              test_years = c(2020, 2023),
-                             skip = F, 
+                             skip = F,
                              force_overwrite = F),
   .progress = T
 )
@@ -2386,14 +2386,58 @@ varDF <- data.frame(
   )
 )
 
-#get coastline and bathy objects for plotting
-load(
-  "~/ClimateVulnerabilityAssessment2.0/Exposure/RawExposure/Data/coastline.RData"
-) #coastline
-load(
-  "~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped.RData"
-) #staticVars
-bathyR <- staticVars$bathy
+### set up data source dataframe
+sourceDF <- data.frame(
+  Long.Name = c(
+    'NEFSC Bottom Trawl',
+    'NEFSC Observer Program',
+    'Maine-New Hampshire Inshore Trawl Survey',
+    'Massachusetts Division of Marine Fisheries Bottom Trawl Survey',
+    'Long Island Sound Trawl Survey',
+    'New York Nearshore Trawl Survey',
+    'New Jersey Ocean Stock Assessment Survey',
+    'Delaware State Trawl Surveys',
+    'Northeast Area Monitoring and Assessment Program (NEAMAP) & Chesapeake Bay Multispecies Monitoring and Assessment Program (ChesMMAP)',
+    'Additional trawl and tagging data from the Highly Migratory Species Program',
+    'NEFSC Gulf of Maine Long Line Survey',
+    'NEFSC Northern Shrimp Survey',
+    'SEFSC Gillnet Observer Program',
+    'SEFSC Pelagic Observer Program',
+    'SEFSC Logbook Program',
+    'NMFS Large Pelagics Survey',
+    'NEFSC Atlantic Surfclam and Ocean Quahog Survey'
+  ),
+  Short.Name = c(
+    'Survey',
+    'Observer',
+    'MENH',
+    'MA',
+    'CT',
+    'NY',
+    'NJ',
+    'DE',
+    'NEAMAP',
+    "HMS",
+    'GOM LL',
+    'Shrimp',
+    'GOP',
+    'POP',
+    "LOGBOOK",
+    "LPS",
+    "Clam"
+  )
+)
+
+#get coastline for plotting
+land <- vect('~/shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+landNE <- terra::crop(land, rasts)
+
+#get bathymetry for plotting
+statics <- terra::rast('staticVariables_cropped_terra_reproj.tif')
+bathy <- statics$bathy
+
+#load in source key
+source.key <- read.csv('sources.csv')
 
 #plots are made above - this just pulls them in and renders the report (original function also handled plotting)
 make_sdm_reports(
