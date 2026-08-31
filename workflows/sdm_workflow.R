@@ -767,6 +767,22 @@ combs <- future_map(
 )
 plan(sequential)
 
+##try last two sdmtmb models in parallel 
+for(x in 1:nrow(sdmtmb)){
+  component_sdms_wrapper(spp = sdmtmb$spp[x],
+                         model = 'sdmtmb',
+                         dyn_names = var.list$Short.Name,
+                         release = 'r20250715',
+                         spatial_temporal = FALSE,
+                         mask_bathy = T,
+                         rm_corr = T,
+                         static_variables = statics,
+                         training_years = c(1993, 2019),
+                         test_years = c(2020, 2023),
+                         all_years = c(1993, 2035),
+                         skip = T)
+}
+
 #ENSEMBLE
 #runtime:
 plan(multisession, workers = 8)
