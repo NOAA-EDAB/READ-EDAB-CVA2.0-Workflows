@@ -743,8 +743,8 @@ plan(sequential)
 
 ##combined approach to get both sdmtmb finished and maxtent started 
 
-sdmtmb <- data.frame(spp = spp.list$Name[c(7,8,12,22,32)], mod = 'sdmtmb')
-maxent <- data.frame(spp = spp.list$Name[c(1,5:7,13,18:19,23:24,28:30,33:36)], mod = 'maxent')
+sdmtmb <- data.frame(spp = spp.list$Name[c(7,22)], mod = 'sdmtmb')
+maxent <- data.frame(spp = spp.list$Name[c(28,30,33:36)], mod = 'maxent')
 runs <- rbind(sdmtmb, maxent)
 
 plan(multisession, workers = 8)
