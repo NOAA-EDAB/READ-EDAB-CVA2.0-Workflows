@@ -720,7 +720,7 @@ combs <- future_map(
 plan(sequential)
 
 #maxent
-#runtime:
+#runtime: took a lot longer than anticipated; average run time 39.8 hrs per species. 67 days total in sequence. Approx 11 in parallel by the run times; a bit longer for start/stops.
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
@@ -789,7 +789,7 @@ combs <- future_map(
 plan(sequential)
 
 #run on the "side" as models finish up remotely
-sppnames <- spp.list$Name[c(19)]
+sppnames <- spp.list$Name[c(28,30,33,34,36)]
 for(x in 1:length(sppnames)){
   ensemble_sdms_wrapper(spp = sppnames[x],
                         dyn_names = var.list$Short.Name,
