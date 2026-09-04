@@ -790,7 +790,7 @@ combs <- future_map(
 plan(sequential)
 
 #run on the "side" as models finish up remotely
-sppnames <- spp.list$Name[c(28,30,33,34,36)]
+sppnames <- spp.list$Name[c(15, 23, 26:39)]
 for(x in 1:length(sppnames)){
   ensemble_sdms_wrapper(spp = sppnames[x],
                         dyn_names = var.list$Short.Name,
