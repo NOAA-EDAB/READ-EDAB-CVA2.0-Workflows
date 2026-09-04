@@ -698,11 +698,12 @@ plan(sequential)
 
 #sdmtmb
 #runtime:
-sppnames <- spp.list$Name[c(7,8,12,22,32)]
+sppnames <- spp.list$Name[c(15,23,32:42)]
+TMB::openmp(n = 1)
 plan(multisession, workers = 4)
 combs <- future_map(
   1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one
-  ~component_sdms_wrapper(spp = sppnames[.x],
+  ~component_sdms_wrapper(spp = spp.list$Name[40],
                           model = 'sdmtmb',
                           dyn_names = var.list$Short.Name,
                           release = 'r20250715',
@@ -713,7 +714,7 @@ combs <- future_map(
                           training_years = c(1993, 2019),
                           test_years = c(2020, 2023),
                           all_years = c(1993, 2035),
-                          skip = T),
+                          skip = F),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
