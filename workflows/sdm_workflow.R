@@ -925,7 +925,7 @@ for(x in 1:length(sppnames)){
 }
 
 #evalulate ensemble and combine statistics for model reports
-make_evaluation_csv(spp_list = spp.list,
+make_evaluation_csv(spp_list = spp.list[-42,],
                     training_years = c(1993, 2019),
                     pa_col = 'pa',
                     release = 'r20250715',
@@ -993,19 +993,19 @@ var.list <- data.frame(
   )
 )
 
+  make_sdm_plots(
+    species = spp.list$Name[-42],
+    type = c('ensemble', 'weights', 'importance', 'residuals'),
+    release = 'r20250715',
+    spatial_temporal = F,
+    mask_bathy = T,
+    rm_corr = T,
+    training_years = c(1993, 2019),
+    coastline = landNE,
+    model_metrics = metrics,
+    var_names = var.list$Short.Name
+  )
 
-make_sdm_plots(
-  species = spp.list$Name[1],
-  type = c('importance'),
-  release = 'r20250715',
-  spatial_temporal = F,
-  mask_bathy = T,
-  rm_corr = T,
-  training_years = c(1993, 2019),
-  coastline = landNE,
-  model_metrics = metrics,
-  var_names = var.list$Short.Name
-)
 
 ##gifs - same as above, if desired, they can be integrated into the plotting function
 library(gifski)
