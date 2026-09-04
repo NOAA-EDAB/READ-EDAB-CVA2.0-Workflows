@@ -684,1520 +684,266 @@ plan(sequential)
 ##### MAKE MODELS  ###########
 ##############################
 
-models <- c('gam', 'maxent', 'rf', 'brt')
+statics <- terra::wrap(terra::rast('./Data/staticVariables_masked_norm_terra.tif'))
 
-load('norm_MOM6_082025.RData') #norm
+var.list <- data.frame(
+  Long.Name = c(
+    'Bottom Temperature',
+    'Bottom Oxygen',
+    'Sea Water Salinity at Sea Floor',
+    'Bottom Aragonite Solubility',
+    'Sea Surface Temperature',
+    'Sea Surface Salinity',
+    'Surface pH',
+    'Mixed layer depth (delta rho = 0.03)',
+    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
+    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Small zooplankton nitrogen biomass in upper 100m',
+    'Medium zooplankton nitrogen biomass in upper 100m',
+    'Large zooplankton nitrogen biomass in upper 100m',
+    'Water column net primary production vertical integral',
+    'Downward Flux of Particulate Organic Carbon'
+  ),
+  Short.Name = c(
+    'bottomT',
+    'bottomO2',
+    'bottomS',
+    'bottomArg',
+    'surfaceT',
+    'surfaceS',
+    'surfacepH',
+    'MLD',
+    'diazPP',
+    'smallPP',
+    'mediumPP',
+    'largePP',
+    'smallZoo',
+    'mediumZoo',
+    'largeZoo',
+    'intNPP',
+    'POC'
+  )
+)
 
-args <- tidyr::expand_grid(model = models, spp = spp.list$Name[37:42], skip = F)
+#running each model type seperately to help with troubleshooting if needed; plus sdmtmb needs more memory to using less cores in parallel
+#going in increasing order of time needed to run
 
+### can pass spp.list$Name directly to future_map, or a subsetted list of names like below to run just a few species
+## this subset was made to re-run groundfish and benthic species after the addition of the clam survey dataset
+#sppnames <- spp.list$Name[which(spp.list$Habitat.Guild == 'Groundfish' | spp.list$Habitat.Guild == "Benthic")]
+
+#RF
+#started: 12:12 PM 7/22
+#ended: 3:58 PM 7/22
+#runtime: 3 hrs 46 min  = average 40 min per species
+#notes: softshell clam failed due to lack of presence data
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:length(sppnames),
+  ~component_sdms_wrapper(spp = sppnames[.x],
+                          model = 'rf',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T,
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
+                          skip = F),
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
+)
+plan(sequential)
+
+
+#BRT
+#started: 8:42 AM 7/27
+#ended: (approx) 13:00 PM 7/28 (stopped with one model left to go due to adding clam survey)
+#runtime: (approx 28 hrs)
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:length(sppnames),
+  ~component_sdms_wrapper(spp = sppnames[.x],
+                          model = 'brt',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T,
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
+                          skip = F),
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
+)
+plan(sequential)
+
+
+#GAM
+#started: 4:55 PM 7/22
+#ended: 7:45 AM 7/26
+#runtime: 86.8 hrs (3.6 days) = average 14.2 hrs per species but a lot of variability
+#softshell clam also failed here.
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:length(sppnames),
+  ~component_sdms_wrapper(spp = sppnames[.x],
+                          model = 'gam',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T,
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
+                          skip = F),
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
+)
+plan(sequential)
+
+#sdmtmb
+#runtime:
+sppnames <- spp.list$Name[c(15,23,32:42)]
+TMB::openmp(n = 1)
 plan(multisession, workers = 4)
-#sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
-  list(..1 = args$spp, ..2 = args$model, ..3 = args$skip),
-  ~ makeMods(spp = ..1, model = ..2, skip = ..3),
+combs <- future_map(
+  1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one
+  ~component_sdms_wrapper(spp = spp.list$Name[40],
+                          model = 'sdmtmb',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T,
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
+                          skip = F),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr_options(scheduling = FALSE)
 )
-#sink()
 plan(sequential)
 
-### run sdmtmb in sequence, step by step because it doesn't like makeMods for some reason
-for (x in 37:nrow(spp.list)) {
-  sink(file = file.path(getwd(), 'logs', paste0('sdmtmb', '.log')), append = T)
-  print(Sys.time())
-  print(spp.list$Name[x])
-
-  load(paste(file.path(getwd(), spp.list$Name[x]), 'pa_clean.RData', sep = '/')) #load data - dfC
-  print(paste0(spp.list$Name[x], '- making model - ', Sys.time()))
-  mod <- make_sdm(
-    se = dfC,
-    pa_col = 'value',
-    xy_col = c('x', 'y'),
-    month_col = 'month',
-    year_col = 'year',
-    model = 'sdmtmb'
-  )
-  save(
-    mod,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-      '/',
-      toupper('sdmtmb'),
-      '.RData'
-    )
-  )
-  rm(mod)
-  gc(reset = T) #help clean up memory so hopefully this can run sequentially?
-}
-
-for (x in 40:nrow(spp.list)) {
-  # s <- makeMods(spp = spp.list$Name[x], model = 'sdmtmb', skip = T)
-  sink(file = file.path(getwd(), 'logs', paste0('sdmtmb', '.log')), append = T)
-  print(Sys.time())
-  print(spp.list$Name[x])
-
-  # load(paste(file.path(getwd(),spp.list$Name[x]), 'pa_clean.RData', sep = '/')) #load data - dfC
-
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-    '/',
-    toupper('sdmtmb'),
-    '.RData'
-  )) #mod
-
-  if (class(mod) == 'sdmTMB') {
-    #CV
-    # print(paste0(spp.list$Name[x], '- performing CV - ', Sys.time()))
-
-    # cv <- sdm_cv(mod = mod, se = dfC, pa_col = 'value', xy_col = c('x', 'y'), month_col = 'month', year_col = 'year', model = 'sdmtmb')
-    # save(cv, file = paste0(file.path(getwd(),spp.list$Name[x], 'model_output', 'cvs'), '/', toupper('sdmtmb'), '.RData'))
-
-    load(paste0(
-      file.path(getwd(), spp.list$Name[x], 'model_output', 'cvs'),
-      '/',
-      toupper('sdmtmb'),
-      '.RData'
-    )) #cv
-    print(paste0(spp.list$Name[x], '- Getting Preds - ', Sys.time()))
-    preds <- sdm_preds(cv = cv, model = 'sdmtmb')
-    save(
-      preds,
-      file = paste0(
-        file.path(getwd(), spp.list$Name[x], 'model_output', 'preds'),
-        '/',
-        toupper('sdmtmb'),
-        '.RData'
-      )
-    )
-
-    print(paste0(spp.list$Name[x], '- Evaluating Model - ', Sys.time()))
-    ev <- sdm_eval(preds = preds, metric = 'auc', model = 'sdmtmb')
-    save(
-      ev,
-      file = paste0(
-        file.path(getwd(), spp.list$Name[x], 'model_output', 'eval_metrics'),
-        '/',
-        toupper('sdmtmb'),
-        '.RData'
-      )
-    )
-    rm(cv)
-    rm(preds)
-    rm(ev) #remove objects after they've been saved to help with memory (hopefully)
-  } else {
-    #end if
-    print('model did not converge. cannot perform cv')
-  } #end else
-  gc(reset = T) #help clean up memory so hopefully this can run sequentially?
-  print(x)
-  print(Sys.time())
-  sink()
-}
-
-for (x in 37:nrow(spp.list)) {
-  # s <- makeMods(spp = spp.list$Name[x], model = 'sdmtmb', skip = T)
-  sink(file = file.path(getwd(), 'logs', paste0('sdmtmb', '.log')), append = T)
-  print(Sys.time())
-  print(spp.list$Name[x])
-
-  load(paste(file.path(getwd(), spp.list$Name[x]), 'pa_clean.RData', sep = '/')) #load data - dfC
-
-  print(paste0(
-    spp.list$Name[x],
-    '- Getting Variable Importance - ',
-    Sys.time()
-  ))
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-    '/',
-    toupper('sdmtmb'),
-    '.RData'
-  ))
-  imp <- sdm_importance(
-    mod = mod,
-    se = dfC,
-    pa_col = 'value',
-    xy_col = c('x', 'y'),
-    month_col = 'month',
-    year_col = 'year',
-    model = 'sdmtmb'
-  )
-  save(
-    imp,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'model_output', 'importance'),
-      '/',
-      toupper('sdmtmb'),
-      '.RData'
-    )
-  )
-  rm(imp)
-  gc(reset = T) #help clean up memory so hopefully this can run sequentially?
-  print(x)
-  print(Sys.time())
-  sink()
-}
-
-##############################
-
-##############################
-##### PREDICT MODELS  ########
-##############################
-##1993-2019 (training time series)
-load('./Data/MOM6/norm_MOM6_082025.RData') #norm
-load('./Data/staticVariables_cropped.RData') #staticVars
-bathyR <- staticVars$bathy
-
-#load NORMALIZED staticVars
-load('./Data/staticVariables_cropped_normZ.RData')
-
-models <- c(
-  #'gam',
-  #'rf',
-  'brt'
-)
-
-args <- tidyr::expand_grid(
-  model = models,
-  spp = spp.list$Name,
-  skip = F,
-  yrMin = 1993,
-  yrMax = 2019
-)
-
-options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
-#sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
-  list(
-    ..1 = args$spp,
-    ..2 = args$model,
-    ..3 = args$skip,
-    ..4 = args$yrMin,
-    ..5 = args$yrMax
-  ),
-  ~ predictMods(spp = ..1, model = ..2, skip = ..3, yrMin = ..4, yrMax = ..5),
+#maxent
+#runtime: took a lot longer than anticipated; average run time 39.8 hrs per species. 67 days total in sequence. Approx 11 in parallel by the run times; a bit longer for start/stops.
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~component_sdms_wrapper(spp = spp.list$Name[.x],
+                          model = 'maxent',
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T,
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
+                          skip = F),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr_options(scheduling = FALSE)
 )
-#sink()
 plan(sequential)
 
-#maxent refuses to work in parallel so:
-for (x in 1:nrow(spp.list)) {
-  Sys.time()
-  predictMods(
-    spp = spp.list$Name[x],
-    model = 'maxent',
-    skip = F,
-    yrMin = 1993,
-    yrMax = 2019
-  )
-  Sys.time()
-  print(x)
-}
+##combined approach to get both sdmtmb finished and maxtent started
 
-###sdmtmb in my remote container is dumb, so here's the faster way:
-load('./Data/staticVariables_cropped.RData') #staticVars
-bathyR <- staticVars$bathy
-Sys.time()
-allDF <- makePredDF(
-  norm,
-  bathyR = bathyR,
-  bathy_max = 1000,
-  staticData = './Data/staticVariables_cropped_normZ.RData',
-  mask = T
-)
-Sys.time()
+sdmtmb <- data.frame(spp = spp.list$Name[c(7,22)], mod = 'sdmtmb')
+maxent <- data.frame(spp = spp.list$Name[c(28,30,33:36)], mod = 'maxent')
+runs <- rbind(sdmtmb, maxent)
 
-for (x in 37:nrow(spp.list)) {
-  Sys.time()
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-    '/SDMTMB.RData'
-  )) #load model - mod
-  #predict mod
-  if (class(mod) == 'sdmTMB') {
-    require(sdmTMB)
-    pred <- predict(mod, newdata = allDF, type = 'response') #predict everything all at once
-    pred$my <- paste(pred$month, pred$year, sep = '.')
-    abund <- predictSDM(
-      mod = mod,
-      df = pred,
-      staticData = './Data/staticVariables_cropped_normZ.RData'
-    ) #make into rasters
-    save(
-      abund,
-      file = paste(
-        file.path(getwd(), spp.list$Name[x], 'output_rasters'),
-        '/SDMTMB.RData',
-        sep = ''
-      )
-    )
-  } else {
-    print('sdmTMB did not converge; no predictions made')
-  }
-  rm(pred, abund)
-  Sys.time()
-}
-
-##############################
-##predict to future time series
-
-##doing sdmtmb first because it takes the longest and we need all the memory for it
-##2020-2023
-load('./Data/MOM6/norm_9319_MOM6_1993_2023_102025.RData')
-#this is 1993-2023 inclusive - we just need 2020-2023
-norm20 <- vector(mode = 'list', length = length(norm))
-for (x in 1:length(norm)) {
-  norm20[[x]] <- list(raster::subset(norm[[x]][[1]], 325:372))
-}
-names(norm20) <- names(norm) #even though names aren't showing up like they do in norm 93-19 it still works
-
-load('./Data/staticVariables_cropped.RData') #staticVars
-bathyR <- staticVars$bathy
-Sys.time()
-all2023 <- makePredDF(
-  norm20,
-  bathyR = bathyR,
-  bathy_max = 1000,
-  staticData = './Data/staticVariables_cropped_normZ.RData',
-  mask = T
-)
-Sys.time()
-
-for (x in 37:nrow(spp.list)) {
-  Sys.time()
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-    '/SDMTMB.RData'
-  )) #load model - mod
-  #predict mod
-  if (class(mod) == 'sdmTMB') {
-    require(sdmTMB)
-    pred <- predict(mod, newdata = all2023, type = 'response') #predict everything all at once
-    pred$my <- paste(pred$month, pred$year, sep = '.')
-    abund <- predictSDM(
-      mod = mod,
-      df = pred,
-      staticData = './Data/staticVariables_cropped_normZ.RData'
-    ) #make into rasters
-    save(
-      abund,
-      file = paste(
-        file.path(getwd(), spp.list$Name[x], 'output_rasters'),
-        '/SDMTMB_2020_2023.RData',
-        sep = ''
-      )
-    )
-  } else {
-    print('sdmTMB did not converge; no predictions made')
-  }
-  rm(pred, abund)
-  Sys.time()
-}
-rm(norm, norm20, all2023)
-
-##2020-2030
-load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2020_2030_102025.RData')
-#layer names need to be fixed
-my <- expand.grid(1:12, 2020:2029)
-nm <- paste(my[, 1], my[, 2], sep = '.')
-for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
-}
-load('./Data/staticVariables_cropped.RData') #staticVars
-bathyR <- staticVars$bathy
-Sys.time()
-all2030 <- makePredDF(
-  norm,
-  bathyR = bathyR,
-  bathy_max = 1000,
-  staticData = './Data/staticVariables_cropped_normZ.RData',
-  mask = T
-)
-Sys.time()
-
-for (x in 37:nrow(spp.list)) {
-  Sys.time()
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-    '/SDMTMB.RData'
-  )) #load model - mod
-  #predict mod
-  if (class(mod) == 'sdmTMB') {
-    require(sdmTMB)
-    pred <- predict(mod, newdata = all2030, type = 'response') #predict everything all at once
-    pred$my <- paste(pred$month, pred$year, sep = '.')
-    abund <- predictSDM(
-      mod = mod,
-      df = pred,
-      staticData = './Data/staticVariables_cropped_normZ.RData'
-    ) #make into rasters
-    save(
-      abund,
-      file = paste(
-        file.path(getwd(), spp.list$Name[x], 'output_rasters'),
-        '/SDMTMB_2020_2029.RData',
-        sep = ''
-      )
-    )
-  } else {
-    print('sdmTMB did not converge; no predictions made')
-  }
-  rm(pred, abund)
-  Sys.time()
-}
-rm(norm, all2030)
-
-##2025-2035
-load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2025_2035_102025.RData')
-#layer names need to be fixed
-my <- expand.grid(1:12, 2025:2034)
-nm <- paste(my[, 1], my[, 2], sep = '.')
-for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
-}
-load('./Data/staticVariables_cropped.RData') #staticVars
-bathyR <- staticVars$bathy
-Sys.time()
-all2535 <- makePredDF(
-  norm,
-  bathyR = bathyR,
-  bathy_max = 1000,
-  staticData = './Data/staticVariables_cropped_normZ.RData',
-  mask = T
-)
-
-Sys.time()
-for (x in 37:nrow(spp.list)) {
-  Sys.time()
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
-    '/SDMTMB.RData'
-  )) #load model - mod
-  #predict mod
-  if (class(mod) == 'sdmTMB') {
-    require(sdmTMB)
-    pred <- predict(mod, newdata = all2535, type = 'response') #predict everything all at once
-    pred$my <- paste(pred$month, pred$year, sep = '.')
-    abund <- predictSDM(
-      mod = mod,
-      df = pred,
-      staticData = './Data/staticVariables_cropped_normZ.RData'
-    ) #make into rasters
-    save(
-      abund,
-      file = paste(
-        file.path(getwd(), spp.list$Name[x], 'output_rasters'),
-        '/SDMTMB_2025_2034.RData',
-        sep = ''
-      )
-    )
-  } else {
-    print('sdmTMB did not converge; no predictions made')
-  }
-  rm(pred, abund)
-  Sys.time()
-}
-rm(norm, all2535)
-##############################
-##get other component models (all but sdmtmb) using the original method (predictMods) - predictMods and args are defined using code above for 93-19 prediction
-##2020-2023
-load('./Data/MOM6/norm_9319_MOM6_1993_2023_102025.RData')
-#this is 1993-2023 inclusive - we just need 2020-2023
-norm20 <- vector(mode = 'list', length = length(norm))
-for (x in 1:length(norm)) {
-  norm20[[x]] <- list(raster::subset(norm[[x]][[1]], 325:372))
-}
-names(norm20) <- names(norm) #even though names aren't showing up like they do in norm 93-19 it still works
-norm <- norm20 #overwrite just to keep predictMods the same
-
-models <- c('gam', 'rf', 'brt')
-args <- tidyr::expand_grid(
-  model = models,
-  spp = spp.list$Name,
-  skip = F,
-  yr_min = 2020,
-  yr_max = 2023
-)
-
-options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
-#sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
-  list(
-    ..1 = args$spp,
-    ..2 = args$model,
-    ..3 = args$skip,
-    ..4 = args$yr_min,
-    ..5 = args$yr_max
-  ),
-  ~ predict_sdms_wrapper(
-    spp = ..1,
-    model = ..2,
-    skip = ..3,
-    yr_min = ..4,
-    yr_max = ..5
-  ),
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(runs),
+  ~component_sdms_wrapper(spp = runs$spp[.x],
+                          model = runs$mod[.x],
+                          dyn_names = var.list$Short.Name,
+                          release = 'r20250715',
+                          spatial_temporal = FALSE,
+                          mask_bathy = T,
+                          rm_corr = T,
+                          static_variables = statics,
+                          training_years = c(1993, 2019),
+                          test_years = c(2020, 2023),
+                          all_years = c(1993, 2035),
+                          skip = T),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr_options(scheduling = FALSE)
 )
-#sink()
 plan(sequential)
 
+##try last two sdmtmb models in parallel
+for(x in 1:nrow(sdmtmb)){
+  component_sdms_wrapper(spp = sdmtmb$spp[x],
+                         model = 'sdmtmb',
+                         dyn_names = var.list$Short.Name,
+                         release = 'r20250715',
+                         spatial_temporal = FALSE,
+                         mask_bathy = T,
+                         rm_corr = T,
+                         static_variables = statics,
+                         training_years = c(1993, 2019),
+                         test_years = c(2020, 2023),
+                         all_years = c(1993, 2035),
+                         skip = T)
+}
 
-##2020-2030
-load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2020_2030_102025.RData')
-#layer names need to be fixed
-my <- expand.grid(1:12, 2020:2029)
-nm <- paste(my[, 1], my[, 2], sep = '.')
-for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
-} #even though names aren't showing up like they do in norm 93-19 it still works
-
-models <- c('gam', 'rf', 'brt')
-args <- tidyr::expand_grid(
-  model = models,
-  spp = spp.list$Name,
-  skip = F,
-  yr_min = 2020,
-  yr_max = 2029
-)
-
-options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
-#sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
-  list(
-    ..1 = args$spp,
-    ..2 = args$model,
-    ..3 = args$skip,
-    ..4 = args$yr_min,
-    ..5 = args$yr_max
-  ),
-  ~ predict_sdms_wrapper(
-    spp = ..1,
-    model = ..2,
-    skip = ..3,
-    yr_min = ..4,
-    yr_max = ..5
-  ),
+#ENSEMBLE
+#runtime:
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~ensemble_sdms_wrapper(spp = spp.list$Name[.x],
+                         dyn_names = var.list$Short.Name,
+                         release = 'r20250715',
+                         spatial_temporal = FALSE,
+                         mask_bathy = T,
+                         rm_corr = T,
+                         static_variables = statics,
+                         training_years = c(1993, 2019),
+                         test_years = c(2020, 2023),
+                         all_years = c(1993, 2035),
+                         skip = F),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr_options(scheduling = FALSE)
 )
-#sink()
 plan(sequential)
 
-##2025-2035
-load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2025_2035_102025.RData')
-#layer names need to be fixed
-my <- expand.grid(1:12, 2025:2034)
-nm <- paste(my[, 1], my[, 2], sep = '.')
-for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
+#run on the "side" as models finish up remotely
+sppnames <- spp.list$Name[c(15, 23, 26:39)]
+for(x in 1:length(sppnames)){
+  ensemble_sdms_wrapper(spp = sppnames[x],
+                        dyn_names = var.list$Short.Name,
+                        release = 'r20250715',
+                        spatial_temporal = FALSE,
+                        mask_bathy = T,
+                        rm_corr = T,
+                        static_variables = statics,
+                        training_years = c(1993, 2019),
+                        test_years = c(2020, 2023),
+                        skip = F)
 }
 
-models <- c('gam', 'rf', 'brt')
-args <- tidyr::expand_grid(
-  model = models,
-  spp = spp.list$Name,
-  skip = F,
-  yr_min = 2025,
-  yr_max = 2035
-)
-
-options(future.globals.maxSize = Inf) #remove check for sharing large files so that norm is shared across workers since this is a relatively low memory intensive job otherwise
-plan(multisession, workers = 3)
-#sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
-  list(
-    ..1 = args$spp,
-    ..2 = args$model,
-    ..3 = args$skip,
-    ..4 = args$yr_min,
-    ..5 = args$yr_max
-  ),
-  ~ predict_sdms_wrapper(
-    spp = ..1,
-    model = ..2,
-    skip = ..3,
-    yr_min = ..4,
-    yr_max = ..5
-  ),
-  .progress = T,
-  .options = furrr_options(seed = 2025)
-)
-#sink()
-plan(sequential)
-
-##maxent
-##2020-2023
-load('./Data/MOM6/norm_9319_MOM6_1993_2023_102025.RData')
-#this is 1993-2023 inclusive - we just need 2020-2023
-norm20 <- vector(mode = 'list', length = length(norm))
-for (x in 1:length(norm)) {
-  norm20[[x]] <- list(raster::subset(norm[[x]][[1]], 325:372))
-}
-names(norm20) <- names(norm) #even though names aren't showing up like they do in norm 93-19 it still works
-norm <- norm20 #overwrite just to keep predictMods the same
-
-for (x in 1:nrow(spp.list)) {
-  Sys.time()
-  predict_sdms_wrapper(
-    spp = spp.list$Name[x],
-    model = 'maxent',
-    skip = F,
-    yr_min = 2020,
-    yr_max = 2023
-  )
-  Sys.time()
-}
-
-##2020-2030
-load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2020_2030_102025.RData')
-#layer names need to be fixed
-my <- expand.grid(1:12, 2020:2029)
-nm <- paste(my[, 1], my[, 2], sep = '.')
-for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
-} #even though names aren't showing up like they do in norm 93-19 it still works
-
-for (x in 37:nrow(spp.list)) {
-  Sys.time()
-  predict_sdms_wrapper(
-    spp = spp.list$Name[x],
-    model = 'maxent',
-    skip = F,
-    yr_min = 2020,
-    yr_max = 2029
-  )
-  Sys.time()
-}
-
-##2025-2035
-load('./Data/MOM6/norm_9319_MOM6_decadalforecast_2025_2035_102025.RData')
-#layer names need to be fixed
-my <- expand.grid(1:12, 2025:2034)
-nm <- paste(my[, 1], my[, 2], sep = '.')
-for (x in 1:length(norm)) {
-  names(norm[[x]][[1]]) <- nm
-}
-
-for (x in 37:nrow(spp.list)) {
-  Sys.time()
-  predictMods(
-    spp = spp.list$Name[x],
-    model = 'maxent',
-    skip = F,
-    yr_min = 2025,
-    yr_max = 2035
-  )
-  Sys.time()
-}
-
-##############################
-
-##############################
-##### MAKE ENSEMBLE  #########
-##############################
-
-#1993-2019
-args <- tidyr::expand_grid(
-  spp = spp.list$Name,
-  yrMin = 1993,
-  yrMax = 2019,
-  buildEns = T
-)
-
-plan(multisession, workers = 3)
-#sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
-  list(..1 = args$spp, ..2 = args$yrMin, ..3 = args$yrMax, ..4 = args$buildEns),
-  ~ makeEns(spp = ..1, yrMin = ..2, yrMax = ..3, buildEns = ..4),
-  .progress = T,
-  .options = furrr_options(seed = 2025)
-)
-#sink()
-plan(sequential)
-
-for (x in 1:nrow(spp.list)) {
-  Sys.time()
-  print(spp.list$Name[x])
-  makeEns(spp = spp.list$Name[x], yrMin = 1993, yrMax = 2019, buildEns = F)
-  Sys.time()
-}
-
-##2020-23, 2020-30, 2025-35
-args1 <- tidyr::expand_grid(
-  spp = spp.list$Name,
-  yrMin = 2020,
-  yrMax = 2023,
-  buildEns = F
-)
-args2 <- tidyr::expand_grid(
-  spp = spp.list$Name[1:36],
-  yrMin = 2020,
-  yrMax = 2029,
-  buildEns = F
-)
-args3 <- tidyr::expand_grid(
-  spp = spp.list$Name[1:36],
-  yrMin = 2025,
-  yrMax = 2034,
-  buildEns = F
-)
-
-args <- rbind(args1, args2, args3)
-
-plan(multisession, workers = 6)
-#sink(file = 'rasters.log', append = T)
-checks <- future_pmap(
-  list(..1 = args$spp, ..2 = args$yrMin, ..3 = args$yrMax, ..4 = args$buildEns),
-  ~ makeEns(spp = ..1, yrMin = ..2, yrMax = ..3, buildEns = ..4),
-  .progress = T,
-  .options = furrr_options(seed = 2025)
-)
-#sink()
-plan(sequential)
-
-for (x in 1:nrow(spp.list)) {
-  Sys.time()
-  print(spp.list$Name[x])
-  build_ensemble_wrapper(
-    spp = spp.list$Name[x],
-    yr_min = 2020,
-    yr_max = 2023,
-    build_ens = F
-  )
-  Sys.time()
-  print(x)
-}
-
-##############################
-
-##############################
-##### TEST ENSEMBLE  #########
-##############################
-
-altNames <- paste(
-  spp.list$Common.Name,
-  spp.list$COM_NAME,
-  spp.list$Scientific.Name,
-  spp.list$Alternate.Name,
-  spp.list$SCI_NAME,
-  spp.list$SCI_NAME_ALT,
-  spp.list$SCI_NAME_ALT2,
-  sep = ','
-)
-
-make_performanceCSV(spp.list, testEns = T, yrMin = 2020, yrMax = 2023)
-
-#distribution of AUCs for component models
-boxplot(sppEval[, 7:11])
-
-sppEval$Feeding.Guild <- as.factor(sppEval$Feeding.Guild)
-sppEval$Habitat.Guild <- as.factor(sppEval$Habitat.Guild)
-
-#by groups
-par(mfrow = c(5, 2), par = c(2, 2, 2, 2))
-boxplot(BRT ~ Feeding.Guild, data = sppEval)
-boxplot(BRT ~ Habitat.Guild, data = sppEval)
-
-boxplot(GAM ~ Feeding.Guild, data = sppEval)
-boxplot(GAM ~ Habitat.Guild, data = sppEval)
-
-boxplot(MAXENT ~ Feeding.Guild, data = sppEval)
-boxplot(MAXENT ~ Habitat.Guild, data = sppEval)
-
-boxplot(RF ~ Feeding.Guild, data = sppEval)
-boxplot(RF ~ Habitat.Guild, data = sppEval)
-
-boxplot(SDMTMB ~ Feeding.Guild, data = sppEval)
-boxplot(SDMTMB ~ Habitat.Guild, data = sppEval)
-
-##distribution of AUCs for ensembles, both within and outside
-boxplot(sppEval[, 16:18])
-
-sppEval$Common.Name[which(sppEval$ENS.AUC < 0.7)]
-sppEval$Common.Name[which(sppEval$AUC.2020.2023 < 0.7)]
-
-##############################
-
-##############################
-##### PLOT ENSEMBLE - OLD  ###
-##############################
-######average ensembles
-load(
-  "~/ClimateVulnerabilityAssessment2.0/Exposure/RawExposure/Data/coastline.RData"
-)
-load(
-  "~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped.RData"
-)
-bathyR <- staticVars$bathy
-
-#contemporary
-for (x in 1:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_1993_2019.RData'
-  )) #abund
-
-  #avg ensemble HSM
-  avgHSM <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund), by = 12)
-    MNS <- raster::stack(abund[mn])
-    avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
-
-  avgHSM <- replace(avgHSM, abs(bathyR) > 1000, NA)
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/mean_SDM_1993_2019_vert.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
-  for (y in 1:12) {
-    plot(
-      raster::subset(avgHSM, y),
-      zlim = c(0, 1),
-      col = cmocean('matter')(64),
-      legend = F
-    )
-    plot(coastCropped['id'], col = 'grey', add = T)
-    legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
-  }
-  image.plot(
-    matrix(seq(0, 1, by = 0.1), 11, 11),
-    legend.only = T,
-    horizontal = T,
-    legend.shrink = 0.7,
-    smallplot = c(0.4, 0.8, 0.25, 0.35),
-    legend.args = list(
-      text = 'Probability of\nOccurance',
-      cex = 0.75,
-      side = 3,
-      line = 0.1
-    ),
-    axis.args = list(cex.axis = 1, mgp = c(3, 0.5, 0)),
-    col = cmocean('matter')(64)
-  )
-  dev.off()
-
-  print(x)
-}
-
-#decade 1
-for (x in 1:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_2020_2029.RData'
-  )) #abund
-
-  #avg ensemble HSM
-  avgHSM <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund), by = 12)
-    MNS <- raster::stack(abund[mn])
-    avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
-
-  avgHSM <- replace(avgHSM, abs(bathyR) > 1000, NA)
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/mean_sdm_2020_2029.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
-  for (y in 1:12) {
-    plot(
-      raster::subset(avgHSM, y),
-      zlim = c(0, 1),
-      col = cmocean('matter')(64),
-      legend = F
-    )
-    plot(coastCropped['id'], col = 'grey', add = T)
-    legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
-  }
-  image.plot(
-    matrix(seq(0, 1, by = 0.1), 11, 11),
-    legend.only = T,
-    horizontal = T,
-    legend.shrink = 0.7,
-    smallplot = c(0.4, 0.8, 0.25, 0.35),
-    legend.args = list(
-      text = 'Probability of\nOccurance',
-      cex = 0.75,
-      side = 3,
-      line = 0.1
-    ),
-    axis.args = list(cex.axis = 1, mgp = c(3, 0.5, 0)),
-    col = cmocean('matter')(64)
-  )
-  dev.off()
-
-  print(x)
-}
-
-#decade 2
-for (x in 1:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_2025_2034.RData'
-  )) #abund
-
-  #avg ensemble HSM
-  avgHSM <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund), by = 12)
-    MNS <- raster::stack(abund[mn])
-    avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
-
-  avgHSM <- replace(avgHSM, abs(bathyR) > 1000, NA)
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/mean_sdm_2024_2034.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
-  for (y in 1:12) {
-    plot(
-      raster::subset(avgHSM, y),
-      zlim = c(0, 1),
-      col = cmocean('matter')(64),
-      legend = F
-    )
-    plot(coastCropped['id'], col = 'grey', add = T)
-    legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
-  }
-  image.plot(
-    matrix(seq(0, 1, by = 0.1), 11, 11),
-    legend.only = T,
-    horizontal = T,
-    legend.shrink = 0.7,
-    smallplot = c(0.4, 0.8, 0.25, 0.35),
-    legend.args = list(
-      text = 'Probability of\nOccurance',
-      cex = 0.75,
-      side = 3,
-      line = 0.1
-    ),
-    axis.args = list(cex.axis = 1, mgp = c(3, 0.5, 0)),
-    col = cmocean('matter')(64)
-  )
-  dev.off()
-
-  print(x)
-}
-
-#####changes in distributions
-#contemporary within (93-08 vs 09-19)
-for (x in 1:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_1993_2019.RData'
-  )) #abund
-
-  abund93 <- abund[1:192]
-  abund09 <- abund[193:324]
-
-  #avg ensemble HSM
-  avg93 <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund93), by = 12)
-    MNS <- raster::stack(abund93[mn])
-    avg93[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avg93 <- stack(avg93)
-  names(avg93) <- month.abb
-
-  #avg ensemble HSM
-  avg09 <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund09), by = 12)
-    MNS <- raster::stack(abund[mn])
-    avg09[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avg09 <- stack(avg09)
-  names(avg09) <- month.abb
-
-  diffHSM <- avg09 - avg93
-  diffHSM <- replace(diffHSM, abs(bathyR) > 1000, NA)
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/change_sdm_1993_2008_v_2009_2019.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
-  for (y in 1:12) {
-    plot(
-      raster::subset(diffHSM, y),
-      zlim = c(-0.5, 0.5),
-      col = cmocean('balance')(64),
-      legend = F
-    )
-    plot(coastCropped['id'], col = 'grey', add = T)
-    legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
-  }
-  image.plot(
-    matrix(seq(-0.5, 0.5, by = 0.1), 11, 11),
-    legend.only = T,
-    horizontal = T,
-    legend.shrink = 0.7,
-    smallplot = c(0.4, 0.8, 0.25, 0.35),
-    legend.args = list(
-      text = 'Change in \nProbability',
-      cex = 0.75,
-      side = 3,
-      line = 0.1
-    ),
-    axis.args = list(cex.axis = 1, mgp = c(3, 0.5, 0)),
-    col = cmocean('balance')(64)
-  )
-  dev.off()
-
-  print(x)
-  #print(quantile(avg09[] - avg93[], na.rm = T, seq(0,1,0.1)))
-}
-
-#contemporary - decade 1
-for (x in 1:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_1993_2019.RData'
-  )) #abund
-
-  #avg ensemble HSM
-  avgHSM <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund), by = 12)
-    MNS <- raster::stack(abund[mn])
-    avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
-  pHSM <- avgHSM
-
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_2020_2029.RData'
-  )) #abund
-
-  #avg ensemble HSM
-  avgHSM <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund), by = 12)
-    MNS <- raster::stack(abund[mn])
-    avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
-  fHSM <- avgHSM
-
-  diffHSM <- fHSM - pHSM
-  diffHSM <- replace(diffHSM, abs(bathyR) > 1000, NA)
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/change_sdm_1993_2019_v_2020_2029.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
-  for (y in 1:12) {
-    plot(
-      raster::subset(diffHSM, y),
-      zlim = c(-0.5, 0.5),
-      col = cmocean('balance')(64),
-      legend = F
-    )
-    plot(coastCropped['id'], col = 'grey', add = T)
-    legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
-  }
-  image.plot(
-    matrix(seq(-0.5, 0.5, by = 0.1), 11, 11),
-    legend.only = T,
-    horizontal = T,
-    legend.shrink = 0.7,
-    smallplot = c(0.4, 0.8, 0.25, 0.35),
-    legend.args = list(
-      text = 'Change in \nProbability',
-      cex = 0.75,
-      side = 3,
-      line = 0.1
-    ),
-    axis.args = list(cex.axis = 1, mgp = c(3, 0.5, 0)),
-    col = cmocean('balance')(64)
-  )
-  dev.off()
-
-  print(x)
-  #print(quantile(fHSM[]-pHSM[], na.rm = T, seq(0,1,0.1)))
-}
-
-#contemporary - decade 2
-for (x in 1:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_1993_2019.RData'
-  )) #abund
-
-  #avg ensemble HSM
-  avgHSM <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund), by = 12)
-    MNS <- raster::stack(abund[mn])
-    avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
-  pHSM <- avgHSM
-
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_2025_2034.RData'
-  )) #abund
-
-  #avg ensemble HSM
-  avgHSM <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund), by = 12)
-    MNS <- raster::stack(abund[mn])
-    avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avgHSM <- stack(avgHSM)
-  names(avgHSM) <- month.abb
-  fHSM <- avgHSM
-
-  diffHSM <- fHSM - pHSM
-  diffHSM <- replace(diffHSM, abs(bathyR) > 1000, NA)
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/change_sdm_1993_2019_v_2025_2034.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
-  for (y in 1:12) {
-    plot(
-      raster::subset(diffHSM, y),
-      zlim = c(-0.5, 0.5),
-      col = cmocean('balance')(64),
-      legend = F
-    )
-    plot(coastCropped['id'], col = 'grey', add = T)
-    legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
-  }
-  image.plot(
-    matrix(seq(-0.5, 0.5, by = 0.1), 11, 11),
-    legend.only = T,
-    horizontal = T,
-    legend.shrink = 0.7,
-    smallplot = c(0.4, 0.8, 0.25, 0.35),
-    legend.args = list(
-      text = 'Change in \nProbability',
-      cex = 0.75,
-      side = 3,
-      line = 0.1
-    ),
-    axis.args = list(cex.axis = 1, mgp = c(3, 0.5, 0)),
-    col = cmocean('balance')(64)
-  )
-  dev.off()
-
-  print(x)
-}
-
-#####radar plots for importance
-library(fmsb)
-range01 <- function(x) {
-  (x - min(x)) / (max(x) - min(x))
-}
-for (s in 37:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[s],
-    '/pa_clean.RData'
-  )) #dfC
-  flist <- dir(
-    paste0(
-      '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-      spp.list$Name[s],
-      '/model_output/importance'
-    ),
-    full.names = T
-  )
-  flistClean <- dir(
-    paste0(
-      '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-      spp.list$Name[s],
-      '/model_output/importance/'
-    ),
-    full.names = F
-  )
-
-  #set up data frame
-  vars <- names(dfC)[-c(1:3)]
-  dfI <- as.data.frame(matrix(nrow = length(flist), ncol = length(vars)))
-  colnames(dfI) <- vars
-
-  for (x in 1:length(flist)) {
-    load(flist[x]) #imp
-    if (class(imp) == 'data.frame') {
-      imp.vec <- imp$rel.inf ### need to remove spatial variables
-      names(imp.vec) <- imp$var
-      for (y in 1:length(names(imp.vec))) {
-        if (names(imp.vec)[y] %in% vars) {
-          i <- which(vars == names(imp.vec)[y])
-          dfI[x, i] <- imp.vec[y]
-        }
-      }
-    } else {
-      #imp <- range01(imp)
-      for (y in 1:length(names(imp))) {
-        if (names(imp)[y] %in% vars) {
-          i <- which(vars == names(imp)[y])
-          dfI[x, i] <- imp[y]
-        }
-      }
-    }
-    #print(x)
-  }
-
-  rownames(dfI) <- gsub('.RData', '', flistClean)
-
-  dfI <- replace(dfI, is.na(dfI), 0)
-
-  dfI <- t(apply(dfI, 1, FUN = function(x) {
-    x / sum(x)
-  }))
-
-  dfI <- rbind(rep(max(dfI, na.rm = T), ncol(dfI)), rep(0, ncol(dfI)), dfI)
-
-  pal <- brewer.pal(n = 5, 'Set1')
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[s], 'figures'),
-      '/variable_importance_radars.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  par(mfrow = c(2, 1), mar = c(1, 4, 1, 4))
-  #for(x in 3:nrow(dfI)){
-  radarchart(
-    as.data.frame(dfI),
-    pfcol = alpha(pal, 0.1),
-    pty = 15:19,
-    pcol = alpha(pal, 1),
-    plty = 1,
-    title = "Component Models",
-    vlcex = 1.25
-  )
-  legend(
-    'topleft',
-    legend = rownames(dfI)[3:7],
-    lty = 1,
-    col = pal,
-    pch = 15:19,
-    bty = 'n'
-  )
-  #}
-  #add weighted mean from ensemble
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[s],
-    '/model_output/ensemble_weights.RData'
-  ))
-  dfW <- dfI[-c(1, 2), ]
-  ws <- apply(dfW, MARGIN = 2, FUN = weighted.mean, w = weights, na.rm = T)
-  ws <- rbind(dfI[1:2, ], ws)
-  radarchart(
-    as.data.frame(ws),
-    pfcol = alpha(pal, 0.5),
-    pty = 19,
-    pcol = alpha(pal, 1),
-    plty = 1,
-    title = 'ENSEMBLE',
-    vlcex = 1.25
-  )
-  dev.off()
-  print(s)
-} #end s
-
-##### residuals
-#contemporary
-for (x in 37:nrow(spp.list)) {
-  #model predictions
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_1993_2019.RData'
-  )) #abund
-  abund <- stack(abund)
-
-  #observations
-  obs <- stack(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/input_rasters/combined_rasters_1993_2019.nc'
-  ))
-
-  #manipulate obs a bit to clean it up
-  names(obs) <- names(abund)
-  obsC <- crop(obs, extent(abund))
-  obsC[obsC == 0] <- NA
-  obsC[obsC == 1] <- 0
-  obsC[obsC == 2] <- 1
-
-  resids <- obsC - abund
-
-  #avg residuals
-  avgR <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, nlayers(resids), by = 12)
-    MNS <- raster::subset(resids, mn)
-    avgR[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avgR <- stack(avgR)
-  names(avgR) <- month.abb
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/mean_residuals_1993_2019.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  par(mfrow = c(4, 3), mar = c(3, 3, 1, 0))
-  for (y in 1:12) {
-    plot(
-      raster::subset(avgR, y),
-      zlim = c(-1, 1),
-      col = cmocean('balance')(64),
-      legend = F
-    )
-    plot(coastCropped['id'], col = 'grey', add = T)
-    legend('topleft', bty = 'n', legend = month.abb[y], cex = 2)
-  }
-  image.plot(
-    matrix(seq(-1, 1, by = 0.1), 11, 11),
-    legend.only = T,
-    horizontal = T,
-    legend.shrink = 0.7,
-    smallplot = c(0.4, 0.8, 0.25, 0.35),
-    legend.args = list(text = 'Residuals', cex = 0.75, side = 3, line = 0.1),
-    axis.args = list(cex.axis = 1, mgp = c(3, 0.5, 0)),
-    col = cmocean('balance')(64)
-  )
-  dev.off()
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/histogram_residuals_1993_2019.pdf'
-    ),
-    width = 6,
-    height = 6
-  )
-  hist(resids[], main = '', xlab = 'Residuals')
-  dev.off()
-
-  print(x)
-}
-
-##### model weights/aucs
-metrics <- read.csv('species_evaluation_metrics.csv')
-metrics$Name <- gsub(' ', '', metrics$Common.Name)
-
-for (x in 37:nrow(metrics)) {
-  m <- as.matrix(metrics[x, c(12:16)])
-
-  pdf(
-    paste0(
-      file.path(getwd(), metrics$Name[x], 'figures'),
-      '/component_model_weights.pdf'
-    ),
-    width = 6,
-    height = 6
-  )
-  barplot(
-    m,
-    names = c("BRT", 'GAM', 'MAXENT', 'RF', 'SDMTMB'),
-    ylab = 'Weight',
-    xlab = 'Component Model',
-    ylim = c(0, 0.3)
-  )
-  box()
-  dev.off()
-
-  aucs <- as.matrix(metrics[x, c(7:11)])
-  pdf(
-    paste0(
-      file.path(getwd(), metrics$Name[x], 'figures'),
-      '/component_model_aucs.pdf'
-    ),
-    width = 6,
-    height = 6
-  )
-  barplot(
-    aucs,
-    names = c("BRT", 'GAM', 'MAXENT', 'RF', 'SDMTMB'),
-    ylab = 'AUC',
-    xlab = 'Component Model',
-    ylim = c(0, 1)
-  )
-  box()
-  dev.off()
-
-  print(x)
-  # print(m)
-}
-
-
-##gifs
-library(gifski)
-#contemporary
-for (x in 37:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_1993_2019.RData'
-  )) #abund
-
-  abund <- stack(abund)
-  abund <- replace(abund, abs(bathyR) > 1000, NA)
-
-  save_gif(
-    expr = for (y in 1:nlayers(abund)) {
-      plot(
-        raster::subset(abund, y),
-        zlim = c(0, 1),
-        col = cmocean('matter')(64),
-        legend = F
-      )
-      plot(coastCropped['id'], col = 'grey', add = T)
-      legend('topleft', bty = 'n', legend = names(abund)[y], cex = 2)
-      image.plot(
-        matrix(seq(0, 1, by = 0.1), 11, 11),
-        legend.only = T,
-        horizontal = T,
-        legend.shrink = 0.7,
-        smallplot = c(0.4, 0.8, 0.15, 0.20),
-        legend.args = list(
-          text = 'Probability of Occurance',
-          cex = 1.25,
-          side = 3,
-          line = 0.1
-        ),
-        axis.args = list(cex.axis = 1, mgp = c(3, 0.5, 0)),
-        col = cmocean('matter')(64)
-      )
-    },
-    width = 720,
-    height = 720,
-    delay = 0.5,
-    loop = T,
-    progress = T,
-    gif_file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/mean_SDM_1993_2019.gif'
-    )
-  )
-
-  print(x)
-}
-
-#2025-2035
-for (x in 37:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_2025_2034.RData'
-  )) #abund
-
-  abund <- stack(abund)
-  abund <- replace(abund, abs(bathyR) > 1000, NA)
-
-  save_gif(
-    expr = for (y in 1:nlayers(abund)) {
-      plot(
-        raster::subset(abund, y),
-        zlim = c(0, 1),
-        col = cmocean('matter')(64),
-        legend = F
-      )
-      plot(coastCropped['id'], col = 'grey', add = T)
-      legend('topleft', bty = 'n', legend = names(abund)[y], cex = 2)
-      image.plot(
-        matrix(seq(0, 1, by = 0.1), 11, 11),
-        legend.only = T,
-        horizontal = T,
-        legend.shrink = 0.7,
-        smallplot = c(0.4, 0.8, 0.15, 0.20),
-        legend.args = list(
-          text = 'Probability of Occurance',
-          cex = 1.25,
-          side = 3,
-          line = 0.1
-        ),
-        axis.args = list(cex.axis = 1, mgp = c(3, 0.5, 0)),
-        col = cmocean('matter')(64)
-      )
-    },
-    width = 720,
-    height = 720,
-    delay = 0.5,
-    loop = T,
-    progress = T,
-    gif_file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
-      '/mean_SDM_2025_2034.gif'
-    )
-  )
-
-  print(x)
-}
-
+#evalulate ensemble and combine statistics for model reports
+make_evaluation_csv(spp_list = spp.list,
+                    training_years = c(1993, 2019),
+                    pa_col = 'pa',
+                    release = 'r20250715',
+                    spatial_temporal = FALSE,
+                    mask_bathy = T,
+                    rm_corr = T,
+                    add_data = F,
+                    additional_data = NULL)
 
 ##############################
 
