@@ -698,12 +698,12 @@ plan(sequential)
 
 #sdmtmb
 #runtime:
-#sppnames <- spp.list$Name[c(7,8,12,22,32)]
+sppnames <- spp.list$Name[c(15,23,32:42)]
 TMB::openmp(n = 1)
-plan(multisession, workers = 5)
+plan(multisession, workers = 4)
 combs <- future_map(
-  1:nrow(spp.list), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one
-  ~component_sdms_wrapper(spp = spp.list$Name[.x],
+  1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one
+  ~component_sdms_wrapper(spp = spp.list$Name[40],
                           model = 'sdmtmb',
                           dyn_names = var.list$Short.Name,
                           release = 'r20250715',
