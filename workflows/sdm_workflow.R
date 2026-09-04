@@ -26,16 +26,6 @@ spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
   dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main folder
-  #dir.create(
-<<<<<<< HEAD
-   # file.path(getwd(), spp.list$Name[x], 'input_rasters'),
-    #showWarnings = T
- # ) #input raster folder
-=======
-  # file.path(getwd(), spp.list$Name[x], 'input_rasters'),
-  #showWarnings = T
-  # ) #input raster folder
->>>>>>> dev
   dir.create(
     file.path(getwd(), spp.list$Name[x], 'input_csvs'),
     showWarnings = T
