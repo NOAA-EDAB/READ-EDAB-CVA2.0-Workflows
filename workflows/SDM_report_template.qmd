@@ -8,7 +8,6 @@ params:
   sTab: null
   n_pres: 0
   n_abs: 0
-  auc: 0
   weight_plot_pdf: ""
   imp_plot_pdf: ""
   results_pdf: ""
@@ -27,15 +26,11 @@ editor:
     wrap: 72
 ---
 
-\\begin{center} \Huge \textbf{Species Distribution Model Summary Report}
-\\ \vspace{0.2cm} \Large Species: \\textit{`r params$species_name`}
-\\end{center}
-
-\vspace{-0.8cm}
+# ***Species Distribution Model Summary Report:** `r params$species_name`*
 
 ## Monthly Mean Model Predictions from 1993-2023
 
-```{r, echo=FALSE, out.width="75%", fig.align='center'}
+```{r, echo=FALSE, out.width="80%", fig.align='center'}
 if(file.exists(params$results_pdf)) {
   knitr::include_graphics(params$results_pdf)
 } else {
@@ -49,11 +44,12 @@ if(file.exists(params$results_pdf)) {
 
 All residuals are calculated as the difference between the observed
 presence/absence and predicted probability of occurrence for monthly
-data between 1993-2023.
+data between 1993-2023. Positive values indicate that the species was present, but the model predicted low probability of occurrance whereas negative values indicate that the species was absent, but the model predicted high probability of occurrance. 
 
 ### Residual Distribution
+The following histogram illustrates the distribution of all residuals across the timeseries. The vertical dashed line represents the mean of all residuals. 
 
-```{r, echo=FALSE, out.width="85%", fig.align='center'}
+```{r, echo=FALSE, fig.align='center'}
 if(file.exists(params$resid_hist)) {
   knitr::include_graphics(params$resid_hist)
 } else {
@@ -64,8 +60,9 @@ if(file.exists(params$resid_hist)) {
 \newpage
 
 ### Monthly Mean Residuals from 1993-2023
+The maps below illustrate the monthly mean residuals from 1993-2023. 
 
-```{r, echo=FALSE, out.width="75%", fig.align='center'}
+```{r, echo=FALSE,  out.width="85%", fig.align='center'}
 if(file.exists(params$resid_map)) {
   knitr::include_graphics(params$resid_map)
 } else {
@@ -77,25 +74,18 @@ if(file.exists(params$resid_map)) {
 
 ## Variable Importance
 
-```{r, echo=FALSE, out.width="75%", fig.align='center'}
+Variable importance is extracted from each model and normalized to their
+respective sums. Variable importance for the ensemble is the weighted
+average of the normalized variable importance for each component model
+based on their performance.
+
+```{r, echo=FALSE,  out.width="85%", fig.align='center'}
 if(file.exists(params$imp_plot_pdf)) {
-  cat(paste0("\\includegraphics[width=\\textwidth]{", params$imp_plot_pdf, "}"))
+  knitr::include_graphics(params$imp_plot_pdf)
 } else {
   cat("Plot not found.")
 }
 ```
-
-## Ensemble Model Performance
-
-AUCs for the ensemble model were calculated using a leave-one-out
-approach. Models were built with fisheries and MOM6 data from 1993-2019
-and data from 2020-2023 were used to evaluate the model performance
-using the AUC. The closer the AUC is to 1, the better the model
-predictions are. An AUC of 0.5 or less indicates that the model is
-essentially guessing when it attempts to classify presence vs absence.
-
-The AUC for the **`r params$species_name`** ensemble was
-**`r params$auc`**.
 
 \newpage
 
@@ -197,29 +187,19 @@ knitr::kable(
 ```
 :::
 
-\vspace{-0.4cm}
-
 ## Component Model Weights
 
-````{=tex}
-\begin{minipage}[t]{0.28\textwidth}
-Weights of the component models were calculated based on their respective AUCs (Area under the Curve). AUCs were calculated using observed and predicted values from 2020-2023, and then scaled to 0-1 using a Gini Index.
+Weights of the component models were calculated based on their
+respective AUCs (Area under the Curve). AUCs were calculated using
+observed and predicted values from 2020-2023, and then scaled to 0-1
+using a Gini Index. Model weights were calculated as the fraction of the total sum of rescaled-AUCs. 
 
-\textit{Note that not all sdmTMB models converged for all species, so some species may have an sdmTMB weight of zero.}
-\end{minipage}
-\hfill
-\begin{minipage}[c]{0.68\textwidth}
-\centering
-```{r}
+```{r, fig.align='center'}
 #| echo: false
 #| results: asis
 if(file.exists(params$weight_plot_pdf)) {
-  # Use sanitize = TRUE or simply ensure the path is treated as a string
-  # kableExtra's include_graphics handles this well, or raw LaTeX:
-  cat(paste0("\\includegraphics[width=\\textwidth]{", params$weight_plot_pdf, "}"))
+  knitr::include_graphics(params$weight_plot_pdf)
 } else {
   cat("Plot not found.")
 }
 ```
-\end{minipage}
-````

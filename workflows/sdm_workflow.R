@@ -995,7 +995,7 @@ var.list <- data.frame(
 
   make_sdm_plots(
     species = spp.list$Name[-42],
-    type = c('ensemble', 'weights', 'importance', 'residuals'),
+    type = c('residuals'),
     release = 'r20250715',
     spatial_temporal = F,
     mask_bathy = T,
@@ -1003,7 +1003,7 @@ var.list <- data.frame(
     training_years = c(1993, 2019),
     coastline = landNE,
     model_metrics = metrics,
-    var_names = var.list$Short.Name
+    var_names = c(var.list$Short.Name, 'month', 'year', 'rugosity', 'dist2coast', 'bathy')
   )
 
 
@@ -1180,7 +1180,7 @@ sourceDF <- data.frame(
     'New York Nearshore Trawl Survey',
     'New Jersey Ocean Stock Assessment Survey',
     'Delaware State Trawl Surveys',
-    'Northeast Area Monitoring and Assessment Program (NEAMAP) & Chesapeake Bay Multispecies Monitoring and Assessment Program (ChesMMAP)',
+    'Northeast Area Monitoring and Assessment Program (NEAMAP) and Chesapeake Bay Multispecies Monitoring and Assessment Program (ChesMMAP)',
     'Additional trawl and tagging data from the Highly Migratory Species Program',
     'NEFSC Gulf of Maine Long Line Survey',
     'NEFSC Northern Shrimp Survey',
@@ -1188,7 +1188,7 @@ sourceDF <- data.frame(
     'SEFSC Pelagic Observer Program',
     'SEFSC Logbook Program',
     'NMFS Large Pelagics Survey',
-    'Northeast Area Monitoring and Assessment Program (NEAMAP) & Chesapeake Bay Multispecies Monitoring and Assessment Program (ChesMMAP)',
+    'Northeast Area Monitoring and Assessment Program (NEAMAP) and Chesapeake Bay Multispecies Monitoring and Assessment Program (ChesMMAP)',
     'Massachusetts Division of Marine Fisheries Bottom Trawl Survey',
     'NEFSC Atlantic Surfclam and Ocean Quahog Survey'
   ),
@@ -1220,7 +1220,7 @@ sources <- read.csv('sources.csv')
 
 #plots are made above - this just pulls them in and renders the report (original function also handled plotting)
 make_sdm_reports(
-  species_list = spp.list[1,],
+  species_list = spp.list[-42,],
   release = 'r20250715',
   model_metrics = metrics,
   sources = sources,
@@ -1228,8 +1228,8 @@ make_sdm_reports(
   feeding_key = feeding,
   habitat_key = habitat,
   variable_key = varDF,
-  template = 'SDM_report_template.qmd',
-  report_path = './Reports'
+  template = '~/ClimateVulnerabilityAssessment2.0/workflows/READ-EDAB-CVA2.0-Workflows/workflows/SDM_report_template.qmd',
+  report_path = 'Reports'
 )
 
 
