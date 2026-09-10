@@ -849,6 +849,9 @@ make_evaluation_csv(spp_list = spp.list[-42,],
 ##### PREDICT MODELS TO FORECAST  ########
 ##########################################
 
+statics <- terra::rast('./Data/staticVariables_masked_norm_terra.tif')
+bathy <- terra::wrap(statics$bathy)
+
 #first, pull forecast data
 ###decadal forecast
 forecast.list <- data.frame(
@@ -915,24 +918,24 @@ plan(sequential)
 
 #because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
 
-#for(x in 1:nrow(forecast.list)){
-# print(Sys.time())
-#  get_model_data_wrapper(
-#   var_name = forecast.list$Long.Name[x],
-#  short_name = forecast.list$Short.Name[x],
-# json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
-#release = 'r20250925',
-#    init = 'i202501',
-#   spatial_temporal = FALSE,
-#  source = "forecast",
-# mask_bathy = T,
-#bathy = bathy,
-#    bathy_range = c(-1000, 0),
-#   force_overwrite = T
-#)
-#  print(x)
-# print(Sys.time())
-#}
+for(x in 1:nrow(forecast.list)){
+ print(Sys.time())
+  get_model_data_wrapper(
+   var_name = forecast.list$Long.Name[x],
+  short_name = forecast.list$Short.Name[x],
+ json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+release = 'r20250925',
+    init = 'i202501',
+   spatial_temporal = FALSE,
+  source = "forecast",
+ mask_bathy = T,
+bathy = bathy,
+    bathy_range = c(-1000, 0),
+   force_overwrite = T
+)
+  print(x)
+ print(Sys.time())
+}
 
 #second, normalize forecast data to HINDCAST MEAN/SD
 norm_forecast <- vector(mode = 'list', length = length(forecast.list$Short.Name))
