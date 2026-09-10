@@ -645,6 +645,34 @@ combs <- future_map(
 )
 plan(sequential)
 
+###here is an example of how to re-run a portion of the workflow in sequence
+## for example, if the variable importance calculation was modified and you only needed to re-run that, you could use the following: 
+for(x in 1:nrow(spp.list)){
+  spp = spp.list$Name[x]
+  # Define standard paths
+  spp_dir          <- file.path(getwd(), spp)
+  
+  # Load training data
+  dfT <- read.csv(file.path(spp_dir, paste0('training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'))) 
+  
+  # Get covariates in dataframe
+  static_variables <- terra::unwrap(static_variables)
+  d_names <- var.list$Short.Name[var.list$Short.Name %in% names(dfT)]
+  s_names <- names(static_variables)[names(static_variables) %in% names(dfT)]
+  var_names <- c(d_names, s_names)
+  static_variables <- terra::wrap(static_variables)
+  
+  load(file.path(spp_dir, 'model_output', 'models', 'RF.rds'))
+  
+  imp <- calculate_sdm_variable_importance(
+    mod = mod, se = dfT, pa_col = 'pa', xy_col = c("grid.lon", "grid.lat"),
+    month_col = 'month', year_col = 'year', model = 'rf', var_names = var_names
+  )
+  
+  save(imp, file = file.path(spp_dir, 'model_output', 'importance', 'RF.rds'))
+  print(x)
+}
+#this could also easily be done in parallel with a %dopar% or something similar; RF is light and fast enough where it wasn't necessary here. 
 
 #BRT
 #started: 8:42 AM 7/27
@@ -770,10 +798,11 @@ plan(sequential)
 
 #ENSEMBLE
 #runtime:
-plan(multisession, workers = 8)
+sppnames <- spp.list$Name[c(28, 30, 32:34)]
+plan(multisession, workers = 5)
 combs <- future_map(
-  1:nrow(spp.list),
-  ~ensemble_sdms_wrapper(spp = spp.list$Name[.x],
+  1:length(sppnames),
+  ~ensemble_sdms_wrapper(spp = sppnames[.x],
                          dyn_names = var.list$Short.Name,
                          release = 'r20250715',
                          spatial_temporal = FALSE,
