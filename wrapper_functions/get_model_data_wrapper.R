@@ -92,9 +92,27 @@ get_model_data_wrapper <- function(
     
     # Save the processed raw raster to disk
     #dir.create(dirname(raw_filename), recursive = TRUE, showWarnings = FALSE)
-    terra::writeRaster(raw_data, filename = raw_filename, overwrite = TRUE)
-    log_info("{short_name} raw {source} data saved to disk")
+    switch(tolower(source),
+           "hindcast" = {
+             terra::writeRaster(raw_data, filename = raw_filename, overwrite = TRUE)
+             log_info("{short_name} raw {source} data saved to disk")
+           },
+           "forecast" = {
+             r <- raw_data$raw
+             terra::writeRaster(r, filename = paste0('./Data/MOM6/raw_MOM6_', short_name, '_', source, '_', release, init_suffix, suffix, '_ensembles.tif'), overwrite = TRUE)
+             
+             a <- raw_data$average
+             terra::writeRaster(a, filename = paste0('./Data/MOM6/raw_MOM6_', short_name, '_', source, '_', release, init_suffix, suffix, '_average.tif'), overwrite = TRUE)
+             log_info("{short_name} raw {source} data saved to disk")
+           },
+           # Default fallback error if you pass a typo 
+           stop(paste("Unknown data source specified:", source))
+    )
+    
   }
+  
+  ##assume you want to move forward with the average of the ensembles 
+  raw_data <- raw_data$average
   
   # Step 1.5 - mask raw data if necessary BEFORE saving
   if (mask_bathy) {
