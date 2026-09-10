@@ -995,7 +995,7 @@ var.list <- data.frame(
 
   make_sdm_plots(
     species = spp.list$Name[-42],
-    type = c('residuals'),
+    type = c('ensemble', 'weights', 'importance', 'residuals'),
     release = 'r20250715',
     spatial_temporal = F,
     mask_bathy = T,
