@@ -627,8 +627,8 @@ var.list <- data.frame(
 #notes: softshell clam failed due to lack of presence data
 plan(multisession, workers = 8)
 combs <- future_map(
-  1:length(sppnames),
-  ~component_sdms_wrapper(spp = sppnames[.x],
+  1:nrow(spp.list),
+  ~component_sdms_wrapper(spp = spp.list$Name[.x],
                           model = 'rf',
                           dyn_names = var.list$Short.Name,
                           release = 'r20250715',
@@ -770,11 +770,10 @@ plan(sequential)
 
 #ENSEMBLE
 #runtime:
-sppnames <- spp.list$Name[c(23,26:41)]
 plan(multisession, workers = 8)
 combs <- future_map(
-  1:length(sppnames),
-  ~ensemble_sdms_wrapper(spp = sppnames[.x],
+  1:nrow(spp.list),
+  ~ensemble_sdms_wrapper(spp = spp.list$Name[.x],
                          dyn_names = var.list$Short.Name,
                          release = 'r20250715',
                          spatial_temporal = FALSE,
@@ -789,7 +788,7 @@ combs <- future_map(
 )
 plan(sequential)
 
-#run on the "side" as models finish up remotely
+#run on the "side" in sequence as models finish up remotely
 sppnames <- spp.list$Name[c(15, 23, 26:39)]
 for(x in 1:length(sppnames)){
   ensemble_sdms_wrapper(spp = sppnames[x],
@@ -805,7 +804,7 @@ for(x in 1:length(sppnames)){
 }
 
 #evalulate ensemble and combine statistics for model reports
-make_evaluation_csv(spp_list = spp.list,
+make_evaluation_csv(spp_list = spp.list[-42,],
                     training_years = c(1993, 2019),
                     pa_col = 'pa',
                     release = 'r20250715',
