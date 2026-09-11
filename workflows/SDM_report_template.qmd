@@ -6,6 +6,7 @@ params:
   fTab: null
   hTab: null
   sTab: null
+  mTab: null
   n_pres: 0
   n_abs: 0
   weight_plot_pdf: ""
@@ -30,6 +31,8 @@ editor:
 
 ## Monthly Mean Model Predictions from 1993-2023
 
+The maps illustrate the monthly average probability of occurrence from 1993 - 2023. Darker colors indicate where the model predicted the species are most likely to occur on average throughout the timeseries.  
+
 ```{r, echo=FALSE, out.width="80%", fig.align='center'}
 if(file.exists(params$results_pdf)) {
   knitr::include_graphics(params$results_pdf)
@@ -42,9 +45,7 @@ if(file.exists(params$results_pdf)) {
 
 ## Model Residuals from 1993-2023
 
-All residuals are calculated as the difference between the observed
-presence/absence and predicted probability of occurrence for monthly
-data between 1993-2023. Positive values indicate that the species was present, but the model predicted low probability of occurrance whereas negative values indicate that the species was absent, but the model predicted high probability of occurrance. 
+All residuals are calculated as the difference between the observed values (0 for absence and 1 for presence) and model predictions (ranging between 0 and 1). Positive values indicate that the model underpredicted (species was present, but model predicted low likelihood) and negative values mean that the model overpredicted (species was absent, but model predicted high likelihood).
 
 ### Residual Distribution
 The following histogram illustrates the distribution of all residuals across the timeseries. The vertical dashed line represents the mean of all residuals. 
@@ -60,7 +61,7 @@ if(file.exists(params$resid_hist)) {
 \newpage
 
 ### Monthly Mean Residuals from 1993-2023
-The maps below illustrate the monthly mean residuals from 1993-2023. 
+The maps below illustrate the monthly mean residuals from 1993-2023, indicating when and where the model over or underpredicted on average. 
 
 ```{r, echo=FALSE,  out.width="85%", fig.align='center'}
 if(file.exists(params$resid_map)) {
@@ -77,9 +78,11 @@ if(file.exists(params$resid_map)) {
 Variable importance is extracted from each model and normalized to their
 respective sums. Variable importance for the ensemble is the weighted
 average of the normalized variable importance for each component model
-based on their performance.
+based on their performance. 
 
-```{r, echo=FALSE,  out.width="85%", fig.align='center'}
+The spider plots below illustrate which environmental variables were important in the model predictions. The closer the polygon is to the edge of the circle, the stronger the influence of the variable. 
+
+```{r, echo=FALSE,  out.width="80%", fig.align='center'}
 if(file.exists(params$imp_plot_pdf)) {
   knitr::include_graphics(params$imp_plot_pdf)
 } else {
@@ -91,10 +94,9 @@ if(file.exists(params$imp_plot_pdf)) {
 
 ## Model Inputs
 
-### Fisheries Data
+Below is a summary of the training data used, including the number of presences/absences, data sources utilized, and the environmental variables considered based on species niche. The weights of the component models in the final ensemble are also included for your reference. 
 
-A total of **`r params$n_pres`** presences and **`r params$n_abs`**
-absences were used to build the **`r params$species_name`** model.
+### Fisheries Data
 
 Presence/absence data was collected from the following datasets:
 
@@ -112,6 +114,9 @@ if (length(items) > 0) {
   cat("\\end{itemize}\n")
 }
 ```
+
+A total of **`r params$n_pres`** presences and **`r params$n_abs`**
+absences were used to build the model.
 
 ### MOM6 Data
 
@@ -187,19 +192,33 @@ knitr::kable(
 ```
 :::
 
-## Component Model Weights
+\newpage
+
+### Component Model Weights
 
 Weights of the component models were calculated based on their
 respective AUCs (Area under the Curve). AUCs were calculated using
 observed and predicted values from 2020-2023, and then scaled to 0-1
 using a Gini Index. Model weights were calculated as the fraction of the total sum of rescaled-AUCs. 
 
-```{r, fig.align='center'}
+```{r}
 #| echo: false
 #| results: asis
-if(file.exists(params$weight_plot_pdf)) {
-  knitr::include_graphics(params$weight_plot_pdf)
-} else {
-  cat("Plot not found.")
-}
+library(knitr)
+library(kableExtra)
+
+# 1. Force the parameter back into a data frame structure
+# This 'un-flattens' the YAML list back into rows and columns
+df_m <- as.data.frame(params$mTab)
+
+knitr::kable(
+  df_m, 
+  format = "latex", 
+  booktabs = TRUE, 
+  col.names = c("BRT", "GAM", "MAXENT", "RF", "SDMTMB"),
+  row.names = FALSE  # <--- This removes the "1, 2, 3" column
+) |> 
+kable_styling(position = "center", 
+    latex_options = "hold_position")
+
 ```
