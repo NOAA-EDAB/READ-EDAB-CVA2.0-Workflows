@@ -45,7 +45,7 @@ if(file.exists(params$results_pdf)) {
 
 ## Model Residuals from 1993-2023
 
-All residuals are calculated as the difference between the observed values (0 for absence and 1 for presence) and model predictions (ranging between 0 and 1). Positive values indicate that the model underpredicted (species was present, but model predicted low likelihood) and negative values mean that the model overpredicted (species was absent, but model predicted high likelihood).
+All residuals are calculated as the difference between the observed values (0 for absence and 1 for presence) and model predictions (ranging between 0 and 1). Positive values indicate that the model underpredicted (species was present, but model predicted low likelihood) and negative values mean that the model overpredicted (species was absent, but model predicted high likelihood). The models rarely predict values of exactly 0 or 1, so some residuals are almost always present; slightly positive residuals may be common where both the species is observed and model predictions are high and, conversely, slightly negative residuals may be common where both the species is absent and the model predicts low probability. 
 
 ### Residual Distribution
 The following histogram illustrates the distribution of all residuals across the timeseries. The vertical dashed line represents the mean of all residuals. 
