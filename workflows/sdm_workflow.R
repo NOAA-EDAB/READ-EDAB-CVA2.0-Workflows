@@ -918,7 +918,7 @@ plan(sequential)
 
 #because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
 
-for(x in 1:nrow(forecast.list)){
+for(x in c(9, 15)){
  print(Sys.time())
   get_model_data_wrapper(
    var_name = forecast.list$Long.Name[x],
