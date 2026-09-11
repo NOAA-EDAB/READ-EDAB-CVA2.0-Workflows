@@ -918,32 +918,32 @@ plan(sequential)
 
 #because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
 
-for(x in c(9, 15)){
- print(Sys.time())
-  get_model_data_wrapper(
-   var_name = forecast.list$Long.Name[x],
-  short_name = forecast.list$Short.Name[x],
- json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
-release = 'r20250925',
-    init = 'i202501',
-   spatial_temporal = FALSE,
-  source = "forecast",
- mask_bathy = T,
-bathy = bathy,
-    bathy_range = c(-1000, 0),
-   force_overwrite = T
-)
-  print(x)
- print(Sys.time())
-}
+#for(x in c(9, 15)){
+ #print(Sys.time())
+  #get_model_data_wrapper(
+#   var_name = forecast.list$Long.Name[x],
+#  short_name = forecast.list$Short.Name[x],
+# json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+#release = 'r20250925',
+#    init = 'i202501',
+#   spatial_temporal = FALSE,
+#  source = "forecast",
+# mask_bathy = T,
+#bathy = bathy,
+#    bathy_range = c(-1000, 0),
+#   force_overwrite = T
+#)
+#  print(x)
+# print(Sys.time())
+#}
 
 #second, normalize forecast data to HINDCAST MEAN/SD
 norm_forecast <- vector(mode = 'list', length = length(forecast.list$Short.Name))
 for(x in 1:length(forecast.list$Short.Name)){
   if(!file.exists(paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))){
     #if the normalized file doesn't exist, make it
-    raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global.tif')
-    hind_avg <- load('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
+    raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global_average.tif')
+    hind_avg <- load(paste0('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds'))
     hind_sd <- load('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
 
     norm <- normalize_model_data(raw = raw, avg = hind_avg, sd = hind_sd, spatial_temporal = F)
