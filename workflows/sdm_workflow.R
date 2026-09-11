@@ -942,9 +942,9 @@ norm_forecast <- vector(mode = 'list', length = length(forecast.list$Short.Name)
 for(x in 1:length(forecast.list$Short.Name)){
   if(!file.exists(paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))){
     #if the normalized file doesn't exist, make it
-    raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global_average.tif')
-    hind_avg <- load(paste0('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds'))
-    hind_sd <- load('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
+    raw <- terra::rast(paste0('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global_average.tif'))
+    hind_avg <- readRDS(paste0('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds'))
+    hind_sd <- readRDS(paste0('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds'))
 
     norm <- normalize_model_data(raw = raw, avg = hind_avg, sd = hind_sd, spatial_temporal = F)
     terra::writeRaster(norm, filename = paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))
@@ -956,48 +956,98 @@ for(x in 1:length(forecast.list$Short.Name)){
   norm_forecast[[x]] <- norm
 }
 
+names(norm_forecast) <- forecast.list$Short.Name
+
 #third, predict models
-statics <- terra::wrap(terra::rast('./Data/staticVariables_masked_norm_terra.tif'))
-mods <- c("GAM", "MAXENT", "SDMTMB", "RF", "BRT")
+statics <- terra::rast('./Data/staticVariables_masked_norm_terra.tif')
+#reproject statics to forecast grid because somehow they are always different
+statics <- resample(statics, norm_forecast[[1]], method = "bilinear") #using raw data from pull_mom6_hindcast
+statics <- terra::wrap(statics)
 
-for(x in 1:nrow(spp.list)){
-#load in training data for each species (needed to predict some models)
- dfT <- read.csv(file.path(getwd(), spp.list$Name[x], 'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'))
- preds <- vector(mode = 'list', length = length(mods))
- #predict component models
- for(m in 1:length(mods)){
-   mod <- load(file.path(getwd(), spp.list$Name[x], 'model_output', 'models', paste0(mods[m], '.rds')))
-   p <- make_sdm_predictions(
-      mod = mod,
-      model = tolower(mods[m]),
-      rasts = norm_forecast,
-      static_variables = terra::unwrap(static_variables),
-      se = dfT,
-      pa_col = 'pa',
-      month_col = 'month',
-      year_col = 'year',
-      xy_col = c("grid.lon", "grid.lat")
-    )
-   #save prediction
-   terra::writeRaster(p, file = file.path(getwd(), spp.list$Name[x], 'output_rasters', paste0(mods[m], '_forecast_r20250925_i202501.tif')), overwrite = TRUE)
-   #and add to list
-   preds[[m]] <- p
- } #end m
+mods <- c("BRT", "GAM","MAXENT","RF",  "SDMTMB")
 
- #now predict ensemble
- #load in weights
- weights <- load(file.path(getwd(), spp.list$Name[x], 'model_output',
-                      'ensemble_weights.rds'))
- #predict
- ens <- make_sdm_predictions(
-   model = 'ensemble',
-   rasts = preds,
-   weights = weights
- )
- #save
- terra::writeRaster(ens, file = file.path(getwd(), spp.list$Name[x], 'output_rasters', 'ENSEMBLE_forecast_r20250925_i202501.tif'), overwrite = TRUE)
-} #end p
+# 1. Load parallel packages
+library(foreach)
+library(doParallel)
+library(terra)
 
+# 2. Set up the parallel cluster
+# Leave one core free so your computer doesn't lock up
+num_cores <- 6
+cl <- parallel::makeCluster(num_cores)
+doParallel::registerDoParallel(cl)
+
+# 3. CRITICAL: Wrap any SpatRaster objects in the global environment
+
+# New: Apply wrap to each raster in the list
+norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
+# Assuming static_variables is already wrapped based on your original code:
+# static_variables_wrapped <- static_variables 
+
+# 4. Execute the parallel loop
+foreach(s = 1:nrow(spp.list), 
+        .packages = c("terra"), 
+        .export = c("make_sdm_predictions", 'prep_time_step_df', 'prep_time_step_stack'),
+        .errorhandling = "pass") %dopar% {
+          
+          # a. Unwrap the spatial data inside the worker environment
+          
+          # New: Apply unwrap to each wrapped object in the list
+          norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
+          static_vars_worker <- terra::unwrap(statics)
+          
+          # b. Load in training data for the species
+          dfT <- read.csv(file.path(getwd(), spp.list$Name[s], 'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'))
+          preds <- vector(mode = 'list', length = length(mods))
+          
+          # c. Predict component models
+          for(m in 1:length(mods)){
+            
+            # FIX: Use readRDS() for .rds files, not load()
+            mod_path <- file.path(getwd(), spp.list$Name[s], 'model_output', 'models', paste0(mods[m], '.rds'))
+            load(mod_path)  #mod
+            
+            p <- make_sdm_predictions(
+              mod = mod,
+              model = tolower(mods[m]),
+              rasts = norm_forecast_worker,
+              static_variables = static_vars_worker,
+              se = dfT,
+              pa_col = 'pa',
+              month_col = 'month',
+              year_col = 'year',
+              xy_col = c("grid.lon", "grid.lat")
+            )
+            
+            # Save prediction
+            out_path <- file.path(getwd(), spp.list$Name[s], 'output_rasters', paste0(mods[m], '_forecast_r20250925_i202501.tif'))
+            terra::writeRaster(p, file = out_path, overwrite = TRUE)
+            
+            # Add to list for ensemble
+            preds[[m]] <- p
+          } #end m
+          
+          # d. Now predict ensemble
+          # FIX: Assigning weights via load() returns a character string. Use readRDS() instead.
+          weights_path <- file.path(getwd(), spp.list$Name[s], 'model_output', 'ensemble_weights.rds')
+          load(weights_path) #weights
+          
+          ens <- make_sdm_predictions(
+            model = 'ensemble',
+            rasts = preds,
+            weights = weights
+          )
+          
+          # Save ensemble
+          ens_path <- file.path(getwd(), spp.list$Name[s], 'output_rasters', 'ENSEMBLE_forecast_r20250925_i202501.tif')
+          terra::writeRaster(ens, file = ens_path, overwrite = TRUE)
+          
+          # Return NULL to prevent foreach from saving massive raster lists into RAM
+          return(NULL)
+        }
+
+# 5. Stop the cluster when finished
+parallel::stopCluster(cl)
 
 ##########################################
 
