@@ -101,7 +101,7 @@ for (x in var.names) {
   #raw exposure
   raw_exp <- calculate_raw_exposure(present = hindcast,
                                     future = forecast,
-                                    spatial_temporal = F,
+                                    spatial_temporal = T,
                                     mask_bathy = T,
                                     bathy = bathy,
                                     bathy_range = c(-1000, 0))
@@ -122,7 +122,7 @@ for (x in var.names) {
 
 }
 
-#make and save nice plots of raw exposure, ranked exposure, and future climatology (avg)
+#make and save nice plots of raw exposure, ranked exposure, and climatologies
 #climatologies 
 #2014-2023
 for(x in var.names){
@@ -167,17 +167,18 @@ for(x in var.names){
   print(x)
 }
 
-#forecast - mean(hindcast)
+#forecast - hindcast
 for (x in var.names) {
   hindcast_path <- paste0('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_', x, '_hindcast_r20250715_global.tif')
   hindcast <- terra::rast(hindcast_path)
   hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
-  hAvg <- avg_model_data(hindcast, spatial_temporal = F)
+  hAvg <- avg_model_data(hindcast, spatial_temporal = T)
   
   forecast_path <- paste0('../SDMs/Data/MOM6/raw_MOM6_', x, '_forecast_r20250925_i202501_global_average.tif')
   forecast <- terra::rast(forecast_path)
   
   fAvg <- terra::tapp(forecast, rep(1:12, times = terra::nlyr(forecast)/12), fun = 'mean')
+  fAvg <- terra::resample(fAvg, hAvg, method = "bilinear")
   
   diff_rast <- fAvg - hAvg
   
