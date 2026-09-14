@@ -6,11 +6,11 @@
 #' @param mask_bathy TRUE/FALSE indicating whether or not bathymetry data was used as a mask for raw data before normalization. Helps pull correct ensemble model associated with the MOM6 data with the same name
 #' @param rm_corr TRUE/FALSE indicating whether or not correlated environmental covariates were removed. Helps to pull correct training/test dataframes 
 #' @param release release code for MOM6 data. Helps pull correct ensemble predictions associated with the MOM6 data with the same name
-#' @param training_years vector with lengths equal to 2, indicating the maximum and minimum years that identify the desired training datasets. Used to help select correct environmental variables
+#' @param training_years vector with length equal to 2, indicating the maximum and minimum years that identify the desired training datasets. Used to help select correct environmental variables
 #' @param sdm_threshold value between 0 and 1. Will remove values lower than this threshold from average ensemble model results to help reduce weird aliasing that can occur in workflow. Defaults to 0.1.
 #' @param spp species name. Used to pull correct data and save outputs in species-specific folders.
 #' @param forecast_release,hindcast_release MOM6 release codes for the (f)orecast and (h)indcasts used. Used to pull correct variable exposures
-#' @param forecast_forecast_init forecast_initialization code corresponding to the forecast_initalization date of the desired forecast data. Used to pull correct variable exposures
+#' @param forecast_init forecast_initialization code corresponding to the forecast_initalization date of the desired forecast data. Used to pull correct variable exposures
 #' @param hindcast_hindcast_yr_range character string corresponding to the years in the hindcast data used. Used to pull correct ranked exposure values and save the data properly
 #'
 #' @return Nothing is returned. The outputs from \code{make_variable_exposure(type = 'map')} and \code{make_variable_exposure(type = 'timeseries')} are saved in the appropriate folders
@@ -18,14 +18,15 @@
 variable_exposures_wrapper <- function(
   spp, 
   forecast_release, 
-  forecast_forecast_init,
+  forecast_init,
   hindcast_release, 
-  hindcast_hindcast_yr_range,
+  hindcast_yr_range,
   spatial_temporal, 
   mask_bathy, 
   rm_corr,
   sdm_threshold = 0.1,
-  dyn_vars
+  dyn_vars,
+  training_years
 ) {
 
   # ==========================================================

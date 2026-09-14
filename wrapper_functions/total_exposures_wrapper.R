@@ -11,16 +11,16 @@
 total_exposures_wrapper <- function(
     spp,
     forecast_release, 
-    forecast_forecast_init,
+    forecast_init,
     hindcast_release, 
-    hindcast_hindcast_yr_range
+    hindcast_yr_range
 ) {
 
   # ==========================================================
   # STEP 0: Set Up
   # ==========================================================
   # Set up the logger to output to your specific file
-  log_file <- file.path(getwd(), 'logs', 'ensemble.log')
+  log_file <- file.path(getwd(), 'logs', 'total_exposure.log')
   log_appender(appender_file(log_file))
 
   log_info("Calculating total exposures for {spp}")
@@ -40,10 +40,10 @@ total_exposures_wrapper <- function(
   ) # mapExp
 
   #variable timeseries
-  readRDS(
+  vecExp <- readRDS(
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      paste0('/variable_exposure_timeseries_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '.tif')
+      paste0('/variable_exposure_timeseries_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '.rds')
     )
   ) #vecExp
 
@@ -175,7 +175,7 @@ total_exposures_wrapper <- function(
     variable_exposure = vecExp,
     count_all = F,
     variable_weights = var_imp[nrow(var_imp),], #last row is always the weighted average of the ensemble
-    weights_threshold = 0.1
+    weight_threshold = 0.1
   )
   saveRDS(
     vecImp,
