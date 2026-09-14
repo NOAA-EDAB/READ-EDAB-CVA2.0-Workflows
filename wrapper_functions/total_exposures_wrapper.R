@@ -3,8 +3,8 @@
 #'
 #' @param spp species name. Used to pull correct data and save outputs in species-specific folders.
 #' @param forecast_release,hindcast_release MOM6 release codes for the (f)orecast and (h)indcasts used. Used to pull correct variable exposures
-#' @param forecast_forecast_init forecast_initialization code corresponding to the forecast_initalization date of the desired forecast data. Used to pull correct variable exposures
-#' @param hindcast_hindcast_yr_range character string corresponding to the years in the hindcast data used. Used to pull correct ranked exposure values and save the data properly
+#' @param forecast_init forecast_initialization code corresponding to the forecast_initalization date of the desired forecast data. Used to pull correct variable exposures
+#' @param hindcast_yr_range character string corresponding to the years in the hindcast data used. Used to pull correct ranked exposure values and save the data properly
 #'
 #' @return returns a data.frame containing the spatial averages of total exposure, plus variable exposure across the entire domain, and within stock polygons if shpfiles exists. The outputs from \code{make_total_exposure(type = 'map')} and \code{make_total_exposure(type = 'timeseries')} are saved in the appropriate folders
 
@@ -72,7 +72,7 @@ total_exposures_wrapper <- function(
     var_imp <- normalize_variable_importance(vars = dyn_vars, ens_weights = weights, imp_list = imp_list)
 
     #save
-    saveRDS(var_imp, file = file.path('../SDMs/', spp, 'model_output',
+    saveRDS(var_imp, file = file.path(getwd(), spp, 'Data',
                                    'normalized_dynamic_variable_importance.rds'))
 
   # ==========================================================
