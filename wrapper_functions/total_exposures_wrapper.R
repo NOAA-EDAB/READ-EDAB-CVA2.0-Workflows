@@ -25,8 +25,8 @@ total_exposures_wrapper <- function(
   # STEP 1: Load in Data
   # ==========================================================
   #ensemble weights
-  weights <- load(file.path('./SDMs/', spp, 'model_output',
-            'ensemble_weights.rds'))
+  load(file.path('../SDMs/', spp, 'model_output',
+            'ensemble_weights.rds')) #weights
 
   #variable maps
   mapExp <- terra::rast(paste0(
@@ -43,12 +43,10 @@ total_exposures_wrapper <- function(
     )
   ) #vecExp
 
-  #normalized variable importance; load if file exists, make it if it doesn't
-  if(!file.exists(file.path('./SDMs/', spp, 'model_output',
-                            'normalized_dynamic_variable_importance.rds'))){
+  #calculate normalized variable importance
     #read in variable importance outputs & create list
     flist <- dir(
-      file.path('./SDMs/', spp, 'model_output/importance'),
+      file.path('../SDMs/', spp, 'model_output/importance'),
       full.names = T,
       pattern = 'rds'
     )
@@ -58,7 +56,7 @@ total_exposures_wrapper <- function(
       imp_list[[x]] <- imp
     }
     names(imp_list) <- gsub('.rds', '', dir(
-      file.path('./SDMs/', spp, 'model_output/importance'),
+      file.path('../SDMs/', spp, 'model_output/importance'),
       full.names = F,
       pattern = 'rds'
     ))
@@ -70,12 +68,8 @@ total_exposures_wrapper <- function(
     var_imp <- normalize_variable_importance(vars = dyn_vars, ens_weights = weights, imp_list = imp_list)
 
     #save
-    save(var_imp, file = file.path('./SDMs/', spp, 'model_output',
+    saveRDS(var_imp, file = file.path('../SDMs/', spp, 'model_output',
                                    'normalized_dynamic_variable_importance.rds'))
-  } else {
-    var_imp <- load(file.path('./SDMs/', spp, 'model_output',
-                              'normalized_dynamic_variable_importance.rds'))
-  }
 
   # ==========================================================
   # STEP 2: Calculate Exposures Across Space
@@ -85,9 +79,9 @@ total_exposures_wrapper <- function(
   mapTot <- make_total_exposure(
     type = 'map',
     variable_exposure = mapExp,
-    count_all = F,
-    weights = NA,
-    weights_threshold = NA
+    count_all = T,
+    variable_weights = NA,
+    weight_threshold = NA
   )
   terra::writeRaster(
    x = mapTot,
@@ -102,9 +96,9 @@ total_exposures_wrapper <- function(
   mapImp <- make_total_exposure(
     type = 'map',
     variable_exposure = mapExp,
-    count_all = T,
-    weights = var_imp[nrow(var_imp),], #last row is always the weighted average of the ensemble
-    weights_threshold = 0.1
+    count_all = F,
+    variable_weights = var_imp[nrow(var_imp),], #last row is always the weighted average of the ensemble
+    weight_threshold = 0.1
   )
   terra::writeRaster(
     x = mapImp,
@@ -129,13 +123,13 @@ total_exposures_wrapper <- function(
   globals <- terra::global(allRasts, fun = 'mean', na.rm = T)
 
   #if stock polygons exist for the species, calculate averages within stocks
-  if(file.exists(paste0('./shpfiles/species_stock_areas/', spp, '.shp'))){
-    stocks <- terra::vect(paste0('./shpfiles/species_stock_areas/', spp, '.shp'))
+  if(file.exists(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))){
+    stocks <- terra::vect(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))
     #average within polygons
   expAvg <- terra::extract(allRasts, stocks, fun = 'mean', na.rm = T)
 
     #combine
-  expAvgs <- rbind(t(globals), expAvg[,-1])
+  expAvg <- rbind(t(globals), expAvg[,-1])
   #add stock column
   expAvg$stock <- c('global', stocks$stock_area)
 
@@ -144,7 +138,7 @@ total_exposures_wrapper <- function(
     expAvg <- t(globals)
   }
 
-  save(
+  saveRDS(
     expAvg,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
@@ -159,11 +153,11 @@ total_exposures_wrapper <- function(
   vecAll <- make_total_exposure(
     type = 'timeseries',
     variable_exposure = vecExp,
-    count_all = F,
-    weights = NA,
-    weights_threshold = NA
+    count_all = T,
+    variable_weights = NA,
+    weight_threshold = NA
   )
-  save(
+  saveRDS(
     vecAll,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
@@ -175,11 +169,11 @@ total_exposures_wrapper <- function(
   vecImp <- make_total_exposure(
     type = 'timeseries',
     variable_exposure = vecExp,
-    count_all = T,
-    weights = var_imp[nrow(var_imp),], #last row is always the weighted average of the ensemble
+    count_all = F,
+    variable_weights = var_imp[nrow(var_imp),], #last row is always the weighted average of the ensemble
     weights_threshold = 0.1
   )
-  save(
+  saveRDS(
     vecImp,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
@@ -189,6 +183,5 @@ total_exposures_wrapper <- function(
 
   log_info('total exposure timeseries for {spp} complete.')
 
-  return(expAvg)
 }
 

@@ -14,6 +14,8 @@ spp.list <- read.csv(
 )
 #spp.list <- spp.list[,c(1:6)]
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name) #make clean names to make folders if necessary/match to folder names
+#save yourself the headache and remove the one that fails 
+spp.list <- spp.list[-42]
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
@@ -543,11 +545,34 @@ stat_areas <- terra::vect('V:/shpfiles/NEFSC_GIS/Statistical_Areas_2010_withName
 make_stock_polygons(key = stock_key, species_col = 'Name', stock_col = 'ASSESSMENT_STOCK_AREA', id_col = 'AREA', polygons = stat_areas, poly_id = 'Id' )
 
 
+
 ##################################
 ### calculate variable exposure
 ##################################
 
-#2009-2019 v 2025 - 2035
+#load in variables
+var.names <- c(
+  'bottomT',
+  'bottomO2',
+  'bottomS',
+  'bottomArg',
+  'surfaceT',
+  'surfaceS',
+  'surfacepH',
+  'MLD',
+  'diazPP',
+  'smallPP',
+  'mediumPP',
+  'largePP',
+  'smallZoo',
+  'mediumZoo',
+  'largeZoo',
+  'intNPP',
+  'POC'
+)
+
+
+#2014-23 v 2025 - 2035
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
@@ -556,8 +581,8 @@ combs <- future_map(
                           spatial_temporal = FALSE,
                           mask_bathy = T,
                           rm_corr = T,
-                          present_time = c(2009, 2019),
-                          future_time = c(2025, 2035))
+                          dyn_vars = var.names,
+                          training_years = c(1993, 2019))
   .progress = T
 )
 plan(sequential)
