@@ -582,8 +582,9 @@ combs <- future_map(
                           mask_bathy = T,
                           rm_corr = T,
                           dyn_vars = var.names,
-                          training_years = c(1993, 2019))
-  .progress = T
+                          training_years = c(1993, 2019)),
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 

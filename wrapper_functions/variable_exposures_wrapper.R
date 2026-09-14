@@ -8,13 +8,22 @@
 #' @param release release code for MOM6 data. Helps pull correct ensemble predictions associated with the MOM6 data with the same name
 #' @param training_years vector with lengths equal to 2, indicating the maximum and minimum years that identify the desired training datasets. Used to help select correct environmental variables
 #' @param sdm_threshold value between 0 and 1. Will remove values lower than this threshold from average ensemble model results to help reduce weird aliasing that can occur in workflow. Defaults to 0.1.
-#' @param present_time,future_time character strings indicating the present and future time series to compare. Example: '1993-2019'. Used to pull correct ranked exposure values and save the data properly
+#' @param spp species name. Used to pull correct data and save outputs in species-specific folders.
+#' @param forecast_release,hindcast_release MOM6 release codes for the (f)orecast and (h)indcasts used. Used to pull correct variable exposures
+#' @param forecast_forecast_init forecast_initialization code corresponding to the forecast_initalization date of the desired forecast data. Used to pull correct variable exposures
+#' @param hindcast_hindcast_yr_range character string corresponding to the years in the hindcast data used. Used to pull correct ranked exposure values and save the data properly
 #'
 #' @return Nothing is returned. The outputs from \code{make_variable_exposure(type = 'map')} and \code{make_variable_exposure(type = 'timeseries')} are saved in the appropriate folders
 
 variable_exposures_wrapper <- function(
-  spp,
-  spatial_temporal, mask_bathy, release, rm_corr,
+  spp, 
+  forecast_release, 
+  forecast_forecast_init,
+  hindcast_release, 
+  hindcast_hindcast_yr_range,
+  spatial_temporal, 
+  mask_bathy, 
+  rm_corr,
   sdm_threshold = 0.1,
   dyn_vars
 ) {
@@ -23,7 +32,7 @@ variable_exposures_wrapper <- function(
   # STEP 0: Set Up
   # ==========================================================
   # Set up the logger to output to your specific file
-  log_file <- file.path(getwd(), 'logs', 'ensemble.log')
+  log_file <- file.path(getwd(), 'logs', 'variable_exposure.log')
   log_appender(appender_file(log_file))
 
   log_info("Calculating variable exposures for {spp}")
@@ -34,10 +43,10 @@ variable_exposures_wrapper <- function(
   corr_suffix <- if(rm_corr) "rmcorr" else ""
   
   # Define standard paths
-  predictions_path <- file.path('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs', spp, 'output_rasters', paste0('ENSEMBLE_hindcast_', release, '_', bathy_suffix, suffix, '.tif'))
+  predictions_path <- file.path('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs', spp, 'output_rasters', paste0('ENSEMBLE_hindcast_', hindcast_release, '_', bathy_suffix, suffix, '.tif'))
   
   # Load training data
-  training_name <- file.path('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs', spp, paste0('training_', training_years[1], '_', training_years[2], '_', corr_suffix, '_hindcast_', release, '_', bathy_suffix, suffix, '.csv'))
+  training_name <- file.path('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs', spp, paste0('training_', training_years[1], '_', training_years[2], '_', corr_suffix, '_hindcast_', hindcast_release, '_', bathy_suffix, suffix, '.csv'))
   
   if (!file.exists(training_name)) {
     log_error("Data file missing for species: {spp}.")
@@ -71,7 +80,7 @@ variable_exposures_wrapper <- function(
   for (x in seq_along(d_names)) {
     raster_path <- paste0('./RawExposure/Data/',
                           d_names[x],
-                          '_rankedexposure_r20250925_i202501_r20250715_20142023_global.tif')
+                          '_rankedexposure_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '_global.tif')
     if (!file.exists(raster_path)) {
       log_error("Missing upstream raster for {spp}: {raster_path}")
       return(NULL)
@@ -99,7 +108,7 @@ variable_exposures_wrapper <- function(
     x = mapExp,
     filename = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/variable_exposure_maps_r20250925_i202501_r20250715_20142023.tif'
+      paste0('/variable_exposure_maps_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '.tif')
     ),
     overwrite = TRUE
   )
@@ -124,11 +133,11 @@ variable_exposures_wrapper <- function(
     sdm_raster = avgHSM,
     stock_polys = stocks
   )
-  save(
+  saveRDS(
     vecExp,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/variable_exposure_timeseries_r20250925_i202501_r20250715_20142023.rds'
+      paste0('/variable_exposure_timeseries_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range,'.rds')
     )
   )
 

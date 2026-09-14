@@ -2,14 +2,18 @@
 #' @description A wrapper function for \code{make_total_exposure} that handles object loading, produces both maps and timeseries, and averages total spatial maps globally and within stock polygons if desired. automatically does calculation both with all variables and with only the important variables
 #'
 #' @param spp species name. Used to pull correct data and save outputs in species-specific folders.
-#' @param present_time,future_time character strings indicating the present and future time series to compare. Example: '1993-2019'. Used to pull correct ranked exposure values and save the data properly
+#' @param forecast_release,hindcast_release MOM6 release codes for the (f)orecast and (h)indcasts used. Used to pull correct variable exposures
+#' @param forecast_forecast_init forecast_initialization code corresponding to the forecast_initalization date of the desired forecast data. Used to pull correct variable exposures
+#' @param hindcast_hindcast_yr_range character string corresponding to the years in the hindcast data used. Used to pull correct ranked exposure values and save the data properly
 #'
 #' @return returns a data.frame containing the spatial averages of total exposure, plus variable exposure across the entire domain, and within stock polygons if shpfiles exists. The outputs from \code{make_total_exposure(type = 'map')} and \code{make_total_exposure(type = 'timeseries')} are saved in the appropriate folders
 
 total_exposures_wrapper <- function(
     spp,
-    present_time,
-    future_time
+    forecast_release, 
+    forecast_forecast_init,
+    hindcast_release, 
+    hindcast_hindcast_yr_range
 ) {
 
   # ==========================================================
@@ -31,15 +35,15 @@ total_exposures_wrapper <- function(
   #variable maps
   mapExp <- terra::rast(paste0(
     file.path(getwd(), spp, 'Data'),
-    '/variable_exposure_maps_r20250925_i202501_r20250715_20142023.tif'
+    paste0('/variable_exposure_maps_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '.tif')
     )
   ) # mapExp
 
   #variable timeseries
-  load(
+  readRDS(
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/variable_exposure_timeseries_r20250925_i202501_r20250715_20142023.rds'
+      paste0('/variable_exposure_timeseries_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '.tif')
     )
   ) #vecExp
 
@@ -87,7 +91,7 @@ total_exposures_wrapper <- function(
    x = mapTot,
     filename = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/total_exposure_map_all_var_r20250925_i202501_r20250715_20142023.tif'
+      paste0('/total_exposure_map_all_var_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range,'.tif')
     ),
    overwrite = TRUE
   )
@@ -104,7 +108,7 @@ total_exposures_wrapper <- function(
     x = mapImp,
     filename = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/total_exposure_map_imp_var_r20250925_i202501_r20250715_20142023.tif'
+      paste0('/total_exposure_map_imp_var_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range,'.tif')
     ),
     overwrite = TRUE
   )
@@ -142,7 +146,7 @@ total_exposures_wrapper <- function(
     expAvg,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/total_exposure_map_averages_r20250925_i202501_r20250715_20142023.rds'
+      paste0('/total_exposure_map_averages_' , forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '.rds')
     )
   )
   # ==========================================================
@@ -161,7 +165,7 @@ total_exposures_wrapper <- function(
     vecAll,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/total_exposure_timeseries_all_var_r20250925_i202501_r20250715_20142023.rds'
+      paste0('/total_exposure_timeseries_all_var_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range,'.rds')
     )
   )
 
@@ -177,7 +181,7 @@ total_exposures_wrapper <- function(
     vecImp,
     file = paste0(
       file.path(getwd(), spp, 'Data'),
-      '/total_exposure_timeseries_imp_var_r20250925_i202501_r20250715_20142023.rds'
+      paste0('/total_exposure_timeseries_imp_var_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range,'.rds')
     )
   )
 
