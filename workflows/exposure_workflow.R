@@ -617,7 +617,13 @@ plan(sequential)
 ### Plot Results - WITH FUNCTIONS/NESTED FIGURES
 ##################################
 
-load('./RawExposure/Data/coastline.RData') #coastCropped
+#get bathymetry for plotting
+statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+bathy <- statics$bathy
+
+#get coastline for plotting
+land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+landNE <- terra::crop(land, bathy)
 
 ### set up variable dataframe to make pretty names - not exact MOM6 names to make sure they fit
 varDF <- data.frame(
@@ -668,7 +674,7 @@ plot_Exposure(
   presentTime = '1993-2008',
   futureTime = '2009-2019',
   variableDF = varDF,
-  coastline = coastCropped
+  coastline = landNE
 )
 
 #decade 1
