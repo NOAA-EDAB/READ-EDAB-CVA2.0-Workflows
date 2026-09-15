@@ -101,7 +101,7 @@ total_exposures_wrapper <- function(
     type = 'map',
     variable_exposure = mapExp,
     count_all = F,
-    variable_weights = var_imp[nrow(var_imp),], #last row is always the weighted average of the ensemble
+    variable_weights = var_imp[nrow(var_imp),match(names(mapExp), colnames(var_imp))], #last row is always the weighted average of the ensemble. reordered to match the names of the variable exposure rasters
     weight_threshold = 0.1
   )
   terra::writeRaster(
@@ -174,7 +174,7 @@ total_exposures_wrapper <- function(
     type = 'timeseries',
     variable_exposure = vecExp,
     count_all = F,
-    variable_weights = var_imp[nrow(var_imp),], #last row is always the weighted average of the ensemble
+    variable_weights = var_imp[nrow(var_imp),match(rownames(vecExp), colnames(var_imp))], #last row is always the weighted average of the ensemble
     weight_threshold = 0.1
   )
   saveRDS(

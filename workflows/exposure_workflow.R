@@ -667,34 +667,16 @@ varDF <- data.frame(
   )
 )
 
-#contemporary timeframe
-plot_Exposure(
-  species = spp.list$Name,
+
+make_exposure_plots(
+  species = spp.list$Name[-42],
   type = c('variable', 'total', 'important', 'radar'),
-  presentTime = '1993-2008',
-  futureTime = '2009-2019',
-  variableDF = varDF,
+  forecast_release = 'r20250925', 
+  forecast_init = 'i202501',
+  hindcast_release = 'r20250715', 
+  hindcast_yr_range = '20142023',
+  variable_df = varDF,
   coastline = landNE
-)
-
-#decade 1
-plot_Exposure(
-  species = spp.list$Name,
-  type = c('variable', 'total', 'important'),
-  presentTime = '2009-2019',
-  futureTime = '2020-2030',
-  variableDF = varDF,
-  coastline = coastCropped
-)
-
-#decade 2
-plot_Exposure(
-  species = spp.list$Name,
-  type = c('variable', 'total', 'important'),
-  presentTime = '2009-2019',
-  futureTime = '2025-2035',
-  variableDF = varDF,
-  coastline = coastCropped
 )
 
 ## make exposure summary tables
