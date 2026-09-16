@@ -4,50 +4,24 @@
 #####SET UP - LOAD EVERY TIME ####
 ##################################
 
-setwd('V:/Exposure')
+setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/Exposure')
 ### source functions
 library(spatialcva)
 
 #load species list for loops
 spp.list <- read.csv(
-  'V:/SDMs/spp_list.csv'
+  '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/spp_list.csv'
 )
 #spp.list <- spp.list[,c(1:6)]
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name) #make clean names to make folders if necessary/match to folder names
 #save yourself the headache and remove the one that fails 
-spp.list <- spp.list[-42]
+spp.list <- spp.list[-42,]
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
   dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main species folder
   dir.create(file.path(getwd(), spp.list$Name[x], 'Data'), showWarnings = T) #data folder
-  #data subfolders for all combinations of present/future timeseries
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Data', '1993-2008 vs 2009-2019'),
-    showWarnings = T
-  ) #present: 1993-2008, future: 2009-2019
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Data', '2009-2019 vs 2020-2030'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2020-2030
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Data', '2009-2019 vs 2025-2035'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2025-2035
   dir.create(file.path(getwd(), spp.list$Name[x], 'Figures'), showWarnings = T) #figures folder
-  #data subfolders for all combinations of present/future timeseries
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Figures', '1993-2008 vs 2009-2019'),
-    showWarnings = T
-  ) #present: 1993-2008, future: 2009-2019
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Figures', '2009-2019 vs 2020-2030'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2020-2030
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Figures', '2009-2019 vs 2025-2035'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2025-2035
 }
 ##################################
 
@@ -507,7 +481,7 @@ for (x in 1:length(expRanked)) {
 ### create stock polygons for all species
 ##################################
 #similar to calculating raw exposure, this should only need to happen once as it saves the shp files
-setwd("V:/shpfiles/species_stock_areas")
+setwd("/home/kgallagher/ClimateVulnerabilityAssessment2.0/shpfiles/species_stock_areas")
 
 #get species/stocks/polygons lists
 #NEFMC list
@@ -540,11 +514,19 @@ stock_key <- stock_key[-which(stock_key$ASSESSMENT_STOCK_AREA == 'UNIT' | is.na(
 stock_key <- merge(stock_key, spp.list, by = 'Name', all.x = F, all.y = T)
 
 ##load in CAM polygons
-stat_areas <- terra::vect('V:/shpfiles/NEFSC_GIS/Statistical_Areas_2010_withNames.shp')
+stat_areas <- terra::vect('../NEFSC_GIS/Statistical_Areas_2010_withNames.shp')
 
-make_stock_polygons(key = stock_key, species_col = 'Name', stock_col = 'ASSESSMENT_STOCK_AREA', id_col = 'AREA', polygons = stat_areas, poly_id = 'Id' )
+#get bathymetry for plotting
+statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+bathy <- statics$bathy
 
+#get coastline for plotting
+land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+landNE <- terra::crop(land, bathy)
 
+make_stock_polygons(key = stock_key, species_col = 'Name', stock_col = 'ASSESSMENT_STOCK_AREA', id_col = 'AREA', polygons = stat_areas, poly_id = 'Id', plot = T, bathymetry = bathy, coastline = landNE)
+
+##################################
 
 ##################################
 ### calculate variable exposure
@@ -614,7 +596,7 @@ plan(sequential)
 ##################################
 
 ##################################
-### Plot Results - WITH FUNCTIONS/NESTED FIGURES
+### Plot Results 
 ##################################
 
 #get bathymetry for plotting
@@ -669,14 +651,15 @@ varDF <- data.frame(
 
 
 make_exposure_plots(
-  species = spp.list$Name[-42],
+  species = spp.list$Name,
   type = c('variable', 'total', 'important', 'radar'),
   forecast_release = 'r20250925', 
   forecast_init = 'i202501',
   hindcast_release = 'r20250715', 
   hindcast_yr_range = '20142023',
   variable_df = varDF,
-  coastline = landNE
+  coastline = landNE,
+  bathymetry = bathy
 )
 
 ## make exposure summary tables
