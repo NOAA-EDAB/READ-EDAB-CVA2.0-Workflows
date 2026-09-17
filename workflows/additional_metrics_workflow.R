@@ -14,7 +14,7 @@ setwd(
 )
 
 #create combined data.frame
-flist <- dir('./raw_csvs', pattern = '.csv')
+flist <- dir('./raw_csvs', pattern = '.csv', full.names = T)
 scorers <- sub(".*/NECVA2.0_Directional_Scores_(.*)\\.csv$", "\\1", flist)
 direct <- NULL
 #this presumes a similar set up and naming scheme to the model confidence spreadsheets
@@ -32,8 +32,8 @@ write.csv(direct, file = 'combined_directionality.csv') #save for prosperity (th
 
 #now we calculate metric similar to sensitivity
 species.data.list <- split(direct, direct$Species)
-species.direct <- lapply(species.data.list, directionality, bootstrap = F) #calculate sensitivity w/o bootstrap
-direct.bootstrap <- lapply(species.data.list, directionality, bootstrap = T) #this only takes ~5 minutes for 42 species
+species.direct <- lapply(species.data.list, calculate_directionality, bootstrap = F) #calculate sensitivity w/o bootstrap
+direct.bootstrap <- lapply(species.data.list, calculate_directionality, bootstrap = T) #this only takes ~5 minutes for 42 species
 
 #get certainty
 direct.certainty <- mapply(
