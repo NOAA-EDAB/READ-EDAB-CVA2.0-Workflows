@@ -1393,7 +1393,7 @@ sources <- read.csv('sources.csv')
 
 #plots are made above - this just pulls them in and renders the report (original function also handled plotting)
 make_sdm_reports(
-  species_list = spp.list[-42,],
+  species_list = spp.list[-42, ],
   release = 'r20250715',
   model_metrics = metrics,
   sources = sources,
