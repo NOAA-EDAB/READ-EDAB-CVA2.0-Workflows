@@ -25,40 +25,40 @@ spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
-  dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main folder
+  dir.create(file.path(here::here("SDMs"), spp.list$Name[x]), showWarnings = T) #main folder
   dir.create(
-    file.path(getwd(), spp.list$Name[x], 'input_csvs'),
+    file.path(here::here("SDMs"), spp.list$Name[x], 'input_csvs'),
     showWarnings = T
   )
   dir.create(
-    file.path(getwd(), spp.list$Name[x], 'output_rasters'),
+    file.path(here::here("SDMs"), spp.list$Name[x], 'output_rasters'),
     showWarnings = T
   ) #output data folder
   dir.create(
-    file.path(getwd(), spp.list$Name[x], 'model_output'),
+    file.path(here::here("SDMs"), spp.list$Name[x], 'model_output'),
     showWarnings = T
   ) #model_output folder
   dir.create(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'models'),
+    file.path(here::here("SDMs"), spp.list$Name[x], 'model_output', 'models'),
     showWarnings = T
   ) #model_output/models folder
   dir.create(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'cvs'),
+    file.path(here::here("SDMs"), spp.list$Name[x], 'model_output', 'cvs'),
     showWarnings = T
   ) #model_output/cvs folder
   dir.create(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'preds'),
+    file.path(here::here("SDMs"), spp.list$Name[x], 'model_output', 'preds'),
     showWarnings = T
   ) #model_output/preds folder
   dir.create(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'eval_metrics'),
+    file.path(here::here("SDMs"), spp.list$Name[x], 'model_output', 'eval_metrics'),
     showWarnings = T
   ) #model_output/eval_metrics folder
   dir.create(
-    file.path(getwd(), spp.list$Name[x], 'model_output', 'importance'),
+    file.path(here::here("SDMs"), spp.list$Name[x], 'model_output', 'importance'),
     showWarnings = T
   ) #model_output/importance folder
-  dir.create(file.path(getwd(), spp.list$Name[x], 'figures'), showWarnings = T) #model_output folder
+  dir.create(file.path(here::here("SDMs"), spp.list$Name[x], 'figures'), showWarnings = T) #model_output folder
 }
 
 
@@ -578,7 +578,7 @@ plan(sequential)
 
 ###quick sanity check because the results can get lost in the log - load each csv in and print range - all should be 0-1
 flist <- dir(
-  path = getwd(),
+  path = here::here("SDMs"),
   pattern = 'combined_pa.csv',
   recursive = T,
   full.names = T
@@ -1052,7 +1052,7 @@ for (x in 37:nrow(spp.list)) {
     loop = T,
     progress = T,
     gif_file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
+      file.path(here::here("SDMs"), spp.list$Name[x], 'figures'),
       '/mean_SDM_1993_2019.gif'
     )
   )
@@ -1103,7 +1103,7 @@ for (x in 37:nrow(spp.list)) {
     loop = T,
     progress = T,
     gif_file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'figures'),
+      file.path(here::here("SDMs"), spp.list$Name[x], 'figures'),
       '/mean_SDM_2025_2034.gif'
     )
   )

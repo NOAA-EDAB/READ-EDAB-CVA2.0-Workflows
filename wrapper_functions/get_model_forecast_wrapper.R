@@ -54,7 +54,16 @@ get_model_forecast_wrapper <- function(
     }
   }
   names(raw) <- var_df$Short.Name
-  save(raw, file = paste0('./Data/MOM6/raw_MOM6_forecast_', release, '_', init, '.RData'))
+  save(
+    raw,
+    file = paste0(
+      './Data/MOM6/raw_MOM6_forecast_',
+      release,
+      '_',
+      init,
+      '.RData'
+    )
+  )
 
   if (in_par == TRUE) {
     cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
@@ -76,10 +85,28 @@ get_model_forecast_wrapper <- function(
     }
   }
   names(avg) <- var_df$Short.Name
-  if(spatial.temporal){
-    save(avg, file = paste0('./Data/MOM6/avg_MOM6_forecast_', release, '_', init, '.RData'))
+  if (spatial.temporal) {
+    save(
+      avg,
+      file = paste0(
+        './Data/MOM6/avg_MOM6_forecast_',
+        release,
+        '_',
+        init,
+        '.RData'
+      )
+    )
   } else {
-    save(avg, file = paste0('./Data/MOM6/avg_MOM6_forecast_', release, '_', init, '_global.RData'))
+    save(
+      avg,
+      file = paste0(
+        './Data/MOM6/avg_MOM6_forecast_',
+        release,
+        '_',
+        init,
+        '_global.RData'
+      )
+    )
   }
 
   if (in_par == TRUE) {
@@ -102,10 +129,28 @@ get_model_forecast_wrapper <- function(
     }
   }
   names(sds) <- var_df$Short.Name
-  if(spatial.temporal){
-    save(sds, file = paste0('./Data/MOM6/sd_MOM6_forecast_', release, '_', init, '.RData'))
+  if (spatial.temporal) {
+    save(
+      sds,
+      file = paste0(
+        './Data/MOM6/sd_MOM6_forecast_',
+        release,
+        '_',
+        init,
+        '.RData'
+      )
+    )
   } else {
-    save(sds, file = paste0('./Data/MOM6/sd_MOM6_forecast_', release, '_', init, '_global.RData'))
+    save(
+      sds,
+      file = paste0(
+        './Data/MOM6/sd_MOM6_forecast_',
+        release,
+        '_',
+        init,
+        '_global.RData'
+      )
+    )
   }
 
   if (in_par == TRUE) {
@@ -138,10 +183,28 @@ get_model_forecast_wrapper <- function(
     }
   }
   names(norm) <- var_df$Short.Name
-  if(spatial.temporal){
-    save(norm, file = paste0('./Data/MOM6/norm_MOM6_forecast_', release, '_', init, '.RData'))
+  if (spatial.temporal) {
+    save(
+      norm,
+      file = paste0(
+        './Data/MOM6/norm_MOM6_forecast_',
+        release,
+        '_',
+        init,
+        '.RData'
+      )
+    )
   } else {
-    save(norm, file = paste0('./Data/MOM6/norm_MOM6_forecast_', release, '_', init, '_global.RData'))
+    save(
+      norm,
+      file = paste0(
+        './Data/MOM6/norm_MOM6_forecast_',
+        release,
+        '_',
+        init,
+        '_global.RData'
+      )
+    )
   }
 
   return(norm)
