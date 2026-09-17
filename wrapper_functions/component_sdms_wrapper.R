@@ -41,7 +41,7 @@ component_sdms_wrapper <- function(
       corr_suffix <- if (rm_corr) "rmcorr" else ""
 
       # Define standard paths
-      spp_dir <- file.path(getwd(), spp)
+      spp_dir <- file.path(here::here("SDMs"), spp)
       model_path <- file.path(
         spp_dir,
         'model_output',
@@ -75,7 +75,7 @@ component_sdms_wrapper <- function(
       )
 
       # Set up logger
-      log_file <- file.path(getwd(), 'logs', paste0(model, '.log'))
+      log_file <- file.path(here::here("SDMs"), 'logs', paste0(model, '.log'))
       log_appender(appender_file(log_file))
 
       log_info("Processing species: {spp} for model type: {model}")

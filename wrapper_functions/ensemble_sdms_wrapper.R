@@ -39,7 +39,7 @@ ensemble_sdms_wrapper <- function(
       corr_suffix <- if (rm_corr) "rmcorr" else ""
 
       # Define standard paths
-      spp_dir <- file.path(getwd(), spp)
+      spp_dir <- file.path(here::here("SDMs"), spp)
       model_path <- file.path(spp_dir, 'model_output', 'models', 'ENSEMBLE.rds')
       importance_path <- file.path(
         spp_dir,
@@ -60,7 +60,7 @@ ensemble_sdms_wrapper <- function(
       )
 
       # Set up the logger to output to your specific file
-      log_file <- file.path(getwd(), 'logs', 'ensemble.log')
+      log_file <- file.path(here::here("SDMs"), 'logs', 'ensemble.log')
       log_appender(appender_file(log_file))
 
       log_info("Making {spp} ensemble")
@@ -161,7 +161,7 @@ ensemble_sdms_wrapper <- function(
         #put together weights
         #load in AUCs
         evalFlist <- dir(
-          file.path(getwd(), spp, 'model_output', 'eval_metrics'),
+          file.path(here::here("SDMs"), spp, 'model_output', 'eval_metrics'),
           pattern = '.rds',
           full.names = T
         )
@@ -181,7 +181,12 @@ ensemble_sdms_wrapper <- function(
         weights <- gini / sum(gini) #we need to make weights like this since AUC bigger = better; whereas RMSE smaller = better
         save(
           weights,
-          file = file.path(getwd(), spp, 'model_output', 'ensemble_weights.rds')
+          file = file.path(
+            here::here("SDMs"),
+            spp,
+            'model_output',
+            'ensemble_weights.rds'
+          )
         )
 
         # Wrap model building in tryCatch to log errors cleanly
@@ -221,7 +226,12 @@ ensemble_sdms_wrapper <- function(
         log_info("Predicting Ensemble for {spp}...")
 
         if (!exists("weights")) {
-          load(file.path(getwd(), spp, 'model_output', 'ensemble_weights.rds'))
+          load(file.path(
+            here::here("SDMs"),
+            spp,
+            'model_output',
+            'ensemble_weights.rds'
+          ))
         }
 
         #load in prediction rasters from other models
