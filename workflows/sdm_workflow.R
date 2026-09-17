@@ -379,14 +379,16 @@ var.list <- data.frame(
 )
 
 #load in bathy for masking
-staticR <- terra::rast('~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped_terra_reproj.tif')#staticR
+staticR <- terra::rast(
+  '~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped_terra_reproj.tif'
+) #staticR
 #bathy object = staticR$bathy
 bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
 
 plan(multisession, workers = 8)
 mom6_results <- future_map(
   1:nrow(var.list),
-  ~get_model_data_wrapper(
+  ~ get_model_data_wrapper(
     var_name = var.list$Long.Name[.x],
     short_name = var.list$Short.Name[.x],
     json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.hindcast.json",
@@ -417,8 +419,11 @@ is.obs.key <- c(F, T, F, F, F, F, F, F, F, T, F, F, T, T, T, T, F, F, F) #flags 
 
 #build argument matrix to pass along to wrapper function through furrr
 args <- NULL
-for(x in 1:nrow(spp.list)){
-  sFlag <- unlist(as.vector(source.key[which(source.key$Common.Name == spp.list$Common.Name[x]),-c(1)])) #pull T/F flags from sources key
+for (x in 1:nrow(spp.list)) {
+  sFlag <- unlist(as.vector(source.key[
+    which(source.key$Common.Name == spp.list$Common.Name[x]),
+    -c(1)
+  ])) #pull T/F flags from sources key
   sSources <- source.names[sFlag] #use flags to subset source names
   sObs <- is.obs.key[sFlag] #use flags to subset obs.key
   altNames <- paste(
@@ -432,16 +437,18 @@ for(x in 1:nrow(spp.list)){
     sep = ','
   )
 
-  a <- data.frame(spp = spp.list$Name[x],
-                  is_obs = sObs,
-                  source = sSources,
-                  all_names = altNames)
+  a <- data.frame(
+    spp = spp.list$Name[x],
+    is_obs = sObs,
+    source = sSources,
+    all_names = altNames
+  )
   args <- rbind(args, a)
 }
 args$source <- paste0(args$source, '_1993_2023')
 
 ###example of just one - adding clam dredge survey
-args <- args[args$source == 'Clam_1993_2023',]
+args <- args[args$source == 'Clam_1993_2023', ]
 
 plan(multisession, workers = 8)
 checks <- future_map(
@@ -464,9 +471,11 @@ plan(sequential)
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
-  ~ combine_fisheries_dfs_wrapper(name = spp.list$Name[.x],
-                                  skip = F,
-                                  force_overwrite = T),
+  ~ combine_fisheries_dfs_wrapper(
+    name = spp.list$Name[.x],
+    skip = F,
+    force_overwrite = T
+  ),
   .progress = T
 )
 plan(sequential)
@@ -541,22 +550,24 @@ options(future.globals.maxSize = Inf) #remove check for sharing large files so t
 plan(multisession, workers = 4)
 combs <- future_map(
   1:nrow(spp.list),
-  ~prepare_dataframe_wrapper(name = spp.list$Name[.x],
-                             short_names = var.list$Short.Name,
-                             release = 'r20250715',
-                             spatial_temporal = FALSE,
-                             mask_bathy = T,
-                             all_env = F,
-                             spp_key = spp.list,
-                             feed_key = feeding,
-                             hab_key = habitat,
-                             add_static = T,
-                             static_variables = statics,
-                             rm_corr = T,
-                             training_years = c(1993, 2019),
-                             test_years = c(2020, 2023),
-                             skip = F,
-                             force_overwrite = F),
+  ~ prepare_dataframe_wrapper(
+    name = spp.list$Name[.x],
+    short_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    all_env = F,
+    spp_key = spp.list,
+    feed_key = feeding,
+    hab_key = habitat,
+    add_static = T,
+    static_variables = statics,
+    rm_corr = T,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    skip = F,
+    force_overwrite = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -570,7 +581,9 @@ plan(sequential)
 ##### MAKE MODELS  ###########
 ##############################
 
-statics <- terra::wrap(terra::rast('./Data/staticVariables_masked_norm_terra.tif'))
+statics <- terra::wrap(terra::rast(
+  './Data/staticVariables_masked_norm_terra.tif'
+))
 
 var.list <- data.frame(
   Long.Name = c(
@@ -628,18 +641,20 @@ var.list <- data.frame(
 plan(multisession, workers = 8)
 combs <- future_map(
   1:length(sppnames),
-  ~component_sdms_wrapper(spp = sppnames[.x],
-                          model = 'rf',
-                          dyn_names = var.list$Short.Name,
-                          release = 'r20250715',
-                          spatial_temporal = FALSE,
-                          mask_bathy = T,
-                          rm_corr = T,
-                          static_variables = statics,
-                          training_years = c(1993, 2019),
-                          test_years = c(2020, 2023),
-                          all_years = c(1993, 2035),
-                          skip = F),
+  ~ component_sdms_wrapper(
+    spp = sppnames[.x],
+    model = 'rf',
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    all_years = c(1993, 2035),
+    skip = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -653,18 +668,20 @@ plan(sequential)
 plan(multisession, workers = 8)
 combs <- future_map(
   1:length(sppnames),
-  ~component_sdms_wrapper(spp = sppnames[.x],
-                          model = 'brt',
-                          dyn_names = var.list$Short.Name,
-                          release = 'r20250715',
-                          spatial_temporal = FALSE,
-                          mask_bathy = T,
-                          rm_corr = T,
-                          static_variables = statics,
-                          training_years = c(1993, 2019),
-                          test_years = c(2020, 2023),
-                          all_years = c(1993, 2035),
-                          skip = F),
+  ~ component_sdms_wrapper(
+    spp = sppnames[.x],
+    model = 'brt',
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    all_years = c(1993, 2035),
+    skip = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -679,18 +696,20 @@ plan(sequential)
 plan(multisession, workers = 8)
 combs <- future_map(
   1:length(sppnames),
-  ~component_sdms_wrapper(spp = sppnames[.x],
-                          model = 'gam',
-                          dyn_names = var.list$Short.Name,
-                          release = 'r20250715',
-                          spatial_temporal = FALSE,
-                          mask_bathy = T,
-                          rm_corr = T,
-                          static_variables = statics,
-                          training_years = c(1993, 2019),
-                          test_years = c(2020, 2023),
-                          all_years = c(1993, 2035),
-                          skip = F),
+  ~ component_sdms_wrapper(
+    spp = sppnames[.x],
+    model = 'gam',
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    all_years = c(1993, 2035),
+    skip = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -698,23 +717,25 @@ plan(sequential)
 
 #sdmtmb
 #runtime:
-sppnames <- spp.list$Name[c(15,23,32:42)]
+sppnames <- spp.list$Name[c(15, 23, 32:42)]
 TMB::openmp(n = 1)
 plan(multisession, workers = 4)
 combs <- future_map(
   1:length(sppnames), #cod was used as a test to troubleshoot new year_range/all_years arguments, so not re-running that one
-  ~component_sdms_wrapper(spp = spp.list$Name[40],
-                          model = 'sdmtmb',
-                          dyn_names = var.list$Short.Name,
-                          release = 'r20250715',
-                          spatial_temporal = FALSE,
-                          mask_bathy = T,
-                          rm_corr = T,
-                          static_variables = statics,
-                          training_years = c(1993, 2019),
-                          test_years = c(2020, 2023),
-                          all_years = c(1993, 2035),
-                          skip = F),
+  ~ component_sdms_wrapper(
+    spp = spp.list$Name[40],
+    model = 'sdmtmb',
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    all_years = c(1993, 2035),
+    skip = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -725,18 +746,20 @@ plan(sequential)
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
-  ~component_sdms_wrapper(spp = spp.list$Name[.x],
-                          model = 'maxent',
-                          dyn_names = var.list$Short.Name,
-                          release = 'r20250715',
-                          spatial_temporal = FALSE,
-                          mask_bathy = T,
-                          rm_corr = T,
-                          static_variables = statics,
-                          training_years = c(1993, 2019),
-                          test_years = c(2020, 2023),
-                          all_years = c(1993, 2035),
-                          skip = F),
+  ~ component_sdms_wrapper(
+    spp = spp.list$Name[.x],
+    model = 'maxent',
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    all_years = c(1993, 2035),
+    skip = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -744,44 +767,48 @@ plan(sequential)
 
 ##combined approach to get both sdmtmb finished and maxtent started
 
-sdmtmb <- data.frame(spp = spp.list$Name[c(7,22)], mod = 'sdmtmb')
-maxent <- data.frame(spp = spp.list$Name[c(28,30,33:36)], mod = 'maxent')
+sdmtmb <- data.frame(spp = spp.list$Name[c(7, 22)], mod = 'sdmtmb')
+maxent <- data.frame(spp = spp.list$Name[c(28, 30, 33:36)], mod = 'maxent')
 runs <- rbind(sdmtmb, maxent)
 
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(runs),
-  ~component_sdms_wrapper(spp = runs$spp[.x],
-                          model = runs$mod[.x],
-                          dyn_names = var.list$Short.Name,
-                          release = 'r20250715',
-                          spatial_temporal = FALSE,
-                          mask_bathy = T,
-                          rm_corr = T,
-                          static_variables = statics,
-                          training_years = c(1993, 2019),
-                          test_years = c(2020, 2023),
-                          all_years = c(1993, 2035),
-                          skip = T),
+  ~ component_sdms_wrapper(
+    spp = runs$spp[.x],
+    model = runs$mod[.x],
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    all_years = c(1993, 2035),
+    skip = T
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
 ##try last two sdmtmb models in parallel
-for(x in 1:nrow(sdmtmb)){
-  component_sdms_wrapper(spp = sdmtmb$spp[x],
-                         model = 'sdmtmb',
-                         dyn_names = var.list$Short.Name,
-                         release = 'r20250715',
-                         spatial_temporal = FALSE,
-                         mask_bathy = T,
-                         rm_corr = T,
-                         static_variables = statics,
-                         training_years = c(1993, 2019),
-                         test_years = c(2020, 2023),
-                         all_years = c(1993, 2035),
-                         skip = T)
+for (x in 1:nrow(sdmtmb)) {
+  component_sdms_wrapper(
+    spp = sdmtmb$spp[x],
+    model = 'sdmtmb',
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    all_years = c(1993, 2035),
+    skip = T
+  )
 }
 
 #ENSEMBLE
@@ -789,17 +816,19 @@ for(x in 1:nrow(sdmtmb)){
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
-  ~ensemble_sdms_wrapper(spp = spp.list$Name[.x],
-                         dyn_names = var.list$Short.Name,
-                         release = 'r20250715',
-                         spatial_temporal = FALSE,
-                         mask_bathy = T,
-                         rm_corr = T,
-                         static_variables = statics,
-                         training_years = c(1993, 2019),
-                         test_years = c(2020, 2023),
-                         all_years = c(1993, 2035),
-                         skip = F),
+  ~ ensemble_sdms_wrapper(
+    spp = spp.list$Name[.x],
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    all_years = c(1993, 2035),
+    skip = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -807,29 +836,33 @@ plan(sequential)
 
 #run on the "side" as models finish up remotely
 sppnames <- spp.list$Name[c(15, 23, 26:39)]
-for(x in 1:length(sppnames)){
-  ensemble_sdms_wrapper(spp = sppnames[x],
-                        dyn_names = var.list$Short.Name,
-                        release = 'r20250715',
-                        spatial_temporal = FALSE,
-                        mask_bathy = T,
-                        rm_corr = T,
-                        static_variables = statics,
-                        training_years = c(1993, 2019),
-                        test_years = c(2020, 2023),
-                        skip = F)
+for (x in 1:length(sppnames)) {
+  ensemble_sdms_wrapper(
+    spp = sppnames[x],
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    skip = F
+  )
 }
 
 #evalulate ensemble and combine statistics for model reports
-make_evaluation_csv(spp_list = spp.list,
-                    training_years = c(1993, 2019),
-                    pa_col = 'pa',
-                    release = 'r20250715',
-                    spatial_temporal = FALSE,
-                    mask_bathy = T,
-                    rm_corr = T,
-                    add_data = F,
-                    additional_data = NULL)
+make_evaluation_csv(
+  spp_list = spp.list,
+  training_years = c(1993, 2019),
+  pa_col = 'pa',
+  release = 'r20250715',
+  spatial_temporal = FALSE,
+  mask_bathy = T,
+  rm_corr = T,
+  add_data = F,
+  additional_data = NULL
+)
 
 ##############################
 
@@ -884,7 +917,7 @@ forecast.list <- data.frame(
 plan(multisession, workers = 8)
 mom6_results <- future_map(
   1:nrow(forecast.list),
-  ~get_model_data_wrapper(
+  ~ get_model_data_wrapper(
     var_name = forecast.list$Long.Name[.x],
     short_name = forecast.list$Short.Name[.x],
     json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
@@ -923,36 +956,85 @@ plan(sequential)
 #}
 
 #second, normalize forecast data to HINDCAST MEAN/SD
-norm_forecast <- vector(mode = 'list', length = length(forecast.list$Short.Name))
-for(x in 1:length(forecast.list$Short.Name)){
-  if(!file.exists(paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))){
+norm_forecast <- vector(
+  mode = 'list',
+  length = length(forecast.list$Short.Name)
+)
+for (x in 1:length(forecast.list$Short.Name)) {
+  if (
+    !file.exists(paste0(
+      './Data/MOM6/norm_',
+      forecast.list$Short.Name[x],
+      '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'
+    ))
+  ) {
     #if the normalized file doesn't exist, make it
-    raw <- terra::rast('./Data/MOM6/raw_MOM6_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_global.tif')
-    hind_avg <- load('./Data/MOM6/avg_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
-    hind_sd <- load('./Data/MOM6/sd_', forecast.list$Short.Name[x], '_hindcast_r20250715_masked_global.rds')
+    raw <- terra::rast(
+      './Data/MOM6/raw_MOM6_',
+      forecast.list$Short.Name[x],
+      '_forecast_r20250925_i202501_global.tif'
+    )
+    hind_avg <- load(
+      './Data/MOM6/avg_',
+      forecast.list$Short.Name[x],
+      '_hindcast_r20250715_masked_global.rds'
+    )
+    hind_sd <- load(
+      './Data/MOM6/sd_',
+      forecast.list$Short.Name[x],
+      '_hindcast_r20250715_masked_global.rds'
+    )
 
-    norm <- normalize_model_data(raw = raw, avg = hind_avg, sd = hind_sd, spatial_temporal = F)
-    terra::writeRaster(norm, filename = paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))
-  } else{
+    norm <- normalize_model_data(
+      raw = raw,
+      avg = hind_avg,
+      sd = hind_sd,
+      spatial_temporal = F
+    )
+    terra::writeRaster(
+      norm,
+      filename = paste0(
+        './Data/MOM6/norm_',
+        forecast.list$Short.Name[x],
+        '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'
+      )
+    )
+  } else {
     #if it does exist, load it in
-    norm <- terra::rast(paste0('./Data/MOM6/norm_', forecast.list$Short.Name[x], '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'))
+    norm <- terra::rast(paste0(
+      './Data/MOM6/norm_',
+      forecast.list$Short.Name[x],
+      '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'
+    ))
   }
   #add to big list to pass to predictions
   norm_forecast[[x]] <- norm
 }
 
 #third, predict models
-statics <- terra::wrap(terra::rast('./Data/staticVariables_masked_norm_terra.tif'))
+statics <- terra::wrap(terra::rast(
+  './Data/staticVariables_masked_norm_terra.tif'
+))
 mods <- c("GAM", "MAXENT", "SDMTMB", "RF", "BRT")
 
-for(x in 1:nrow(spp.list)){
-#load in training data for each species (needed to predict some models)
- dfT <- read.csv(file.path(getwd(), spp.list$Name[x], 'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'))
- preds <- vector(mode = 'list', length = length(mods))
- #predict component models
- for(m in 1:length(mods)){
-   mod <- load(file.path(getwd(), spp.list$Name[x], 'model_output', 'models', paste0(mods[m], '.rds')))
-   p <- make_sdm_predictions(
+for (x in 1:nrow(spp.list)) {
+  #load in training data for each species (needed to predict some models)
+  dfT <- read.csv(file.path(
+    getwd(),
+    spp.list$Name[x],
+    'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'
+  ))
+  preds <- vector(mode = 'list', length = length(mods))
+  #predict component models
+  for (m in 1:length(mods)) {
+    mod <- load(file.path(
+      getwd(),
+      spp.list$Name[x],
+      'model_output',
+      'models',
+      paste0(mods[m], '.rds')
+    ))
+    p <- make_sdm_predictions(
       mod = mod,
       model = tolower(mods[m]),
       rasts = norm_forecast,
@@ -963,24 +1045,46 @@ for(x in 1:nrow(spp.list)){
       year_col = 'year',
       xy_col = c("grid.lon", "grid.lat")
     )
-   #save prediction
-   terra::writeRaster(p, file = file.path(getwd(), spp.list$Name[x], 'output_rasters', paste0(mods[m], '_forecast_r20250925_i202501.tif')), overwrite = TRUE)
-   #and add to list
-   preds[[m]] <- p
- } #end m
+    #save prediction
+    terra::writeRaster(
+      p,
+      file = file.path(
+        getwd(),
+        spp.list$Name[x],
+        'output_rasters',
+        paste0(mods[m], '_forecast_r20250925_i202501.tif')
+      ),
+      overwrite = TRUE
+    )
+    #and add to list
+    preds[[m]] <- p
+  } #end m
 
- #now predict ensemble
- #load in weights
- weights <- load(file.path(getwd(), spp.list$Name[x], 'model_output',
-                      'ensemble_weights.rds'))
- #predict
- ens <- make_sdm_predictions(
-   model = 'ensemble',
-   rasts = preds,
-   weights = weights
- )
- #save
- terra::writeRaster(ens, file = file.path(getwd(), spp.list$Name[x], 'output_rasters', 'ENSEMBLE_forecast_r20250925_i202501.tif'), overwrite = TRUE)
+  #now predict ensemble
+  #load in weights
+  weights <- load(file.path(
+    getwd(),
+    spp.list$Name[x],
+    'model_output',
+    'ensemble_weights.rds'
+  ))
+  #predict
+  ens <- make_sdm_predictions(
+    model = 'ensemble',
+    rasts = preds,
+    weights = weights
+  )
+  #save
+  terra::writeRaster(
+    ens,
+    file = file.path(
+      getwd(),
+      spp.list$Name[x],
+      'output_rasters',
+      'ENSEMBLE_forecast_r20250925_i202501.tif'
+    ),
+    overwrite = TRUE
+  )
 } #end p
 
 
