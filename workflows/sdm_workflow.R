@@ -641,18 +641,20 @@ var.list <- data.frame(
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
-  ~component_sdms_wrapper(spp = spp.list$Name[.x],
-                          model = 'rf',
-                          dyn_names = var.list$Short.Name,
-                          release = 'r20250715',
-                          spatial_temporal = FALSE,
-                          mask_bathy = T,
-                          rm_corr = T,
-                          static_variables = statics,
-                          training_years = c(1993, 2019),
-                          test_years = c(2020, 2023),
-                          all_years = c(1993, 2035),
-                          skip = F),
+  ~ component_sdms_wrapper(
+    spp = spp.list$Name[.x],
+    model = 'rf',
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    all_years = c(1993, 2035),
+    skip = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -660,13 +662,16 @@ plan(sequential)
 
 ###here is an example of how to re-run a portion of the workflow in sequence
 ## for example, if the variable importance calculation was modified and you only needed to re-run that, you could use the following:
-for(x in 1:nrow(spp.list)){
-  spp = spp.list$Name[x]
+for (x in 1:nrow(spp.list)) {
+  spp <- spp.list$Name[x]
   # Define standard paths
-  spp_dir          <- file.path(getwd(), spp)
+  spp_dir <- file.path(getwd(), spp)
 
   # Load training data
-  dfT <- read.csv(file.path(spp_dir, paste0('training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv')))
+  dfT <- read.csv(file.path(
+    spp_dir,
+    paste0('training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv')
+  ))
 
   # Get covariates in dataframe
   static_variables <- terra::unwrap(static_variables)
@@ -678,8 +683,14 @@ for(x in 1:nrow(spp.list)){
   load(file.path(spp_dir, 'model_output', 'models', 'RF.rds'))
 
   imp <- calculate_sdm_variable_importance(
-    mod = mod, se = dfT, pa_col = 'pa', xy_col = c("grid.lon", "grid.lat"),
-    month_col = 'month', year_col = 'year', model = 'rf', var_names = var_names
+    mod = mod,
+    se = dfT,
+    pa_col = 'pa',
+    xy_col = c("grid.lon", "grid.lat"),
+    month_col = 'month',
+    year_col = 'year',
+    model = 'rf',
+    var_names = var_names
   )
 
   save(imp, file = file.path(spp_dir, 'model_output', 'importance', 'RF.rds'))
@@ -797,16 +808,18 @@ sppnames <- spp.list$Name[c(28, 30, 32:34)]
 plan(multisession, workers = 5)
 combs <- future_map(
   1:length(sppnames),
-  ~ensemble_sdms_wrapper(spp = sppnames[.x],
-                         dyn_names = var.list$Short.Name,
-                         release = 'r20250715',
-                         spatial_temporal = FALSE,
-                         mask_bathy = T,
-                         rm_corr = T,
-                         static_variables = statics,
-                         training_years = c(1993, 2019),
-                         test_years = c(2020, 2023),
-                         skip = F),
+  ~ ensemble_sdms_wrapper(
+    spp = sppnames[.x],
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    skip = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -830,15 +843,17 @@ for (x in 1:length(sppnames)) {
 }
 
 #evalulate ensemble and combine statistics for model reports
-make_evaluation_csv(spp_list = spp.list[-42,],
-                    training_years = c(1993, 2019),
-                    pa_col = 'pa',
-                    release = 'r20250715',
-                    spatial_temporal = FALSE,
-                    mask_bathy = T,
-                    rm_corr = T,
-                    add_data = F,
-                    additional_data = NULL)
+make_evaluation_csv(
+  spp_list = spp.list[-42, ],
+  training_years = c(1993, 2019),
+  pa_col = 'pa',
+  release = 'r20250715',
+  spatial_temporal = FALSE,
+  mask_bathy = T,
+  rm_corr = T,
+  add_data = F,
+  additional_data = NULL
+)
 
 ##############################
 
@@ -916,8 +931,8 @@ plan(sequential)
 #because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
 
 #for(x in c(9, 15)){
- #print(Sys.time())
-  #get_model_data_wrapper(
+#print(Sys.time())
+#get_model_data_wrapper(
 #   var_name = forecast.list$Long.Name[x],
 #  short_name = forecast.list$Short.Name[x],
 # json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
@@ -940,36 +955,36 @@ norm_forecast <- vector(
   length = length(forecast.list$Short.Name)
 )
 for (x in 1:length(forecast.list$Short.Name)) {
-    raw <- terra::rast(
-      './Data/MOM6/raw_MOM6_',
-      forecast.list$Short.Name[x],
-      '_forecast_r20250925_i202501_global.tif'
-    )
-    hind_avg <- load(
-      './Data/MOM6/avg_',
-      forecast.list$Short.Name[x],
-      '_hindcast_r20250715_masked_global.rds'
-    )
-    hind_sd <- load(
-      './Data/MOM6/sd_',
-      forecast.list$Short.Name[x],
-      '_hindcast_r20250715_masked_global.rds'
-    )
+  raw <- terra::rast(
+    './Data/MOM6/raw_MOM6_',
+    forecast.list$Short.Name[x],
+    '_forecast_r20250925_i202501_global.tif'
+  )
+  hind_avg <- load(
+    './Data/MOM6/avg_',
+    forecast.list$Short.Name[x],
+    '_hindcast_r20250715_masked_global.rds'
+  )
+  hind_sd <- load(
+    './Data/MOM6/sd_',
+    forecast.list$Short.Name[x],
+    '_hindcast_r20250715_masked_global.rds'
+  )
 
-    norm <- normalize_model_data(
-      raw = raw,
-      avg = hind_avg,
-      sd = hind_sd,
-      spatial_temporal = F
+  norm <- normalize_model_data(
+    raw = raw,
+    avg = hind_avg,
+    sd = hind_sd,
+    spatial_temporal = F
+  )
+  terra::writeRaster(
+    norm,
+    filename = paste0(
+      './Data/MOM6/norm_',
+      forecast.list$Short.Name[x],
+      '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'
     )
-    terra::writeRaster(
-      norm,
-      filename = paste0(
-        './Data/MOM6/norm_',
-        forecast.list$Short.Name[x],
-        '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'
-      )
-    )
+  )
   #add to big list to pass to predictions
   norm_forecast[[x]] <- norm
 }
@@ -982,7 +997,7 @@ statics <- terra::rast('./Data/staticVariables_masked_norm_terra.tif')
 statics <- resample(statics, norm_forecast[[1]], method = "bilinear") #using raw data from pull_mom6_hindcast
 statics <- terra::wrap(statics)
 
-mods <- c("BRT", "GAM","MAXENT","RF",  "SDMTMB")
+mods <- c("BRT", "GAM", "MAXENT", "RF", "SDMTMB")
 
 # 1. Load parallel packages
 library(foreach)
@@ -1002,66 +1017,96 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
 # static_variables_wrapped <- static_variables
 
 # 4. Execute the parallel loop
-foreach(s = 1:nrow(spp.list),
-        .packages = c("terra"),
-        .export = c("make_sdm_predictions", 'prep_time_step_df', 'prep_time_step_stack'),
-        .errorhandling = "pass") %dopar% {
+foreach(
+  s = 1:nrow(spp.list),
+  .packages = c("terra"),
+  .export = c(
+    "make_sdm_predictions",
+    'prep_time_step_df',
+    'prep_time_step_stack'
+  ),
+  .errorhandling = "pass"
+) %dopar%
+  {
+    # a. Unwrap the spatial data inside the worker environment
 
-          # a. Unwrap the spatial data inside the worker environment
+    # New: Apply unwrap to each wrapped object in the list
+    norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
+    static_vars_worker <- terra::unwrap(statics)
 
-          # New: Apply unwrap to each wrapped object in the list
-          norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
-          static_vars_worker <- terra::unwrap(statics)
+    # b. Load in training data for the species
+    dfT <- read.csv(file.path(
+      getwd(),
+      spp.list$Name[s],
+      'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'
+    ))
+    preds <- vector(mode = 'list', length = length(mods))
 
-          # b. Load in training data for the species
-          dfT <- read.csv(file.path(getwd(), spp.list$Name[s], 'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'))
-          preds <- vector(mode = 'list', length = length(mods))
+    # c. Predict component models
+    for (m in 1:length(mods)) {
+      # FIX: Use readRDS() for .rds files, not load()
+      mod_path <- file.path(
+        getwd(),
+        spp.list$Name[s],
+        'model_output',
+        'models',
+        paste0(mods[m], '.rds')
+      )
+      load(mod_path) #mod
 
-          # c. Predict component models
-          for(m in 1:length(mods)){
+      p <- make_sdm_predictions(
+        mod = mod,
+        model = tolower(mods[m]),
+        rasts = norm_forecast_worker,
+        static_variables = static_vars_worker,
+        se = dfT,
+        pa_col = 'pa',
+        month_col = 'month',
+        year_col = 'year',
+        xy_col = c("grid.lon", "grid.lat")
+      )
 
-            # FIX: Use readRDS() for .rds files, not load()
-            mod_path <- file.path(getwd(), spp.list$Name[s], 'model_output', 'models', paste0(mods[m], '.rds'))
-            load(mod_path)  #mod
+      # Save prediction
+      out_path <- file.path(
+        getwd(),
+        spp.list$Name[s],
+        'output_rasters',
+        paste0(mods[m], '_forecast_r20250925_i202501.tif')
+      )
+      terra::writeRaster(p, file = out_path, overwrite = TRUE)
 
-            p <- make_sdm_predictions(
-              mod = mod,
-              model = tolower(mods[m]),
-              rasts = norm_forecast_worker,
-              static_variables = static_vars_worker,
-              se = dfT,
-              pa_col = 'pa',
-              month_col = 'month',
-              year_col = 'year',
-              xy_col = c("grid.lon", "grid.lat")
-            )
+      # Add to list for ensemble
+      preds[[m]] <- p
+    } #end m
 
-            # Save prediction
-            out_path <- file.path(getwd(), spp.list$Name[s], 'output_rasters', paste0(mods[m], '_forecast_r20250925_i202501.tif'))
-            terra::writeRaster(p, file = out_path, overwrite = TRUE)
+    # d. Now predict ensemble
+    # FIX: Assigning weights via load() returns a character string. Use readRDS() instead.
+    weights_path <- file.path(
+      getwd(),
+      spp.list$Name[s],
+      'model_output',
+      'ensemble_weights.rds'
+    )
+    load(weights_path) #weights
 
-            # Add to list for ensemble
-            preds[[m]] <- p
-          } #end m
+    ens <- make_sdm_predictions(
+      model = 'ensemble',
+      rasts = preds,
+      weights = weights
+    )
 
-          # d. Now predict ensemble
-          # FIX: Assigning weights via load() returns a character string. Use readRDS() instead.
-          weights_path <- file.path(getwd(), spp.list$Name[s], 'model_output', 'ensemble_weights.rds')
-          load(weights_path) #weights
+    # Save ensemble
+    ens_path <- file.path(
+      getwd(),
+      spp.list$Name[s],
+      'output_rasters',
+      'ENSEMBLE_forecast_r20250925_i202501.tif'
+    )
+    terra::writeRaster(ens, file = ens_path, overwrite = TRUE)
 
-          ens <- make_sdm_predictions(
-            model = 'ensemble',
-            rasts = preds,
-            weights = weights
-          )
-
-          # Save ensemble
-          ens_path <- file.path(getwd(), spp.list$Name[s], 'output_rasters', 'ENSEMBLE_forecast_r20250925_i202501.tif')
-          terra::writeRaster(ens, file = ens_path, overwrite = TRUE)
-
-          # Return NULL to prevent foreach from saving massive raster lists into RAM
-          return(NULL)
-        }
+    # Return NULL to prevent foreach from saving massive raster lists into RAM
+    return(NULL)
+  }
 
 # 5. Stop the cluster when finished
 parallel::stopCluster(cl)
