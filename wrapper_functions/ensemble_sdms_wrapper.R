@@ -2,7 +2,7 @@
 #' @description This is a wrapper function for \code{build_sdm}, \code{make_sdm_predictions}, and \code{calculate_sdm_auc}. This function produces log files and has skip functionality to assist in running multiple species in parallel.
 
 #' @param spp Species name to add to log files and save data to correct directory (see vignette for recommended directory set up)
-#' @param model Component model name. One of the following: gam, maxent, rf, brt, sdmtmb
+#' @param models Component model names to use in the ensemble. must match the names of files in the evaluations folder
 #' @param training_years,test_years vectors with lengths equal to 2, indicating the maximum and minimum years that identify the desired training and test datasets
 #' @param short_names a vector of shorthand names for variable to help pull desired environmental data based on naming convention
 #' @param release release code for MOM6 data. Helps pull correct training/test dataset associated with the MOM6 data with the same name
@@ -14,7 +14,7 @@
 
 #' @return returns the AUC of the produced model. Outputs from the subsequent functions called within are saved within specific directories. See the vignette for recommended directory set up.
 
-ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, release, spatial_temporal, mask_bathy, rm_corr, static_variables, skip = TRUE) {
+ensemble_sdms_wrapper <- function(spp, models, training_years, test_years, dyn_names, release, spatial_temporal, mask_bathy, rm_corr, static_variables, skip = TRUE) {
   # Wrap the entire wrapper function execution in a outer tryCatch
   # to guarantee no error kills the parallel worker thread.
   tryCatch({
@@ -30,7 +30,6 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
   # Define standard paths
   spp_dir        <- file.path(getwd(), spp)
   model_path     <- file.path(spp_dir, 'model_output', 'models',  'ENSEMBLE.rds')
-  importance_path <- file.path(spp_dir, 'model_output', 'importance', 'ENSEMBLE.rds')
   predictions_path <- file.path(spp_dir, 'output_rasters', paste0('ENSEMBLE_hindcast_', release, '_', bathy_suffix, suffix, '.tif'))
   evaluation_path <- file.path(spp_dir, 'model_output', 'eval_metrics', 'ENSEMBLE.rds')
 
@@ -67,6 +66,9 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
     if(any(grepl('ENSEMBLE', mod.preds))){
       mod.preds <- mod.preds[-grep('ENSEMBLE', mod.preds)] #remove ensemble if present (should only be true if overwriting data)
     }
+    
+    #subset list to desired models 
+    mod.preds <- mod.preds[grepl(paste(toupper(models),collapse = "|"), mod.preds)]
 
     pList <- vector('list', length = length(mod.preds)) #initiate blank list of preds
 
@@ -97,6 +99,9 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
     if(any(grepl('ENSEMBLE', evalFlist))){
       evalFlist <- evalFlist[-grep('ENSEMBLE', evalFlist)] #remove ensemble if present (should only be true if overwriting data)
     }
+    
+    #subset list to desired models 
+    evalFlist <- evalFlist[grepl(paste(toupper(models),collapse = "|"), evalFlist)]
 
     eval <- vector(length = length(evalFlist))
     for (y in 1:length(evalFlist)) {
@@ -108,6 +113,7 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
 
     #generate weights
     weights <- gini / sum(gini) #we need to make weights like this since AUC bigger = better; whereas RMSE smaller = better
+    names(weights) <- toupper(models[order(models)])
     save(
       weights,
       file = file.path(getwd(), spp, 'model_output',
@@ -150,6 +156,9 @@ ensemble_sdms_wrapper <- function(spp, training_years, test_years, dyn_names, re
     if(any(grepl('ENSEMBLE', mod.preds))){
       mod.preds <- mod.preds[-grep('ENSEMBLE', mod.preds)] #remove ensemble if present (should only be true if overwriting data)
     }
+    
+    #subset list to desired models 
+    mod.preds <- mod.preds[grepl(paste(toupper(models),collapse = "|"), mod.preds)]
 
     pred_rasters <- vector(mode = 'list', length = length(mod.preds))
     for (x in 1:length(mod.preds)) {
