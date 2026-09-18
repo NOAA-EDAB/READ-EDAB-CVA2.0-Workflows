@@ -5,7 +5,7 @@
 library(spatialcva)
 library(parallel)
 
-setwd("~/Sensitivity")
+setwd(here::here("Sensitivity"))
 
 ##################################
 ##### PRELIMINARY ANALYSIS #######
@@ -100,9 +100,11 @@ dq <- lapply(species.data.list, calculate_data_quality)
 attributeDQ <- do.call(rbind, dq)
 
 ##calculate percent of scores greater than 2 for species narratives
-dq.per <- lapply(species.data.list, function(x){length(which(x$Data.Quality >= 2))/nrow(x)})
+dq.per <- lapply(species.data.list, function(x) {
+  length(which(x$Data.Quality >= 2)) / nrow(x)
+})
 dq.per <- do.call(rbind, dq.per)
-attributeDQ$Percent.2 <- dq.per[,1]
+attributeDQ$Percent.2 <- dq.per[, 1]
 
 write.csv(attributeDQ, './Final/data_quality_2_0_final_scores.csv') #save results
 

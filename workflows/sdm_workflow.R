@@ -553,6 +553,27 @@ var.list <- data.frame(
   )
 )
 
+plan(multisession, workers = 8)
+checks <- future_pmap(
+  list(
+    ..1 = args$source,
+    ..2 = args$spp,
+    ..3 = args$all_names,
+    ..4 = args$is_obs
+  ),
+  ~ save_df_wrapper(
+    csv_name = ..1,
+    spp = ..2,
+    spp_names = ..3,
+    is_obs = ..4,
+    skip = F,
+    grid = "http://psl.noaa.gov/thredds/dodsC/Projects/CEFI/regional_mom6/cefi_portal/northwest_atlantic/full_domain/hindcast/monthly/regrid/r20250715/tos.nwa.full.hcast.monthly.regrid.r20250715.199301-202312.nc",
+    force_overwrite = TRUE
+  ),
+  .progress = T
+)
+plan(sequential)
+
 statics <- terra::rast('./Data/staticVariables_masked_norm_terra.tif')
 statics <- terra::wrap(statics) #to help with parallelization
 
@@ -588,7 +609,17 @@ combs <- future_map(
 plan(sequential)
 
 
-##############################
+###quick sanity check because the results can get lost in the log - load each csv in and print range - all should be 0-1
+flist <- dir(
+  path = here::here("SDMs"),
+  pattern = 'combined_pa.csv',
+  recursive = T,
+  full.names = T
+)
+for (x in 1:length(flist)) {
+  r <- read.csv(flist[x])
+  print(range(r$pa, na.rm = T))
+}
 
 ##############################
 ##### MAKE MODELS  ###########
@@ -1311,26 +1342,67 @@ varDF <- data.frame(
   )
 )
 
-#get coastline and bathy objects for plotting
-load(
-  "~/ClimateVulnerabilityAssessment2.0/Exposure/RawExposure/Data/coastline.RData"
-) #coastline
-load(
-  "~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped.RData"
-) #staticVars
-bathyR <- staticVars$bathy
+### set up data source dataframe
+sourceDF <- data.frame(
+  Long.Name = c(
+    'NEFSC Bottom Trawl',
+    'NEFSC Observer Program',
+    'Maine-New Hampshire Inshore Trawl Survey',
+    'Massachusetts Division of Marine Fisheries Bottom Trawl Survey',
+    'Long Island Sound Trawl Survey',
+    'New York Nearshore Trawl Survey',
+    'New Jersey Ocean Stock Assessment Survey',
+    'Delaware State Trawl Surveys',
+    'Northeast Area Monitoring and Assessment Program (NEAMAP) and Chesapeake Bay Multispecies Monitoring and Assessment Program (ChesMMAP)',
+    'Additional trawl and tagging data from the Highly Migratory Species Program',
+    'NEFSC Gulf of Maine Long Line Survey',
+    'NEFSC Northern Shrimp Survey',
+    'SEFSC Gillnet Observer Program',
+    'SEFSC Pelagic Observer Program',
+    'SEFSC Logbook Program',
+    'NMFS Large Pelagics Survey',
+    'Northeast Area Monitoring and Assessment Program (NEAMAP) and Chesapeake Bay Multispecies Monitoring and Assessment Program (ChesMMAP)',
+    'Massachusetts Division of Marine Fisheries Bottom Trawl Survey',
+    'NEFSC Atlantic Surfclam and Ocean Quahog Survey'
+  ),
+  Short.Name = c(
+    'Survey',
+    'Observer',
+    'MENH',
+    'MA',
+    'CT',
+    'NY',
+    'NJ',
+    'DE',
+    'NEAMAP',
+    "HMS",
+    'GOM LL',
+    'Shrimp',
+    'GOP',
+    'POP',
+    "LOGBOOK",
+    "LPS",
+    'NEAMAP-BFT',
+    'MA-BFT',
+    "Clam"
+  )
+)
+
+#load in source key
+sources <- read.csv('sources.csv')
 
 #plots are made above - this just pulls them in and renders the report (original function also handled plotting)
 make_sdm_reports(
-  species_list = spp.list,
-  yr_min = 1993,
-  yr_max = 2019,
+  species_list = spp.list[-42, ],
+  release = 'r20250715',
   model_metrics = metrics,
+  sources = sources,
+  source_key = sourceDF,
   feeding_key = feeding,
   habitat_key = habitat,
   variable_key = varDF,
-  template = 'SDM_report_template.qmd',
-  report_path = './Reports'
+  template = '~/ClimateVulnerabilityAssessment2.0/workflows/READ-EDAB-CVA2.0-Workflows/workflows/SDM_report_template.qmd',
+  report_path = 'Reports'
 )
 
 
