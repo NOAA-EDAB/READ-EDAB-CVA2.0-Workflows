@@ -6,9 +6,7 @@
 
 setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/Exposure')
 ### source functions
-targets::tar_source(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/functions"
-) #this will eventually be replaced with loading the package
+library(spatialcva)
 
 #load species list for loops
 spp.list <- read.csv(
@@ -16,38 +14,14 @@ spp.list <- read.csv(
 )
 #spp.list <- spp.list[,c(1:6)]
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name) #make clean names to make folders if necessary/match to folder names
+#save yourself the headache and remove the one that fails
+spp.list <- spp.list[-42, ]
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
   dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main species folder
   dir.create(file.path(getwd(), spp.list$Name[x], 'Data'), showWarnings = T) #data folder
-  #data subfolders for all combinations of present/future timeseries
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Data', '1993-2008 vs 2009-2019'),
-    showWarnings = T
-  ) #present: 1993-2008, future: 2009-2019
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Data', '2009-2019 vs 2020-2030'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2020-2030
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Data', '2009-2019 vs 2025-2035'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2025-2035
   dir.create(file.path(getwd(), spp.list$Name[x], 'Figures'), showWarnings = T) #figures folder
-  #data subfolders for all combinations of present/future timeseries
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Figures', '1993-2008 vs 2009-2019'),
-    showWarnings = T
-  ) #present: 1993-2008, future: 2009-2019
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Figures', '2009-2019 vs 2020-2030'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2020-2030
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Figures', '2009-2019 vs 2025-2035'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2025-2035
 }
 ##################################
 
@@ -503,102 +477,147 @@ for (x in 1:length(expRanked)) {
 ##################################
 
 ##################################
-### create species-specific averages for all variables
+### create stock polygons for all species
+##################################
+#similar to calculating raw exposure, this should only need to happen once as it saves the shp files
+setwd(
+  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/shpfiles/species_stock_areas"
+)
+
+#get species/stocks/polygons lists
+#NEFMC list
+nefmc <- read.csv('NEFMC_species_stock_assessment_areas.csv')
+#fix some names to match spp.list since that is what the directories are based out of
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'American sea scallop',
+  'Atlantic sea scallop'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Atlantic menhaden',
+  'Atlantic Menhaden'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Atlantic surf clam',
+  'Atlantic surfclam'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Blueline Tilefish',
+  'Blueline tilefish'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Atlantic chub mackerel',
+  'Chub mackerel'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Red drum',
+  'Red Drum'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Northern shortfin squid',
+  'Shortfin squid'
+)
+nefmc <- nefmc[-which(nefmc$COMMON_NAME == 'Black seabass'), ]
+nefmc$Name <- gsub(' ', '', nefmc$COMMON_NAME)
+
+#Black Sea Bass from MAFMC
+bsb <- read.csv('BSB_Assessment_StockAreas.csv')
+#add/rename columns to bsb to match nefmc
+bsb$Name <- 'Blackseabass'
+bsb$AREA <- bsb$STOCK_AREA
+bsb$ASSESSMENT_STOCK_AREA <- bsb$STOCK_ABBREV
+
+#combine all stock keys
+stock_key <- rbind(
+  nefmc[, c('Name', "ASSESSMENT_STOCK_AREA", 'AREA')],
+  bsb[, c('Name', "ASSESSMENT_STOCK_AREA", 'AREA')]
+)
+#remove species with UNIT stocks  or with NAs as a result of the match; both indicate that there are no subunits
+stock_key <- stock_key[
+  -which(
+    stock_key$ASSESSMENT_STOCK_AREA == 'UNIT' |
+      is.na(stock_key$ASSESSMENT_STOCK_AREA)
+  ),
+]
+
+#merge with spp.list to subset to just species list
+stock_key <- merge(stock_key, spp.list, by = 'Name', all.x = F, all.y = T)
+
+##load in CAM polygons
+stat_areas <- terra::vect('../NEFSC_GIS/Statistical_Areas_2010_withNames.shp')
+
+#get bathymetry for plotting
+statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+bathy <- statics$bathy
+
+#get coastline for plotting
+land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+landNE <- terra::crop(land, bathy)
+
+make_stock_polygons(
+  key = stock_key,
+  species_col = 'Name',
+  stock_col = 'ASSESSMENT_STOCK_AREA',
+  id_col = 'AREA',
+  polygons = stat_areas,
+  poly_id = 'Id',
+  plot = T,
+  bathymetry = bathy,
+  coastline = landNE
+)
+
 ##################################
 
-#contemporary - 1993-2008 v 2009-2019
-args <- tidyr::expand_grid(
-  spp = spp.list$Name,
-  ensName = 'ENSEMBLE_1993_2019',
-  pStart = 1993,
-  pEnd = 2008,
-  fStart = 2009,
-  fEnd = 2019
-)
-plan(multisession, workers = 6)
-checks <- future_pmap(
-  list(
-    ..1 = args$spp,
-    ..2 = args$ensName,
-    ..3 = args$pStart,
-    ..4 = args$pEnd,
-    ..5 = args$fStart,
-    ..6 = args$fEnd
-  ),
-  ~ makeVariableAverages(
-    spp = ..1,
-    ensName = ..2,
-    pStart = ..3,
-    pEnd = ..4,
-    fStart = ..5,
-    fEnd = ..6
-  ),
-  .progress = T,
-  .options = furrr_options(seed = 2025)
-)
-plan(sequential)
+##################################
+### calculate variable exposure
+##################################
 
-#decade 1 - 2009-2019 v 2020 - 2030
-args <- tidyr::expand_grid(
-  spp = spp.list$Name,
-  ensName = 'ENSEMBLE_1993_2019',
-  pStart = 2009,
-  pEnd = 2019,
-  fStart = 2020,
-  fEnd = 2030
+#load in variables
+var.names <- c(
+  'bottomT',
+  'bottomO2',
+  'bottomS',
+  'bottomArg',
+  'surfaceT',
+  'surfaceS',
+  'surfacepH',
+  'MLD',
+  'diazPP',
+  'smallPP',
+  'mediumPP',
+  'largePP',
+  'smallZoo',
+  'mediumZoo',
+  'largeZoo',
+  'intNPP',
+  'POC'
 )
-plan(multisession, workers = 6)
-checks <- future_pmap(
-  list(
-    ..1 = args$spp,
-    ..2 = args$ensName,
-    ..3 = args$pStart,
-    ..4 = args$pEnd,
-    ..5 = args$fStart,
-    ..6 = args$fEnd
-  ),
-  ~ makeVariableAverages(
-    spp = ..1,
-    ensName = ..2,
-    pStart = ..3,
-    pEnd = ..4,
-    fStart = ..5,
-    fEnd = ..6
-  ),
-  .progress = T,
-  .options = furrr_options(seed = 2025)
-)
-plan(sequential)
 
-#decade 2 - 2009-2019 v 2025 - 2035
-args <- tidyr::expand_grid(
-  spp = spp.list$Name,
-  ensName = 'ENSEMBLE_1993_2019',
-  pStart = 2009,
-  pEnd = 2019,
-  fStart = 2025,
-  fEnd = 2035
-)
-plan(multisession, workers = 6)
-checks <- future_pmap(
-  list(
-    ..1 = args$spp,
-    ..2 = args$ensName,
-    ..3 = args$pStart,
-    ..4 = args$pEnd,
-    ..5 = args$fStart,
-    ..6 = args$fEnd
-  ),
-  ~ makeVariableAverages(
-    spp = ..1,
-    ensName = ..2,
-    pStart = ..3,
-    pEnd = ..4,
-    fStart = ..5,
-    fEnd = ..6
+
+#2014-23 v 2025 - 2035
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~ variable_exposures_wrapper(
+    spp = spp.list$Name[.x],
+    forecast_release = 'r20250925',
+    forecast_init = 'i202501',
+    hindcast_release = 'r20250715',
+    hindcast_yr_range = '20142023',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    dyn_vars = var.names,
+    training_years = c(1993, 2019)
   ),
   .progress = T,
-  .options = furrr_options(seed = 2025)
+  .options = furrr_options(scheduling = FALSE)
 )
 plan(sequential)
 
@@ -607,1442 +626,36 @@ plan(sequential)
 ##################################
 ### Make Total Exposure
 ##################################
-#create weights & save
-staticVars <- c('year', 'month', 'bathy', 'rugosity', 'dist2coast') #the variables to exclude from dynamic variable weights, since these will not chance
-for (x in 1:nrow(spp.list)) {
-  #load in necessary things
-  #make list of importance files
-  iFlist <- dir(
-    path = paste0(
-      '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-      spp.list$Name[x],
-      '/model_output/importance'
-    ),
-    full.names = T
-  )
 
-  #load in weights
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/model_output/ensemble_weights.RData'
-  )) #weights
-
-  #load in data frame to get names of variables
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/pa_clean.RData'
-  )) #dfC
-  iv <- which(names(dfC) == 'x' | names(dfC) == 'y' | names(dfC) == 'value')
-  vars <- names(dfC)[-iv] #exclude space and value (presence/absence)
-
-  cW <- combineWeights(
-    vars = vars,
-    ensWeights = weights,
-    impFlist = iFlist,
-    staticNames = staticVars
-  )
-  save(
-    cW,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/combined_variable_weights.RData'
-    )
-  )
-  print(x)
-}
-
-##TIME SERIES
-#make total exposure with only important variables in models
-#contemporary exposure (1993-2008 vs 2009-2019)
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/variable_exposure_timeseries.RData'
-  )) #vecExp
-
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  totalT <- combineTimeseries(
-    matExp = vecSub,
-    weights = cW,
-    wThreshold = 0.1,
-    countAll = F
-  )
-  save(
-    totalT,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/1993-2008 vs 2009-2019/total_exposure_timeseries_subset.RData'
-    )
-  )
-  print(x)
-}
-
-#decade 1 exposure (2009-2019 vs 2020-2030)
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/variable_exposure_timeseries.RData'
-  )) #vecExp
-
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  totalT <- combineTimeseries(
-    matExp = vecSub,
-    weights = cW,
-    wThreshold = 0.1,
-    countAll = F
-  )
-  save(
-    totalT,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/2009-2019 vs 2020-2030/total_exposure_timeseries_subset.RData'
-    )
-  )
-  print(x)
-}
-
-#decade 2 exposure (2009-2019 vs 2025-2035)
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/variable_exposure_timeseries.RData'
-  )) #vecExp
-
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  totalT <- combineTimeseries(
-    matExp = vecSub,
-    weights = cW,
-    wThreshold = 0.1,
-    countAll = F
-  )
-  save(
-    totalT,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/2009-2019 vs 2025-2035/total_exposure_timeseries_subset.RData'
-    )
-  )
-  print(x)
-}
-
-#make total exposure with ALL variables
-#contemporary exposure
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/variable_exposure_timeseries.RData'
-  )) #vecExp
-
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  totalT <- combineTimeseries(
-    matExp = vecSub,
-    weights = cW,
-    wThreshold = 0,
-    countAll = T
-  )
-  save(
-    totalT,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/1993-2008 vs 2009-2019/total_exposure_timeseries_all.RData'
-    )
-  )
-  print(x)
-}
-
-#decade 1 exposure
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/variable_exposure_timeseries.RData'
-  )) #vecExp
-
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  totalT <- combineTimeseries(
-    matExp = vecSub,
-    weights = cW,
-    wThreshold = 0,
-    countAll = T
-  )
-  save(
-    totalT,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/2009-2019 vs 2020-2030/total_exposure_timeseries_all.RData'
-    )
-  )
-  print(x)
-}
-
-#decade 2 exposure
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/variable_exposure_timeseries.RData'
-  )) #vecExp
-
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  totalT <- combineTimeseries(
-    matExp = vecSub,
-    weights = cW,
-    wThreshold = 0,
-    countAll = T
-  )
-  save(
-    totalT,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/2009-2019 vs 2025-2035/total_exposure_timeseries_all.RData'
-    )
-  )
-  print(x)
-}
-
-#MAPS
-#with important variables
-#contemporary exposure
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/variable_exposure_maps.RData'
-  )) #mapExp
-
-  #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  totalM <- combineMaps(
-    mapExp = mapSub,
-    weights = cW,
-    wThreshold = 0.1,
-    countAll = F
-  )
-  save(
-    totalM,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/1993-2008 vs 2009-2019/total_exposure_maps_subset.RData'
-    )
-  )
-  print(x)
-}
-
-#decade 1 exposure
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/variable_exposure_maps.RData'
-  )) #vecExp
-
-  #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  totalM <- combineMaps(
-    mapExp = mapSub,
-    weights = cW,
-    wThreshold = 0.1,
-    countAll = F
-  )
-  save(
-    totalM,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/2009-2019 vs 2020-2030/total_exposure_maps_subset.RData'
-    )
-  )
-  print(x)
-}
-
-#decade 2 exposure
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/variable_exposure_maps.RData'
-  )) #vecExp
-
-  #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  totalM <- combineMaps(
-    mapExp = mapSub,
-    weights = cW,
-    wThreshold = 0.1,
-    countAll = F
-  )
-  save(
-    totalM,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/2009-2019 vs 2025-2035/total_exposure_maps_subset.RData'
-    )
-  )
-  print(x)
-}
-
-#with ALL variables
-#contemporary exposure
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/variable_exposure_maps.RData'
-  )) #mapExp
-
-  #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  totalM <- combineMaps(
-    mapExp = mapSub,
-    weights = cW,
-    wThreshold = 0,
-    countAll = T
-  )
-  save(
-    totalM,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/1993-2008 vs 2009-2019/total_exposure_maps_all.RData'
-    )
-  )
-  print(x)
-}
-
-#decade 1 exposure
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/variable_exposure_maps.RData'
-  )) #vecExp
-
-  #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  totalM <- combineMaps(
-    mapExp = mapSub,
-    weights = cW,
-    wThreshold = 0,
-    countAll = T
-  )
-  save(
-    totalM,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/2009-2019 vs 2020-2030/total_exposure_maps_all.RData'
-    )
-  )
-  print(x)
-}
-
-#decade 2 exposure
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/variable_exposure_maps.RData'
-  )) #vecExp
-
-  #subset mapExp by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  totalM <- combineMaps(
-    mapExp = mapSub,
-    weights = cW,
-    wThreshold = 0,
-    countAll = T
-  )
-  save(
-    totalM,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x], 'Data'),
-      '/2009-2019 vs 2025-2035/total_exposure_maps_all.RData'
-    )
-  )
-  print(x)
-}
-
-##################################
-
-##################################
-### Plot Results - OLD FOR LOOPS
-##################################
-##timeseries
-#contemporary
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/variable_exposure_timeseries.RData'
-  )) #vecExp
-
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  #plot variables
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/1993-2008 vs 2009-2019/exposure_variable_timeseries.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(
-    vecSub[1, ],
-    t = 'b',
-    lty = 1,
-    pch = 1,
-    ylim = c(1, 4),
-    ylab = "Exposure",
-    xlab = "Month"
-  )
-  for (y in 2:nrow(vecSub)) {
-    lines(vecSub[y, ], t = 'b', lty = y, pch = y)
-  }
-  legend(
-    'top',
-    legend = c(rownames(vecSub)),
-    lty = c(1:nrow(vecSub)),
-    pch = c(1:nrow(vecSub)),
-    bty = 'n',
-    ncol = 2
-  )
-  dev.off()
-
-  #load total
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/total_exposure_timeseries_all.RData'
-  )) #totalT
-  totalTA <- totalT
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/total_exposure_timeseries_subset.RData'
-  )) #totalT
-  totalTS <- totalT
-
-  #plot - total
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/1993-2008 vs 2009-2019/exposure_timeseries_all.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(
-    totalTA,
-    t = 'b',
-    lty = 8,
-    lwd = 3,
-    pch = 19,
-    ylim = c(1, 4),
-    ylab = "Exposure",
-    xlab = "Month"
-  )
-  for (y in 1:nrow(vecSub)) {
-    lines(vecSub[y, ], t = 'b', lty = y, pch = y)
-  }
-  legend(
-    'top',
-    legend = c('Total - All Variables', rownames(vecSub)),
-    lty = c(8, 1:nrow(vecSub)),
-    pch = c(19, 1:nrow(vecSub)),
-    bty = 'n',
-    ncol = 2
-  )
-  dev.off()
-
-  #plot - subset
-  wi <- which(cW > 0.1)
-  matSub <- vecSub[wi, ]
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/1993-2008 vs 2009-2019/exposure_timeseries_subset.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(
-    totalTS,
-    t = 'b',
-    lty = 9,
-    lwd = 3,
-    pch = 20,
-    ylim = c(1, 4),
-    ylab = "Exposure",
-    xlab = "Month"
-  )
-  for (y in 1:nrow(matSub)) {
-    lines(matSub[y, ], t = 'b', lty = y, pch = y)
-  }
-  legend(
-    'top',
-    legend = c('Total - Important Variables', rownames(matSub)),
-    lty = c(9, 1:nrow(matSub)),
-    pch = c(20, 1:nrow(matSub)),
-    bty = 'n',
-    ncol = 2
-  )
-  dev.off()
-
-  print(x)
-}
-
-#decade 1
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/variable_exposure_timeseries.RData'
-  )) #vecExp
-
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  #plot variables
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2020-2030/exposure_variable_timeseries.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(
-    vecSub[1, ],
-    t = 'b',
-    lty = 1,
-    pch = 1,
-    ylim = c(1, 4),
-    ylab = "Exposure",
-    xlab = "Month"
-  )
-  for (y in 2:nrow(vecSub)) {
-    lines(vecSub[y, ], t = 'b', lty = y, pch = y)
-  }
-  legend(
-    'top',
-    legend = c(rownames(vecSub)),
-    lty = c(1:nrow(vecSub)),
-    pch = c(1:nrow(vecSub)),
-    bty = 'n',
-    ncol = 2
-  )
-  dev.off()
-
-  #load total
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/total_exposure_timeseries_all.RData'
-  )) #totalT
-  totalTA <- totalT
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/total_exposure_timeseries_subset.RData'
-  )) #totalT
-  totalTS <- totalT
-
-  #plot - total
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2020-2030/exposure_timeseries_all.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(
-    totalTA,
-    t = 'b',
-    lty = 8,
-    lwd = 3,
-    pch = 19,
-    ylim = c(1, 4),
-    ylab = "Exposure",
-    xlab = "Month"
-  )
-  for (y in 1:nrow(vecSub)) {
-    lines(vecSub[y, ], t = 'b', lty = y, pch = y)
-  }
-  legend(
-    'top',
-    legend = c('Total - All Variables', rownames(vecSub)),
-    lty = c(8, 1:nrow(vecSub)),
-    pch = c(19, 1:nrow(vecSub)),
-    bty = 'n',
-    ncol = 2
-  )
-  dev.off()
-
-  #plot - subset
-  wi <- which(cW > 0.1)
-  matSub <- vecSub[wi, ]
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2020-2030/exposure_timeseries_subset.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(
-    totalTS,
-    t = 'b',
-    lty = 9,
-    lwd = 3,
-    pch = 20,
-    ylim = c(1, 4),
-    ylab = "Exposure",
-    xlab = "Month"
-  )
-  for (y in 1:nrow(matSub)) {
-    lines(matSub[y, ], t = 'b', lty = y, pch = y)
-  }
-  legend(
-    'top',
-    legend = c('Total - Important Variables', rownames(matSub)),
-    lty = c(9, 1:nrow(matSub)),
-    pch = c(20, 1:nrow(matSub)),
-    bty = 'n',
-    ncol = 2
-  )
-  dev.off()
-
-  print(x)
-}
-
-#decade 2
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/variable_exposure_timeseries.RData'
-  )) #vecExp
-
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  #plot variables
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2025-2035/exposure_variable_timeseries.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(
-    vecSub[1, ],
-    t = 'b',
-    lty = 1,
-    pch = 1,
-    ylim = c(1, 4),
-    ylab = "Exposure",
-    xlab = "Month"
-  )
-  for (y in 2:nrow(vecSub)) {
-    lines(vecSub[y, ], t = 'b', lty = y, pch = y)
-  }
-  legend(
-    'top',
-    legend = c(rownames(vecSub)),
-    lty = c(1:nrow(vecSub)),
-    pch = c(1:nrow(vecSub)),
-    bty = 'n',
-    ncol = 2
-  )
-  dev.off()
-
-  #load total
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/total_exposure_timeseries_all.RData'
-  )) #totalT
-  totalTA <- totalT
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/total_exposure_timeseries_subset.RData'
-  )) #totalT
-  totalTS <- totalT
-
-  #plot - total
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2025-2035/exposure_timeseries_all.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(
-    totalTA,
-    t = 'b',
-    lty = 8,
-    lwd = 3,
-    pch = 19,
-    ylim = c(1, 4),
-    ylab = "Exposure",
-    xlab = "Month"
-  )
-  for (y in 1:nrow(vecSub)) {
-    lines(vecSub[y, ], t = 'b', lty = y, pch = y)
-  }
-  legend(
-    'top',
-    legend = c('Total - All Variables', rownames(vecSub)),
-    lty = c(8, 1:nrow(vecSub)),
-    pch = c(19, 1:nrow(vecSub)),
-    bty = 'n',
-    ncol = 2
-  )
-  dev.off()
-
-  #plot - subset
-  wi <- which(cW > 0.1)
-  matSub <- vecSub[wi, ]
-
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2025-2035/exposure_timeseries_subset.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(
-    totalTS,
-    t = 'b',
-    lty = 9,
-    lwd = 3,
-    pch = 20,
-    ylim = c(1, 4),
-    ylab = "Exposure",
-    xlab = "Month"
-  )
-  for (y in 1:nrow(matSub)) {
-    lines(matSub[y, ], t = 'b', lty = y, pch = y)
-  }
-  legend(
-    'top',
-    legend = c('Total - Important Variables', rownames(matSub)),
-    lty = c(9, 1:nrow(matSub)),
-    pch = c(20, 1:nrow(matSub)),
-    bty = 'n',
-    ncol = 2
-  )
-  dev.off()
-
-  print(x)
-}
-
-#maps
-load('./RawExposure/Data/coastline.RData')
-#contemporary
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load maps
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/variable_exposure_maps.RData'
-  )) #mapExp
-
-  #subset timeseries matrix by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/1993-2008 vs 2009-2019/exposure_variable_maps.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(mapSub, zlim = c(1, 4), col = cmocean('matter')(4))
-  #plot(coastCropped['id'], col = 'grey', add = T)
-  dev.off()
-
-  #load total
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/total_exposure_maps_all.RData'
-  )) #totalM
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/1993-2008 vs 2009-2019/exposure_total_maps_all.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  dev.off()
-
-  #load total subset
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/1993-2008 vs 2009-2019/total_exposure_maps_subset.RData'
-  )) #totalM
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/1993-2008 vs 2009-2019/exposure_total_maps_subset.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  dev.off()
-
-  print(x)
-}
-
-#decade 1
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load maps
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/variable_exposure_maps.RData'
-  )) #mapExp
-
-  #subset timeseries matrix by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2020-2030/exposure_variable_maps.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(mapSub, zlim = c(1, 4), col = cmocean('matter')(4))
-  #plot(coastCropped['id'], col = 'grey', add = T)
-  dev.off()
-
-  #load total
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/total_exposure_maps_all.RData'
-  )) #totalM
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2020-2030/exposure_total_maps_all.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  dev.off()
-
-  #load total subset
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2020-2030/total_exposure_maps_subset.RData'
-  )) #totalM
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2020-2030/exposure_total_maps_subset.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  dev.off()
-
-  print(x)
-}
-
-#decade 2
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load maps
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/variable_exposure_maps.RData'
-  )) #mapExp
-
-  #subset timeseries matrix by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2025-2035/exposure_variable_maps.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(mapSub, zlim = c(1, 4), col = cmocean('matter')(4))
-  #plot(coastCropped['id'], col = 'grey', add = T)
-  dev.off()
-
-  #load total
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/total_exposure_maps_all.RData'
-  )) #totalM
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2025-2035/exposure_total_maps_all.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  dev.off()
-
-  #load total subset
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/total_exposure_maps_subset.RData'
-  )) #totalM
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2025-2035/exposure_total_maps_subset.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  plot(totalM, zlim = c(1, 4), col = cmocean('matter')(4))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  dev.off()
-
-  print(x)
-}
-
-#dynamic radar plots
-library(fmsb)
-for (x in 1:nrow(spp.list)) {
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  cW <- rbind(rep(1, length(cW)), rep(0, length(cW)), cW)
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/dynamic_variable_weights.pdf'
-    ),
-    width = 8,
-    height = 8
-  )
-  radarchart(as.data.frame(cW), pfcol = alpha('grey', 0.5))
-  dev.off()
-
-  print(x)
-}
-
-##inset timeseries on maps
-### set up variable dataframe to make pretty names - not exact MOM6 names to make sure they fit
-varDF <- data.frame(
-  Long.Name = c(
-    'Bottom Temperature',
-    'Bottom Oxygen',
-    'Bottom Salinity',
-    'Bottom Aragonite Solubility',
-    'Sea Surface Temperature',
-    'Sea Surface Salinity',
-    'Surface pH',
-    'Mixed layer depth (delta rho = 0.03)',
-    'Diazotroph\nintegrated prim. prod.',
-    'Small phyto.\nintegrated prim. prod.',
-    'Medium phyto.\nintegrated prim. prod.',
-    'Large phyto.\nintegrated prim. prod.',
-    'Small zooplankton\nintegrated biomass',
-    'Medium zooplankton\nintegrated biomass',
-    'Large zooplankton\nintegrated biomass',
-    'Net primary production',
-    'Downward Flux of Particulate Organic Carbon'
+#2009-2019 v 2025 - 2035
+plan(multisession, workers = 8)
+combs <- future_map(
+  1:nrow(spp.list),
+  ~ total_exposures_wrapper(
+    spp = spp.list$Name[.x],
+    forecast_release = 'r20250925',
+    forecast_init = 'i202501',
+    hindcast_release = 'r20250715',
+    hindcast_yr_range = '20142023'
   ),
-  Short.Name = c(
-    'bottomT',
-    'bottomO2',
-    'bottomS',
-    'bottomArg',
-    'surfaceT',
-    'surfaceS',
-    'surfacepH',
-    'MLD',
-    'diazPP',
-    'smallPP',
-    'mediumPP',
-    'largePP',
-    'smallZoo',
-    'mediumZoo',
-    'largeZoo',
-    'intNPP',
-    'POC'
-  )
+  .progress = T,
+  .options = furrr_options(scheduling = FALSE)
 )
-#decade 2
-for (x in 1:nrow(spp.list)) {
-  ###VARIABLE-LEVEL EXPOSURE
-  #load variable weights
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/combined_variable_weights.RData'
-  )) #cW
-
-  #load maps
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/variable_exposure_maps.RData'
-  )) #mapExp
-  #subset timeseries matrix by rownames
-  i <- names(mapExp) %in% names(cW)
-  mapSub <- raster::subset(mapExp, which(i == T))
-
-  #load timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/variable_exposure_timeseries.RData'
-  )) #vecExp
-  #subset timeseries matrix by rownames
-  i <- rownames(vecExp) %in% names(cW)
-  vecSub <- vecExp[i, ]
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2025-2035/variable_exposure_maps_inset_timeseries.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  #set up panels according to the number of variables
-  if (raster::nlayers(mapSub) < 6) {
-    par(mfrow = c(2, 3))
-  } else {
-    par(mfrow = c(3, 3))
-  }
-
-  for (y in 1:raster::nlayers(mapSub)) {
-    #get full name of variable
-    i <- varDF$Short.Name %in% names(mapSub)[y]
-
-    #map
-    par(plt = c(0.2, 0.9, 0.15, 0.875))
-    plot(
-      raster::subset(mapSub, y),
-      zlim = c(1, 4),
-      col = cmocean('matter')(4),
-      legend = F,
-      legend.mar = 0,
-      xlab = expression('Longitude (' * degree * ')'),
-      ylab = expression('Latitude (' * degree * ')'),
-      xaxt = 'n',
-      yaxt = 'n',
-      main = varDF$Long.Name[i]
-    )
-    axis(2, at = seq(30, 50, by = 1), labels = seq(30, 50, by = 1), las = 2)
-    axis(1, at = seq(-85, -65, by = 1), labels = seq(-85, -65, by = 1))
-    plot(coastCropped['id'], col = 'grey', add = T)
-
-    #inset timeseries
-    par(plt = c(0.55, 0.9, 0.25, 0.45), new = TRUE)
-    plot(
-      vecSub[y, ],
-      t = 'b',
-      lty = 8,
-      lwd = 0.8,
-      cex = 0.8,
-      pch = y,
-      ylim = c(1, 4),
-      ylab = "",
-      xlab = "",
-      yaxt = 'n',
-      xaxt = 'n'
-    )
-    axis(1, at = 1:12, labels = month.abb, las = 2)
-    axis(2, at = 1:4, labels = c('L', "M", "H", "VH"), las = 2, cex.lab = 0.75)
-  }
-
-  if (raster::nlayers(mapSub) != 6) {
-    #add legend on the last one if the number of variables is not 6
-    plot(1:10, t = 'n', axes = F, xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
-    fields::image.plot(
-      matrix(seq(1, 4, length.out = 16), 4, 4),
-      legend.only = T,
-      horizontal = F,
-      legend.shrink = 0.7,
-      smallplot = c(0.4, 0.6, 0.2, 0.8),
-      legend.args = list(text = 'Exposure', cex = 1.25, side = 3, line = 0.1),
-      axis.args = list(
-        cex.axis = 1,
-        at = 1:4,
-        labels = c('Low (L)', "Moderate (M)", "High (H)", "Very High (VH)"),
-        mgp = c(3, 0.5, 0)
-      ),
-      col = cmocean::cmocean('matter')(4)
-    )
-  } else {
-    #if the number of variables is 6, it will still be a 3x3 grid, so put legend in the middle by adding an extra plot
-    plot(1:10, t = 'n', axes = F, xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
-    plot(1:10, t = 'n', axes = F, xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
-    fields::image.plot(
-      matrix(seq(1, 4, length.out = 16), 4, 4),
-      legend.only = T,
-      horizontal = F,
-      legend.shrink = 0.7,
-      smallplot = c(0.4, 0.6, 0.2, 0.8),
-      legend.args = list(text = 'Exposure', cex = 1.25, side = 3, line = 0.1),
-      axis.args = list(
-        cex.axis = 1,
-        at = 1:4,
-        labels = c('Low (L)', "Moderate (M)", "High (H)", "Very High (VH)"),
-        mgp = c(3, 0.5, 0)
-      ),
-      col = cmocean::cmocean('matter')(4)
-    )
-  }
-
-  dev.off()
-
-  ##TOTAL EXPOSURE - ALL VARIABLES
-  #load total map
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/total_exposure_maps_all.RData'
-  )) #totalM
-
-  #load total timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/total_exposure_timeseries_all.RData'
-  )) #totalT
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2025-2035/total_exposure_maps_inset_timeseries_allvars.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  #map
-  par(fig = c(0, 1, 0, 1))
-  plot(
-    totalM,
-    zlim = c(1, 4),
-    col = cmocean('matter')(4),
-    ylim = c(35, 45),
-    legend = F,
-    xlab = expression('Longitude (' * degree * ')'),
-    ylab = expression('Latitude (' * degree * ')'),
-    xaxt = 'n',
-    yaxt = 'n',
-    legend.mar = 0
-  )
-  axis(2, at = seq(30, 50, by = 1), labels = seq(30, 50, by = 1), las = 2)
-  axis(1, at = seq(-85, -65, by = 1), labels = seq(-85, -65, by = 1))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  fields::image.plot(
-    matrix(seq(1, 4, length.out = 16), 4, 4),
-    legend.only = T,
-    horizontal = T,
-    legend.shrink = 0.7,
-    smallplot = c(0.5, 0.9, 0.15, 0.2),
-    legend.args = list(text = 'Exposure', cex = 1.5, side = 3, line = 0.1),
-    axis.args = list(
-      cex.axis = 1,
-      at = 1:4,
-      labels = c('Low', "Moderate", "High", "Very High"),
-      mgp = c(3, 0.5, 0)
-    ),
-    col = cmocean::cmocean('matter')(4)
-  )
-
-  par(fig = c(0.125, 0.6, 0.65, 0.95), new = TRUE)
-  plot(
-    totalT,
-    t = 'b',
-    lty = 8,
-    lwd = 1.5,
-    pch = 19,
-    ylim = c(1, 4),
-    ylab = "",
-    xlab = "Month",
-    yaxt = 'n',
-    xaxt = 'n'
-  )
-  axis(1, at = 1:12, labels = month.abb, las = 2)
-  axis(
-    2,
-    at = 1:4,
-    labels = c('Low', "Moderate", "High", "Very High"),
-    las = 2,
-    cex.lab = 0.75
-  )
-  dev.off()
-
-  ### ONLY IMPORTANT VARS
-  #load total map
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/total_exposure_maps_subset.RData'
-  )) #totalM
-
-  #load total timeseries
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x], 'Data'),
-    '/2009-2019 vs 2025-2035/total_exposure_timeseries_subset.RData'
-  )) #totalT
-
-  #plot
-  pdf(
-    paste0(
-      file.path(getwd(), spp.list$Name[x], 'Figures'),
-      '/2009-2019 vs 2025-2035/total_exposure_maps_inset_timeseries_impvars.pdf'
-    ),
-    width = 8,
-    height = 11
-  )
-  #map
-  par(fig = c(0, 1, 0, 1))
-  plot(
-    totalM,
-    zlim = c(1, 4),
-    col = cmocean('matter')(4),
-    ylim = c(35, 45),
-    legend = F,
-    xlab = expression('Longitude (' * degree * ')'),
-    ylab = expression('Latitude (' * degree * ')'),
-    xaxt = 'n',
-    yaxt = 'n',
-    legend.mar = 0
-  )
-  axis(2, at = seq(30, 50, by = 1), labels = seq(30, 50, by = 1), las = 2)
-  axis(1, at = seq(-85, -65, by = 1), labels = seq(-85, -65, by = 1))
-  plot(coastCropped['id'], col = 'grey', add = T)
-  fields::image.plot(
-    matrix(seq(1, 4, length.out = 16), 4, 4),
-    legend.only = T,
-    horizontal = T,
-    legend.shrink = 0.7,
-    smallplot = c(0.5, 0.9, 0.15, 0.2),
-    legend.args = list(text = 'Exposure', cex = 1.5, side = 3, line = 0.1),
-    axis.args = list(
-      cex.axis = 1,
-      at = 1:4,
-      labels = c('Low', "Moderate", "High", "Very High"),
-      mgp = c(3, 0.5, 0)
-    ),
-    col = cmocean::cmocean('matter')(4)
-  )
-
-  par(fig = c(0.125, 0.6, 0.65, 0.95), new = TRUE)
-  plot(
-    totalT,
-    t = 'b',
-    lty = 8,
-    lwd = 1.5,
-    pch = 19,
-    ylim = c(1, 4),
-    ylab = "",
-    xlab = "Month",
-    yaxt = 'n',
-    xaxt = 'n'
-  )
-  axis(1, at = 1:12, labels = month.abb, las = 2)
-  axis(
-    2,
-    at = 1:4,
-    labels = c('Low', "Moderate", "High", "Very High"),
-    las = 2,
-    cex.lab = 0.75
-  )
-  dev.off()
-
-  print(x)
-}
+plan(sequential)
 
 ##################################
 
 ##################################
-### Plot Results - WITH FUNCTIONS/NESTED FIGURES
+### Plot Results
 ##################################
 
-load('./RawExposure/Data/coastline.RData') #coastCropped
+#get bathymetry for plotting
+statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+bathy <- statics$bathy
+
+#get coastline for plotting
+land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+landNE <- terra::crop(land, bathy)
 
 ### set up variable dataframe to make pretty names - not exact MOM6 names to make sure they fit
 varDF <- data.frame(
@@ -2086,34 +699,17 @@ varDF <- data.frame(
   )
 )
 
-#contemporary timeframe
-plot_Exposure(
+
+make_exposure_plots(
   species = spp.list$Name,
   type = c('variable', 'total', 'important', 'radar'),
-  presentTime = '1993-2008',
-  futureTime = '2009-2019',
-  variableDF = varDF,
-  coastline = coastCropped
-)
-
-#decade 1
-plot_Exposure(
-  species = spp.list$Name,
-  type = c('variable', 'total', 'important'),
-  presentTime = '2009-2019',
-  futureTime = '2020-2030',
-  variableDF = varDF,
-  coastline = coastCropped
-)
-
-#decade 2
-plot_Exposure(
-  species = spp.list$Name,
-  type = c('variable', 'total', 'important'),
-  presentTime = '2009-2019',
-  futureTime = '2025-2035',
-  variableDF = varDF,
-  coastline = coastCropped
+  forecast_release = 'r20250925',
+  forecast_init = 'i202501',
+  hindcast_release = 'r20250715',
+  hindcast_yr_range = '20142023',
+  variable_df = varDF,
+  coastline = landNE,
+  bathymetry = bathy
 )
 
 ## make exposure summary tables
