@@ -4,7 +4,7 @@
 #' @param spp species name. Used to pull correct data and save outputs in species-specific folders.
 #' @param spatial_temporal TRUE/FALSE to determine method for normalizing. Helps pull correct ensemble model associated with the MOM6 data with the same name
 #' @param mask_bathy TRUE/FALSE indicating whether or not bathymetry data was used as a mask for raw data before normalization. Helps pull correct ensemble model associated with the MOM6 data with the same name
-#' @param rm_corr TRUE/FALSE indicating whether or not correlated environmental covariates were removed. Helps to pull correct training/test dataframes 
+#' @param rm_corr TRUE/FALSE indicating whether or not correlated environmental covariates were removed. Helps to pull correct training/test dataframes
 #' @param release release code for MOM6 data. Helps pull correct ensemble predictions associated with the MOM6 data with the same name
 #' @param training_years vector with length equal to 2, indicating the maximum and minimum years that identify the desired training datasets. Used to help select correct environmental variables
 #' @param sdm_threshold value between 0 and 1. Will remove values lower than this threshold from average ensemble model results to help reduce weird aliasing that can occur in workflow. Defaults to 0.1.
@@ -16,13 +16,13 @@
 #' @return Nothing is returned. The outputs from \code{make_variable_exposure(type = 'map')} and \code{make_variable_exposure(type = 'timeseries')} are saved in the appropriate folders
 
 variable_exposures_wrapper <- function(
-  spp, 
-  forecast_release, 
+  spp,
+  forecast_release,
   forecast_init,
-  hindcast_release, 
+  hindcast_release,
   hindcast_yr_range,
-  spatial_temporal, 
-  mask_bathy, 
+  spatial_temporal,
+  mask_bathy,
   rm_corr,
   sdm_threshold = 0.1,
   dyn_vars,
@@ -33,7 +33,7 @@ variable_exposures_wrapper <- function(
   # STEP 0: Set Up
   # ==========================================================
   # Set up the logger to output to your specific file
-  log_file <- file.path(getwd(), 'logs', 'variable_exposure.log')
+  log_file <- file.path(here::here('Exposure'), 'logs', 'variable_exposure.log')
   log_appender(appender_file(log_file))
 
   log_info("Calculating variable exposures for {spp}")
@@ -42,20 +42,20 @@ variable_exposures_wrapper <- function(
   suffix <- if(spatial_temporal) "" else "_global"
   bathy_suffix <- if(mask_bathy) "masked" else ""
   corr_suffix <- if(rm_corr) "rmcorr" else ""
-  
+
   # Define standard paths
-  predictions_path <- file.path('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs', spp, 'output_rasters', paste0('ENSEMBLE_hindcast_', hindcast_release, '_', bathy_suffix, suffix, '.tif'))
-  
+  predictions_path <- file.path(here::here('SDMs'), spp, 'output_rasters', paste0('ENSEMBLE_hindcast_', hindcast_release, '_', bathy_suffix, suffix, '.tif'))
+
   # Load training data
-  training_name <- file.path('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs', spp, paste0('training_', training_years[1], '_', training_years[2], '_', corr_suffix, '_hindcast_', hindcast_release, '_', bathy_suffix, suffix, '.csv'))
-  
+  training_name <- file.path(here::here('SDMs'), spp, paste0('training_', training_years[1], '_', training_years[2], '_', corr_suffix, '_hindcast_', hindcast_release, '_', bathy_suffix, suffix, '.csv'))
+
   if (!file.exists(training_name)) {
     log_error("Data file missing for species: {spp}.")
     return(NULL) # Exit function gracefully
   }
-  
-  dfT <- read.csv(file.path(training_name)) 
-  
+
+  dfT <- read.csv(file.path(training_name))
+
   # Get covariates in dataframe
   d_names <- dyn_vars[dyn_vars %in% names(dfT)]
 
@@ -86,12 +86,12 @@ variable_exposures_wrapper <- function(
       log_error("Missing upstream raster for {spp}: {raster_path}")
       return(NULL)
     }
-    
+
     exp <- terra::rast(raster_path)
-    
+
     #reproject because there are slight differences in resolution/extent for some reason, especially with the forecasts
     exp_aligned <- terra::resample(exp, avgHSM, method = "bilinear")
-    
+
     exp_rasters[[x]] <- exp_aligned
   }
   names(exp_rasters) <- d_names
@@ -108,7 +108,7 @@ variable_exposures_wrapper <- function(
   terra::writeRaster(
     x = mapExp,
     filename = paste0(
-      file.path(getwd(), spp, 'Data'),
+      file.path(here::here('Exposure'), spp, 'Data'),
       paste0('/variable_exposure_maps_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '.tif')
     ),
     overwrite = TRUE
@@ -120,8 +120,8 @@ variable_exposures_wrapper <- function(
   # STEP 3: Calculate Exposures Across Time
   # ==========================================================
 
-  if(file.exists(paste0('/home/kgallagher/ClimateVulnerabilityAssessment2.0/shpfiles/species_stock_areas/', spp, '.shp'))){
-    stocks <- terra::vect(paste0('/home/kgallagher/ClimateVulnerabilityAssessment2.0/shpfiles/species_stock_areas/', spp, '.shp'))
+  if(file.exists(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))){
+    stocks <- terra::vect(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))
   } else {
     stocks <- NULL
     log_info('No stock shpfiles found for {spp}. Only calculating global variable exposure timeseries')
@@ -137,7 +137,7 @@ variable_exposures_wrapper <- function(
   saveRDS(
     vecExp,
     file = paste0(
-      file.path(getwd(), spp, 'Data'),
+      file.path(here::here('Exposure'), spp, 'Data'),
       paste0('/variable_exposure_timeseries_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range,'.rds')
     )
   )
