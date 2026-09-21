@@ -1003,7 +1003,8 @@ var.list <- data.frame(
     training_years = c(1993, 2019),
     coastline = landNE,
     model_metrics = metrics,
-    var_names = c(var.list$Short.Name, 'month', 'year', 'rugosity', 'dist2coast', 'bathy')
+    var_names = c(var.list$Short.Name, 'month', 'year', 'rugosity', 'dist2coast', 'bathy'),
+    component_models = c('brt', 'gam', 'maxent', 'sdmtmb')
   )
 
 
