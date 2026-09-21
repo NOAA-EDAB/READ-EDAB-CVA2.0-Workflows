@@ -14,8 +14,8 @@ spp.list <- read.csv(
 )
 #spp.list <- spp.list[,c(1:6)]
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name) #make clean names to make folders if necessary/match to folder names
-#save yourself the headache and remove the one that fails 
-spp.list <- spp.list[-42,]
+#save yourself the headache and remove the one that fails
+spp.list <- spp.list[-42, ]
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
@@ -476,25 +476,54 @@ for (x in 1:length(expRanked)) {
 }
 ##################################
 
-
 ##################################
 ### create stock polygons for all species
 ##################################
 #similar to calculating raw exposure, this should only need to happen once as it saves the shp files
-setwd("/home/kgallagher/ClimateVulnerabilityAssessment2.0/shpfiles/species_stock_areas")
+setwd(
+  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/shpfiles/species_stock_areas"
+)
 
 #get species/stocks/polygons lists
 #NEFMC list
 nefmc <- read.csv('NEFMC_species_stock_assessment_areas.csv')
 #fix some names to match spp.list since that is what the directories are based out of
-nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'American sea scallop', 'Atlantic sea scallop')
-nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Atlantic menhaden', 'Atlantic Menhaden')
-nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Atlantic surf clam', 'Atlantic surfclam')
-nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Blueline Tilefish', 'Blueline tilefish')
-nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Atlantic chub mackerel', 'Chub mackerel')
-nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Red drum', 'Red Drum')
-nefmc$COMMON_NAME <- replace(nefmc$COMMON_NAME, nefmc$COMMON_NAME == 'Northern shortfin squid', 'Shortfin squid')
-nefmc <- nefmc[-which(nefmc$COMMON_NAME == 'Black seabass'),]
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'American sea scallop',
+  'Atlantic sea scallop'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Atlantic menhaden',
+  'Atlantic Menhaden'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Atlantic surf clam',
+  'Atlantic surfclam'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Blueline Tilefish',
+  'Blueline tilefish'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Atlantic chub mackerel',
+  'Chub mackerel'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Red drum',
+  'Red Drum'
+)
+nefmc$COMMON_NAME <- replace(
+  nefmc$COMMON_NAME,
+  nefmc$COMMON_NAME == 'Northern shortfin squid',
+  'Shortfin squid'
+)
+nefmc <- nefmc[-which(nefmc$COMMON_NAME == 'Black seabass'), ]
 nefmc$Name <- gsub(' ', '', nefmc$COMMON_NAME)
 
 #Black Sea Bass from MAFMC
@@ -505,10 +534,17 @@ bsb$AREA <- bsb$STOCK_AREA
 bsb$ASSESSMENT_STOCK_AREA <- bsb$STOCK_ABBREV
 
 #combine all stock keys
-stock_key <- rbind(nefmc[,c('Name', "ASSESSMENT_STOCK_AREA", 'AREA')],
-                   bsb[,c('Name', "ASSESSMENT_STOCK_AREA", 'AREA')])
+stock_key <- rbind(
+  nefmc[, c('Name', "ASSESSMENT_STOCK_AREA", 'AREA')],
+  bsb[, c('Name', "ASSESSMENT_STOCK_AREA", 'AREA')]
+)
 #remove species with UNIT stocks  or with NAs as a result of the match; both indicate that there are no subunits
-stock_key <- stock_key[-which(stock_key$ASSESSMENT_STOCK_AREA == 'UNIT' | is.na(stock_key$ASSESSMENT_STOCK_AREA)),]
+stock_key <- stock_key[
+  -which(
+    stock_key$ASSESSMENT_STOCK_AREA == 'UNIT' |
+      is.na(stock_key$ASSESSMENT_STOCK_AREA)
+  ),
+]
 
 #merge with spp.list to subset to just species list
 stock_key <- merge(stock_key, spp.list, by = 'Name', all.x = F, all.y = T)
@@ -524,7 +560,17 @@ bathy <- statics$bathy
 land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
 landNE <- terra::crop(land, bathy)
 
-make_stock_polygons(key = stock_key, species_col = 'Name', stock_col = 'ASSESSMENT_STOCK_AREA', id_col = 'AREA', polygons = stat_areas, poly_id = 'Id', plot = T, bathymetry = bathy, coastline = landNE)
+make_stock_polygons(
+  key = stock_key,
+  species_col = 'Name',
+  stock_col = 'ASSESSMENT_STOCK_AREA',
+  id_col = 'AREA',
+  polygons = stat_areas,
+  poly_id = 'Id',
+  plot = T,
+  bathymetry = bathy,
+  coastline = landNE
+)
 
 ##################################
 
