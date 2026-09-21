@@ -10,11 +10,16 @@
 combine_fisheries_dfs_wrapper <- function(name, skip, force_overwrite = FALSE) {
   # 1. Dynamically route logs to a central file or individual files safely
   # logger handles multiple parallel processes writing to the same file much better than sink
-  log_path <- file.path(getwd(), 'logs', 'combine_dfs.log')
+  log_path <- file.path(here::here("SDMs"), 'logs', 'combine_dfs.log')
   log_appender(appender_file(log_path))
 
   # Define path where output is saved (saved as a variable to prevent typos and duplication)
-  output_file <- file.path(getwd(), name, 'input_csvs', 'combined_pa.csv')
+  output_file <- file.path(
+    here::here("SDMs"),
+    name,
+    'input_csvs',
+    'combined_pa.csv'
+  )
 
   # 2. Check skip / overwrite logic up front
   # If force_overwrite is TRUE, we ignore the skip setting completely
@@ -33,7 +38,7 @@ combine_fisheries_dfs_wrapper <- function(name, skip, force_overwrite = FALSE) {
   result <- tryCatch(
     {
       # Read the data safely inside the try block
-      spp_dir <- file.path(getwd(), name, 'input_csvs')
+      spp_dir <- file.path(here::here("SDMs"), name, 'input_csvs')
 
       combinedDFs <- merge_fisheries_dfs(spp_dir)
 

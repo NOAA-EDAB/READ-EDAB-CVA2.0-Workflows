@@ -35,20 +35,28 @@ get_model_data_wrapper <- function(
   bathy_suffix <- if (mask_bathy) "masked" else ""
   init_suffix <- if (source == 'forecast') paste0("_", init) else ""
 
-  log_appender(appender_file(paste0("./logs/mom6_", source, ".log")))
+  log_path <- file.path(
+    here::here("SDMs"),
+    'logs',
+    paste0('mom6_', source, '.log')
+  )
+  log_appender(appender_file(log_path))
   log_info("Starting variable: {short_name} using source: {source}")
 
   # Define the raw file path up front to check for its existence
-  raw_filename <- paste0(
-    './Data/MOM6/raw_MOM6_',
-    short_name,
-    '_',
-    source,
-    '_',
-    release,
-    init_suffix,
-    suffix,
-    '.tif'
+  raw_filename <- file.path(
+    here::here("SDMs/Data/MOM6"),
+    paste0(
+      'raw_MOM6_',
+      short_name,
+      '_',
+      source,
+      '_',
+      release,
+      init_suffix,
+      suffix,
+      '.tif'
+    )
   )
 
   # --- CHECKPOINT CHECK: Skip Pulling if Raw File Exists ---
@@ -151,67 +159,73 @@ get_model_data_wrapper <- function(
   if (spatial_temporal) {
     terra::writeRaster(
       avg_data,
-      filename = paste0(
-        './Data/MOM6/avg_',
-        short_name,
-        '_',
-        source,
-        '_',
-        release,
-        '_',
-        bathy_suffix,
-        init_suffix,
-        '.tif'
+      filename = file.path(
+        here::here("SDMs/Data/MOM6"),
+        paste0(
+          'avg_',
+          short_name,
+          '_',
+          source,
+          '_',
+          release,
+          init_suffix,
+          suffix,
+          '.tif'
+        )
       ),
       overwrite = TRUE
     )
     terra::writeRaster(
       sd_data,
-      filename = paste0(
-        './Data/MOM6/sd_',
-        short_name,
-        '_',
-        source,
-        '_',
-        release,
-        '_',
-        bathy_suffix,
-        init_suffix,
-        '.tif'
+      filename = file.path(
+        here::here("SDMs/Data/MOM6"),
+        paste0(
+          'sd_',
+          short_name,
+          '_',
+          source,
+          '_',
+          release,
+          init_suffix,
+          suffix,
+          '.tif'
+        )
       ),
       overwrite = TRUE
     )
   } else {
     saveRDS(
       avg_data,
-      file = paste0(
-        './Data/MOM6/avg_',
-        short_name,
-        '_',
-        source,
-        '_',
-        release,
-        '_',
-        bathy_suffix,
-        init_suffix,
-        '_global',
-        '.rds'
+      file = file.path(
+        here::here("SDMs/Data/MOM6"),
+        paste0(
+          'avg_',
+          short_name,
+          '_',
+          source,
+          '_',
+          release,
+          init_suffix,
+          suffix,
+          '.rds'
+        )
       )
     )
     saveRDS(
       sd_data,
-      file = paste0(
-        './Data/MOM6/sd_',
-        short_name,
-        '_',
-        source,
-        '_',
-        release,
-        '_',
-        bathy_suffix,
-        init_suffix,
-        '_global',
-        '.rds'
+      file = file.path(
+        here::here("SDMs/Data/MOM6"),
+        paste0(
+          'sd_',
+          short_name,
+          '_',
+          source,
+          '_',
+          release,
+          init_suffix,
+          suffix,
+          '.rds'
+        )
       )
     )
   }
@@ -225,18 +239,19 @@ get_model_data_wrapper <- function(
     spatial_temporal = spatial_temporal
   )
 
-  norm_filename <- paste0(
-    './Data/MOM6/norm_',
-    short_name,
-    '_',
-    source,
-    '_',
-    release,
-    '_',
-    bathy_suffix,
-    init_suffix,
-    suffix,
-    '.tif'
+  norm_filename <- file.path(
+    here::here("SDMs/Data/MOM6"),
+    paste0(
+      'norm_',
+      short_name,
+      '_',
+      source,
+      '_',
+      release,
+      init_suffix,
+      suffix,
+      '.tif'
+    )
   )
   terra::writeRaster(norm_data, filename = norm_filename, overwrite = TRUE)
 

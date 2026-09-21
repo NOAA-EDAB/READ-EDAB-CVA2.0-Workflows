@@ -1,0 +1,224 @@
+---
+params:
+  species_name: ""
+  fGuild: ""
+  hGuild: ""
+  fTab: null
+  hTab: null
+  sTab: null
+  mTab: null
+  n_pres: 0
+  n_abs: 0
+  weight_plot_pdf: ""
+  imp_plot_pdf: ""
+  results_pdf: ""
+  resid_hist: ""
+  resid_map: ""
+format:
+  pdf:
+    engine: knitr
+    geometry:
+      - top=20mm
+      - bottom=20mm
+      - left=20mm
+      - right=20mm
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+# ***Species Distribution Model Summary Report:** `r params$species_name`*
+
+## Monthly Mean Model Predictions from 1993-2023
+
+The maps illustrate the monthly average probability of occurrence from 1993 - 2023. Darker colors indicate where the model predicted the species are most likely to occur on average throughout the timeseries.  
+
+```{r, echo=FALSE, out.width="80%", fig.align='center'}
+if(file.exists(params$results_pdf)) {
+  knitr::include_graphics(params$results_pdf)
+} else {
+  cat("Plot not found")
+}
+```
+
+\newpage
+
+## Model Residuals from 1993-2023
+
+All residuals are calculated as the difference between the observed values (0 for absence and 1 for presence) and model predictions (ranging between 0 and 1). Positive values indicate that the model underpredicted (species was present, but model predicted low likelihood) and negative values mean that the model overpredicted (species was absent, but model predicted high likelihood). The models rarely predict values of exactly 0 or 1, so some residuals are almost always present; slightly positive residuals may be common where both the species is observed and model predictions are high and, conversely, slightly negative residuals may be common where both the species is absent and the model predicts low probability. 
+
+### Residual Distribution
+The following histogram illustrates the distribution of all residuals across the timeseries. The vertical dashed line represents the mean of all residuals. 
+
+```{r, echo=FALSE, fig.align='center'}
+if(file.exists(params$resid_hist)) {
+  knitr::include_graphics(params$resid_hist)
+} else {
+  cat("Results plot not found at:", params$resid_hist)
+}
+```
+
+\newpage
+
+### Monthly Mean Residuals from 1993-2023
+The maps below illustrate the monthly mean residuals from 1993-2023, indicating when and where the model over or underpredicted on average. 
+
+```{r, echo=FALSE,  out.width="85%", fig.align='center'}
+if(file.exists(params$resid_map)) {
+  knitr::include_graphics(params$resid_map)
+} else {
+  cat("Results plot not found at:", params$resid_map)
+}
+```
+
+\newpage
+
+## Variable Importance
+
+Variable importance is extracted from each model and normalized to their
+respective sums. Variable importance for the ensemble is the weighted
+average of the normalized variable importance for each component model
+based on their performance. 
+
+The spider plots below illustrate which environmental variables were important in the model predictions. The closer the polygon is to the edge of the circle, the stronger the influence of the variable. 
+
+```{r, echo=FALSE,  out.width="80%", fig.align='center'}
+if(file.exists(params$imp_plot_pdf)) {
+  knitr::include_graphics(params$imp_plot_pdf)
+} else {
+  cat("Plot not found.")
+}
+```
+
+\newpage
+
+## Model Inputs
+
+Below is a summary of the training data used, including the number of presences/absences, data sources utilized, and the environmental variables considered based on species niche. The weights of the component models in the final ensemble are also included for your reference. 
+
+### Fisheries Data
+
+Presence/absence data was collected from the following datasets:
+
+```{r}
+#| echo: false
+#| output: asis
+
+# Your input character vector
+items <- params$sTab
+
+# Render LaTeX itemize block safely
+if (length(items) > 0) {
+  cat("\\begin{itemize}\n")
+  cat(paste0("  \\item ", items, "\n"))
+  cat("\\end{itemize}\n")
+}
+```
+
+A total of **`r params$n_pres`** presences and **`r params$n_abs`**
+absences were used to build the model.
+
+### MOM6 Data
+
+**`r params$species_name`** was classified as a **`r params$fGuild`**
+and a **`r params$hGuild`** species. The following dynamic environmental
+variables (not including space, time, and static environmental variables
+such as bathymetry, rugosity, and distance to the coast) were therefore
+used in the species distribution models:
+
+::: {layout-ncol="2"}
+```{r}
+#| echo: false
+#| results: asis
+#| tbl-cap: "Feeding Guild Covariates"
+library(knitr)
+library(kableExtra)
+
+# 1. Force the parameter back into a data frame structure
+# This 'un-flattens' the YAML list back into rows and columns
+df_f <- as.data.frame(params$fTab)
+
+# 2. If it's still one wide row, we manually wrap it into 2 columns
+if(ncol(df_f) > 2) {
+  df_f <- data.frame(
+    Long_Name = unlist(df_f[1, grepl("Long", names(df_f))]),
+    Short_Name = unlist(df_f[1, grepl("Short", names(df_f))])
+  )
+}
+
+# 3. Print with fixed widths to stop the overlapping
+knitr::kable(
+  df_f, 
+  format = "latex", 
+  booktabs = TRUE, 
+  col.names = c("Long Name", "Short Name"),
+  row.names = FALSE  # <--- This removes the "1, 2, 3" column
+) %>%
+  column_spec(1, width = "5cm") %>%
+  column_spec(2, width = "2cm") %>%
+  kable_styling(latex_options = "hold_position", font_size = 8)
+```
+
+```{r}
+#| echo: false
+#| results: asis
+#| tbl-cap: "Habitat Guild Covariates"
+library(knitr)
+library(kableExtra)
+
+# 1. Force the parameter back into a data frame structure
+# This 'un-flattens' the YAML list back into rows and columns
+df_f <- as.data.frame(params$hTab)
+
+# 2. If it's still one wide row, we manually wrap it into 2 columns
+if(ncol(df_f) > 2) {
+  df_f <- data.frame(
+    Long_Name = unlist(df_f[1, grepl("Long", names(df_f))]),
+    Short_Name = unlist(df_f[1, grepl("Short", names(df_f))])
+  )
+}
+
+# 3. Print with fixed widths to stop the overlapping
+knitr::kable(
+  df_f, 
+  format = "latex", 
+  booktabs = TRUE, 
+  col.names = c("Long Name", "Short Name"),
+  row.names = FALSE  # <--- This removes the "1, 2, 3" column
+) %>%
+  column_spec(1, width = "5cm") %>%
+  column_spec(2, width = "2cm") %>%
+  kable_styling(latex_options = "hold_position", font_size = 8)
+```
+:::
+
+\newpage
+
+### Component Model Weights
+
+Weights of the component models were calculated based on their
+respective AUCs (Area under the Curve). AUCs were calculated using
+observed and predicted values from 2020-2023, and then scaled to 0-1
+using a Gini Index. Model weights were calculated as the fraction of the total sum of rescaled-AUCs. 
+
+```{r}
+#| echo: false
+#| results: asis
+library(knitr)
+library(kableExtra)
+
+# 1. Force the parameter back into a data frame structure
+# This 'un-flattens' the YAML list back into rows and columns
+df_m <- as.data.frame(params$mTab)
+
+knitr::kable(
+  df_m, 
+  format = "latex", 
+  booktabs = TRUE, 
+  col.names = c("BRT", "GAM", "MAXENT", "RF", "SDMTMB"),
+  row.names = FALSE  # <--- This removes the "1, 2, 3" column
+) |> 
+kable_styling(position = "center", 
+    latex_options = "hold_position")
+
+```

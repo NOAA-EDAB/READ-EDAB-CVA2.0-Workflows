@@ -5,7 +5,7 @@
 library(spatialcva)
 library(parallel)
 
-setwd("~/Sensitivity")
+setwd(here::here("Sensitivity"))
 
 ##################################
 ##### PRELIMINARY ANALYSIS #######
