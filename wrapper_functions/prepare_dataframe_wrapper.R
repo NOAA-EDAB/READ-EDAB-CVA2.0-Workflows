@@ -39,11 +39,11 @@ prepare_dataframe_wrapper <- function(
   bathy_suffix <- if (mask_bathy) "masked" else ""
   corr_suffix <- if (rm_corr) "rmcorr" else ""
 
-  log_path <- file.path(getwd(), 'logs', 'prepare_dataframes.log')
+  log_path <- file.path(here::here("SDMs"), 'logs', 'prepare_dataframes.log')
   log_appender(appender_file(log_path))
 
   # Define final output paths up front
-  species_dir <- file.path(getwd(), name)
+  species_dir <- file.path(here::here("SDMs"), name)
   training_name <- file.path(
     species_dir,
     paste0(

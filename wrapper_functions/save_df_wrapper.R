@@ -22,11 +22,16 @@ save_df_wrapper <- function(
 ) {
   # 1. Dynamically route logs to a central file or individual files safely
   # logger handles multiple parallel processes writing to the same file much better than sink
-  log_path <- file.path(getwd(), 'logs', 'build_dfs.log')
+  log_path <- file.path(here::here("SDMs"), 'logs', 'build_dfs.log')
   log_appender(appender_file(log_path))
 
   # Define path where output is saved (saved as a variable to prevent typos and duplication)
-  output_file <- file.path(getwd(), spp, 'input_csvs', paste0(csv_name, '.csv'))
+  output_file <- file.path(
+    here::here("SDMs"),
+    spp,
+    'input_csvs',
+    paste0(csv_name, '.csv')
+  )
 
   # 2. Check skip / overwrite logic up front
   # If force_overwrite is TRUE, we ignore the skip setting completely
