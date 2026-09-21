@@ -22,9 +22,18 @@ spp.list$Name <- gsub(' ', '', spp.list$Common.Name) #make clean names to make f
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
-  dir.create(file.path(here::here('Exposure'), spp.list$Name[x]), showWarnings = T) #main species folder
-  dir.create(file.path(here::here('Exposure'), spp.list$Name[x], 'Data'), showWarnings = T) #data folder
-  dir.create(file.path(here::here('Exposure'), spp.list$Name[x], 'Figures'), showWarnings = T) #figures folder
+  dir.create(
+    file.path(here::here('Exposure'), spp.list$Name[x]),
+    showWarnings = T
+  ) #main species folder
+  dir.create(
+    file.path(here::here('Exposure'), spp.list$Name[x], 'Data'),
+    showWarnings = T
+  ) #data folder
+  dir.create(
+    file.path(here::here('Exposure'), spp.list$Name[x], 'Figures'),
+    showWarnings = T
+  ) #figures folder
 }
 ##################################
 
