@@ -68,7 +68,8 @@ ensemble_sdms_wrapper <- function(spp, models, training_years, test_years, dyn_n
     }
     
     #subset list to desired models 
-    mod.preds <- mod.preds[grepl(paste(toupper(models),collapse = "|"), mod.preds)]
+    ind <- grepl(paste(toupper(models),collapse = "|"), mod.preds)
+    mod.preds <- mod.preds[ind]
 
     pList <- vector('list', length = length(mod.preds)) #initiate blank list of preds
 
@@ -113,7 +114,7 @@ ensemble_sdms_wrapper <- function(spp, models, training_years, test_years, dyn_n
 
     #generate weights
     weights <- gini / sum(gini) #we need to make weights like this since AUC bigger = better; whereas RMSE smaller = better
-    names(weights) <- toupper(models[order(models)])
+    names(weights) <- toupper(models[order(models[ind])])
     save(
       weights,
       file = file.path(getwd(), spp, 'model_output',
