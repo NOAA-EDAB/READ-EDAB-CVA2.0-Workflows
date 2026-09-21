@@ -63,7 +63,7 @@ var.names <- c(
 )
 
 #load in bathy for masking
-staticR <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')#staticR
+staticR <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif') #staticR
 #bathy object = staticR$bathy
 bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
 
@@ -86,38 +86,63 @@ for (x in var.names) {
   forecast <- terra::rast(forecast_path)
 
   #raw exposure
-  raw_exp <- calculate_raw_exposure(present = hindcast,
-                                    future = forecast,
-                                    spatial_temporal = T,
-                                    mask_bathy = T,
-                                    bathy = bathy,
-                                    bathy_range = c(-1000, 0))
-  terra::writeRaster(raw_exp, filename = paste0('./RawExposure/Data/',
-                                                x,
-                                                '_rawexposure_r20250925_i202501_r20250715_',
-                                                min(yrs), max(yrs),'_global.tif'),
-                     overwrite = T)
+  raw_exp <- calculate_raw_exposure(
+    present = hindcast,
+    future = forecast,
+    spatial_temporal = T,
+    mask_bathy = T,
+    bathy = bathy,
+    bathy_range = c(-1000, 0)
+  )
+  terra::writeRaster(
+    raw_exp,
+    filename = paste0(
+      './RawExposure/Data/',
+      x,
+      '_rawexposure_r20250925_i202501_r20250715_',
+      min(yrs),
+      max(yrs),
+      '_global.tif'
+    ),
+    overwrite = T
+  )
 
   #rank exposure
-  ranked_exp <- rank_exposure(exposure = raw_exp,
-                              flip = !(x %in% c('bottomT', 'surfaceT', 'bottomArg', 'MLD'))) #if x is one of these names, set flip to F; if not, flip will be T
-  terra::writeRaster(ranked_exp, filename = paste0('./RawExposure/Data/',
-                                                x,
-                                                '_rankedexposure_r20250925_i202501_r20250715_',
-                                                min(yrs), max(yrs),'_global.tif'),
-                     overwrite = T)
-
+  ranked_exp <- rank_exposure(
+    exposure = raw_exp,
+    flip = !(x %in% c('bottomT', 'surfaceT', 'bottomArg', 'MLD'))
+  ) #if x is one of these names, set flip to F; if not, flip will be T
+  terra::writeRaster(
+    ranked_exp,
+    filename = paste0(
+      './RawExposure/Data/',
+      x,
+      '_rankedexposure_r20250925_i202501_r20250715_',
+      min(yrs),
+      max(yrs),
+      '_global.tif'
+    ),
+    overwrite = T
+  )
 }
 
 #make and save nice plots of raw exposure, ranked exposure, and climatologies
 #climatologies
 #2014-2023
-for(x in var.names){
-  hindcast_path <- paste0('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_', x, '_hindcast_r20250715_global.tif')
+for (x in var.names) {
+  hindcast_path <- paste0(
+    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_hindcast_r20250715_global.tif'
+  )
   hindcast <- terra::rast(hindcast_path)
   hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
 
-  avgs <- terra::tapp(hindcast, rep(1:12, times = terra::nlyr(hindcast)/12), fun = 'mean')
+  avgs <- terra::tapp(
+    hindcast,
+    rep(1:12, times = terra::nlyr(hindcast) / 12),
+    fun = 'mean'
+  )
 
   pdf(
     paste0(
@@ -134,11 +159,19 @@ for(x in var.names){
 }
 
 #2025-2035
-for(x in var.names){
-  forecast_path <- paste0('../SDMs/Data/MOM6/raw_MOM6_', x, '_forecast_r20250925_i202501_global_average.tif')
+for (x in var.names) {
+  forecast_path <- paste0(
+    '../SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_forecast_r20250925_i202501_global_average.tif'
+  )
   forecast <- terra::rast(forecast_path)
 
-  avgs <- terra::tapp(forecast, rep(1:12, times = terra::nlyr(forecast)/12), fun = 'mean')
+  avgs <- terra::tapp(
+    forecast,
+    rep(1:12, times = terra::nlyr(forecast) / 12),
+    fun = 'mean'
+  )
 
   pdf(
     paste0(
@@ -156,15 +189,27 @@ for(x in var.names){
 
 #forecast - hindcast
 for (x in var.names) {
-  hindcast_path <- paste0('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_', x, '_hindcast_r20250715_global.tif')
+  hindcast_path <- paste0(
+    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_hindcast_r20250715_global.tif'
+  )
   hindcast <- terra::rast(hindcast_path)
   hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
   hAvg <- avg_model_data(hindcast, spatial_temporal = T)
 
-  forecast_path <- paste0('../SDMs/Data/MOM6/raw_MOM6_', x, '_forecast_r20250925_i202501_global_average.tif')
+  forecast_path <- paste0(
+    '../SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_forecast_r20250925_i202501_global_average.tif'
+  )
   forecast <- terra::rast(forecast_path)
 
-  fAvg <- terra::tapp(forecast, rep(1:12, times = terra::nlyr(forecast)/12), fun = 'mean')
+  fAvg <- terra::tapp(
+    forecast,
+    rep(1:12, times = terra::nlyr(forecast) / 12),
+    fun = 'mean'
+  )
   fAvg <- terra::resample(fAvg, hAvg, method = "bilinear")
 
   diff_rast <- fAvg - hAvg
@@ -178,17 +223,22 @@ for (x in var.names) {
     width = 11,
     height = 8
   )
-  terra::plot(diff_rast, main = month.abb, range = range(diff_rast[], na.rm = T))
+  terra::plot(
+    diff_rast,
+    main = month.abb,
+    range = range(diff_rast[], na.rm = T)
+  )
   dev.off()
   print(x)
-
 }
 
 #raw exposure
 for (x in var.names) {
- raw <- terra::rast(paste0('./RawExposure/Data/',
-                           x,
-                           '_rawexposure_r20250925_i202501_r20250715_20142023_global.tif'))
+  raw <- terra::rast(paste0(
+    './RawExposure/Data/',
+    x,
+    '_rawexposure_r20250925_i202501_r20250715_20142023_global.tif'
+  ))
   pdf(
     paste0(
       './RawExposure/Figures/raw/',
@@ -205,9 +255,11 @@ for (x in var.names) {
 
 #ranked exposure
 for (x in var.names) {
-  ranked <- terra::rast(paste0('./RawExposure/Data/',
-                            x,
-                            '_rankedexposure_r20250925_i202501_r20250715_20142023_global.tif'))
+  ranked <- terra::rast(paste0(
+    './RawExposure/Data/',
+    x,
+    '_rankedexposure_r20250925_i202501_r20250715_20142023_global.tif'
+  ))
 
   # 1. Create a duplicate of your raster specifically for plotting
   plot_ranked <- ranked
@@ -216,8 +268,11 @@ for (x in var.names) {
   categories <- data.frame(id = 1:4, class = as.character(1:4))
 
   # 3. Apply these categorical levels ONLY to the temporary plot object
-  levels(plot_ranked) <- replicate(terra::nlyr(plot_ranked), categories, simplify = FALSE)
-
+  levels(plot_ranked) <- replicate(
+    terra::nlyr(plot_ranked),
+    categories,
+    simplify = FALSE
+  )
 
   pdf(
     paste0(
@@ -229,7 +284,7 @@ for (x in var.names) {
     height = 8
   )
   # 4. Plot the temporary object
-  terra::plot(plot_ranked, main = month.abb, range = c(1,4), all_levels = T)
+  terra::plot(plot_ranked, main = month.abb, range = c(1, 4), all_levels = T)
   dev.off()
   print(x)
 }
