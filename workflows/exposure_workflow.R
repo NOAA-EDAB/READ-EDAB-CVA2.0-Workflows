@@ -4,7 +4,7 @@
 #####SET UP - LOAD EVERY TIME ####
 ##################################
 
-setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/Exposure')
+setwd(here::here('Exposure'))
 #load in package
 library(spatialcva)
 
@@ -15,42 +15,16 @@ library(logger)
 
 #load species list for loops
 spp.list <- read.csv(
-  '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/spp_list.csv'
+  '../SDMs/spp_list.csv'
 )
 #spp.list <- spp.list[,c(1:6)]
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name) #make clean names to make folders if necessary/match to folder names
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
-  dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main species folder
-  dir.create(file.path(getwd(), spp.list$Name[x], 'Data'), showWarnings = T) #data folder
-  #data subfolders for all combinations of present/future timeseries
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Data', '1993-2008 vs 2009-2019'),
-    showWarnings = T
-  ) #present: 1993-2008, future: 2009-2019
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Data', '2009-2019 vs 2020-2030'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2020-2030
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Data', '2009-2019 vs 2025-2035'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2025-2035
-  dir.create(file.path(getwd(), spp.list$Name[x], 'Figures'), showWarnings = T) #figures folder
-  #data subfolders for all combinations of present/future timeseries
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Figures', '1993-2008 vs 2009-2019'),
-    showWarnings = T
-  ) #present: 1993-2008, future: 2009-2019
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Figures', '2009-2019 vs 2020-2030'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2020-2030
-  dir.create(
-    file.path(getwd(), spp.list$Name[x], 'Figures', '2009-2019 vs 2025-2035'),
-    showWarnings = T
-  ) #present: 2009-2019, future: 2025-2035
+  dir.create(file.path(here::here('Exposure'), spp.list$Name[x]), showWarnings = T) #main species folder
+  dir.create(file.path(here::here('Exposure'), spp.list$Name[x], 'Data'), showWarnings = T) #data folder
+  dir.create(file.path(here::here('Exposure'), spp.list$Name[x], 'Figures'), showWarnings = T) #figures folder
 }
 ##################################
 
@@ -88,7 +62,7 @@ bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra h
 #only needs to be done once for each time period
 #2014-2023 v 2025-2035
 for (x in var.names) {
-  hindcast_path <- paste0('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_', x, '_hindcast_r20250715_global.tif')
+  hindcast_path <- paste0('../SDMs/Data/MOM6/raw_MOM6_', x, '_hindcast_r20250715_global.tif')
   hindcast <- terra::rast(hindcast_path)
   hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
 
@@ -123,15 +97,15 @@ for (x in var.names) {
 }
 
 #make and save nice plots of raw exposure, ranked exposure, and climatologies
-#climatologies 
+#climatologies
 #2014-2023
 for(x in var.names){
   hindcast_path <- paste0('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_', x, '_hindcast_r20250715_global.tif')
   hindcast <- terra::rast(hindcast_path)
   hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
-  
+
   avgs <- terra::tapp(hindcast, rep(1:12, times = terra::nlyr(hindcast)/12), fun = 'mean')
-  
+
   pdf(
     paste0(
       './RawExposure/Figures/climatologies/',
@@ -150,9 +124,9 @@ for(x in var.names){
 for(x in var.names){
   forecast_path <- paste0('../SDMs/Data/MOM6/raw_MOM6_', x, '_forecast_r20250925_i202501_global_average.tif')
   forecast <- terra::rast(forecast_path)
-  
+
   avgs <- terra::tapp(forecast, rep(1:12, times = terra::nlyr(forecast)/12), fun = 'mean')
-  
+
   pdf(
     paste0(
       './RawExposure/Figures/climatologies/',
@@ -173,15 +147,15 @@ for (x in var.names) {
   hindcast <- terra::rast(hindcast_path)
   hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
   hAvg <- avg_model_data(hindcast, spatial_temporal = T)
-  
+
   forecast_path <- paste0('../SDMs/Data/MOM6/raw_MOM6_', x, '_forecast_r20250925_i202501_global_average.tif')
   forecast <- terra::rast(forecast_path)
-  
+
   fAvg <- terra::tapp(forecast, rep(1:12, times = terra::nlyr(forecast)/12), fun = 'mean')
   fAvg <- terra::resample(fAvg, hAvg, method = "bilinear")
-  
+
   diff_rast <- fAvg - hAvg
-  
+
   pdf(
     paste0(
       './RawExposure/Figures/differences/',
@@ -194,7 +168,7 @@ for (x in var.names) {
   terra::plot(diff_rast, main = month.abb, range = range(diff_rast[], na.rm = T))
   dev.off()
   print(x)
-  
+
 }
 
 #raw exposure
@@ -221,16 +195,16 @@ for (x in var.names) {
   ranked <- terra::rast(paste0('./RawExposure/Data/',
                             x,
                             '_rankedexposure_r20250925_i202501_r20250715_20142023_global.tif'))
-  
+
   # 1. Create a duplicate of your raster specifically for plotting
   plot_ranked <- ranked
-  
+
   # 2. Define your 4 categories
   categories <- data.frame(id = 1:4, class = as.character(1:4))
-  
+
   # 3. Apply these categorical levels ONLY to the temporary plot object
   levels(plot_ranked) <- replicate(terra::nlyr(plot_ranked), categories, simplify = FALSE)
-  
+
 
   pdf(
     paste0(
