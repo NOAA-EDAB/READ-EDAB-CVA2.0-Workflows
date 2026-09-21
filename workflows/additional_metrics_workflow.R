@@ -18,7 +18,7 @@ flist <- dir('./raw_csvs', pattern = '.csv')
 scorers <- sub(".*/NECVA2.0_Directional_Scores_(.*)\\.csv$", "\\1", flist)
 direct <- NULL
 #this presumes a similar set up and naming scheme to the model confidence spreadsheets
-for(x in 1:length(flist)){
+for (x in 1:length(flist)) {
   #load in data frame & clean
   f <- read.csv(flist[x], skip = 2) #remove header when loading in
 

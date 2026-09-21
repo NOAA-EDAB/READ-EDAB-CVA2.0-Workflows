@@ -28,7 +28,6 @@ variable_exposures_wrapper <- function(
   dyn_vars,
   training_years
 ) {
-
   # ==========================================================
   # STEP 0: Set Up
   # ==========================================================
@@ -39,15 +38,44 @@ variable_exposures_wrapper <- function(
   log_info("Calculating variable exposures for {spp}")
 
   #suffixes to help locate correct data
-  suffix <- if(spatial_temporal) "" else "_global"
-  bathy_suffix <- if(mask_bathy) "masked" else ""
-  corr_suffix <- if(rm_corr) "rmcorr" else ""
+  suffix <- if (spatial_temporal) "" else "_global"
+  bathy_suffix <- if (mask_bathy) "masked" else ""
+  corr_suffix <- if (rm_corr) "rmcorr" else ""
 
   # Define standard paths
-  predictions_path <- file.path(here::here('SDMs'), spp, 'output_rasters', paste0('ENSEMBLE_hindcast_', hindcast_release, '_', bathy_suffix, suffix, '.tif'))
+  predictions_path <- file.path(
+    here::here('SDMs'),
+    spp,
+    'output_rasters',
+    paste0(
+      'ENSEMBLE_hindcast_',
+      hindcast_release,
+      '_',
+      bathy_suffix,
+      suffix,
+      '.tif'
+    )
+  )
 
   # Load training data
-  training_name <- file.path(here::here('SDMs'), spp, paste0('training_', training_years[1], '_', training_years[2], '_', corr_suffix, '_hindcast_', hindcast_release, '_', bathy_suffix, suffix, '.csv'))
+  training_name <- file.path(
+    here::here('SDMs'),
+    spp,
+    paste0(
+      'training_',
+      training_years[1],
+      '_',
+      training_years[2],
+      '_',
+      corr_suffix,
+      '_hindcast_',
+      hindcast_release,
+      '_',
+      bathy_suffix,
+      suffix,
+      '.csv'
+    )
+  )
 
   if (!file.exists(training_name)) {
     log_error("Data file missing for species: {spp}.")
@@ -70,18 +98,32 @@ variable_exposures_wrapper <- function(
   abund <- terra::rast(predictions_path)
 
   #avg ensemble HSM
-  avgHSM <- terra::tapp(abund, rep(1:12, times = terra::nlyr(abund)/12), fun = 'mean')#assuming ensemble is predicted on monthly timesteps and encompases complete years (ie starts in a January and stops in a December), create monthly average data
+  avgHSM <- terra::tapp(
+    abund,
+    rep(1:12, times = terra::nlyr(abund) / 12),
+    fun = 'mean'
+  ) #assuming ensemble is predicted on monthly timesteps and encompases complete years (ie starts in a January and stops in a December), create monthly average data
   names(avgHSM) <- month.abb
 
   ###remove hsm with less than threshold to avoid weird aliasing
-  avgHSM<- terra::ifel(avgHSM <= sdm_threshold, NA, avgHSM)
+  avgHSM <- terra::ifel(avgHSM <= sdm_threshold, NA, avgHSM)
 
   #ranked exposure data
   exp_rasters <- vector(mode = 'list', length = length(d_names))
   for (x in seq_along(d_names)) {
-    raster_path <- paste0('./RawExposure/Data/',
-                          d_names[x],
-                          '_rankedexposure_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '_global.tif')
+    raster_path <- paste0(
+      './RawExposure/Data/',
+      d_names[x],
+      '_rankedexposure_',
+      forecast_release,
+      '_',
+      forecast_init,
+      '_',
+      hindcast_release,
+      '_',
+      hindcast_yr_range,
+      '_global.tif'
+    )
     if (!file.exists(raster_path)) {
       log_error("Missing upstream raster for {spp}: {raster_path}")
       return(NULL)
@@ -109,7 +151,17 @@ variable_exposures_wrapper <- function(
     x = mapExp,
     filename = paste0(
       file.path(here::here('Exposure'), spp, 'Data'),
-      paste0('/variable_exposure_maps_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range, '.tif')
+      paste0(
+        '/variable_exposure_maps_',
+        forecast_release,
+        '_',
+        forecast_init,
+        '_',
+        hindcast_release,
+        '_',
+        hindcast_yr_range,
+        '.tif'
+      )
     ),
     overwrite = TRUE
   )
@@ -120,11 +172,17 @@ variable_exposures_wrapper <- function(
   # STEP 3: Calculate Exposures Across Time
   # ==========================================================
 
-  if(file.exists(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))){
-    stocks <- terra::vect(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))
+  if (file.exists(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))) {
+    stocks <- terra::vect(paste0(
+      '../shpfiles/species_stock_areas/',
+      spp,
+      '.shp'
+    ))
   } else {
     stocks <- NULL
-    log_info('No stock shpfiles found for {spp}. Only calculating global variable exposure timeseries')
+    log_info(
+      'No stock shpfiles found for {spp}. Only calculating global variable exposure timeseries'
+    )
   }
 
   #timeseries
@@ -138,7 +196,17 @@ variable_exposures_wrapper <- function(
     vecExp,
     file = paste0(
       file.path(here::here('Exposure'), spp, 'Data'),
-      paste0('/variable_exposure_timeseries_', forecast_release, '_', forecast_init, '_', hindcast_release,'_',hindcast_yr_range,'.rds')
+      paste0(
+        '/variable_exposure_timeseries_',
+        forecast_release,
+        '_',
+        forecast_init,
+        '_',
+        hindcast_release,
+        '_',
+        hindcast_yr_range,
+        '.rds'
+      )
     )
   )
 
