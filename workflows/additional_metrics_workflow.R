@@ -58,15 +58,19 @@ setwd(
 
 
 spp.list <- read.csv(
-  file.path(here::here('SDMs'), ,'spp_list.csv')
+  file.path(here::here('SDMs'), , 'spp_list.csv')
 )
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
 
 #create species specific folders
 for (x in 1:nrow(spp.list)) {
-  dir.create(file.path(here::here("/AdditionalMetrics/DistributionChange"),
-                       spp.list$Name[x]),
-             showWarnings = T) #main folder
+  dir.create(
+    file.path(
+      here::here("/AdditionalMetrics/DistributionChange"),
+      spp.list$Name[x]
+    ),
+    showWarnings = T
+  ) #main folder
 }
 
 ##calculate for each time frame of interest
