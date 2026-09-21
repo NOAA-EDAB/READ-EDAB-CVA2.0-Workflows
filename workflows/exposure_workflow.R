@@ -558,16 +558,18 @@ var.names <- c(
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
-  ~variable_exposures_wrapper(spp = spp.list$Name[.x],
-                          forecast_release = 'r20250925', 
-                          forecast_init = 'i202501',
-                          hindcast_release = 'r20250715', 
-                          hindcast_yr_range = '20142023',
-                          spatial_temporal = FALSE,
-                          mask_bathy = T,
-                          rm_corr = T,
-                          dyn_vars = var.names,
-                          training_years = c(1993, 2019)),
+  ~ variable_exposures_wrapper(
+    spp = spp.list$Name[.x],
+    forecast_release = 'r20250925',
+    forecast_init = 'i202501',
+    hindcast_release = 'r20250715',
+    hindcast_yr_range = '20142023',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    dyn_vars = var.names,
+    training_years = c(1993, 2019)
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -583,11 +585,13 @@ plan(sequential)
 plan(multisession, workers = 8)
 combs <- future_map(
   1:nrow(spp.list),
-  ~total_exposures_wrapper(spp = spp.list$Name[.x],
-                           forecast_release = 'r20250925', 
-                           forecast_init = 'i202501',
-                           hindcast_release = 'r20250715', 
-                           hindcast_yr_range = '20142023'),
+  ~ total_exposures_wrapper(
+    spp = spp.list$Name[.x],
+    forecast_release = 'r20250925',
+    forecast_init = 'i202501',
+    hindcast_release = 'r20250715',
+    hindcast_yr_range = '20142023'
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
@@ -596,7 +600,7 @@ plan(sequential)
 ##################################
 
 ##################################
-### Plot Results 
+### Plot Results
 ##################################
 
 #get bathymetry for plotting
@@ -653,9 +657,9 @@ varDF <- data.frame(
 make_exposure_plots(
   species = spp.list$Name,
   type = c('variable', 'total', 'important', 'radar'),
-  forecast_release = 'r20250925', 
+  forecast_release = 'r20250925',
   forecast_init = 'i202501',
-  hindcast_release = 'r20250715', 
+  hindcast_release = 'r20250715',
   hindcast_yr_range = '20142023',
   variable_df = varDF,
   coastline = landNE,
