@@ -71,7 +71,11 @@ bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra h
 #only needs to be done once for each time period
 #2014-2023 v 2025-2035
 for (x in var.names) {
-  hindcast_path <- paste0('../SDMs/Data/MOM6/raw_MOM6_', x, '_hindcast_r20250715_global.tif')
+  hindcast_path <- paste0(
+    '../SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_hindcast_r20250715_global.tif'
+  )
   hindcast <- terra::rast(hindcast_path)
   hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
 
