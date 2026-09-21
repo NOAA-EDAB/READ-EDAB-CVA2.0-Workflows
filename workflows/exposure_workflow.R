@@ -82,7 +82,11 @@ for (x in var.names) {
   #get years from names to help with naming output
   yrs <- as.numeric(sub(".*\\.", "", names(hindcast)))
 
-  forecast_path <- paste0('../SDMs/Data/MOM6/raw_MOM6_', x, '_forecast_r20250925_i202501_global_average.tif')
+  forecast_path <- paste0(
+    '../SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_forecast_r20250925_i202501_global_average.tif'
+  )
   forecast <- terra::rast(forecast_path)
 
   #raw exposure
