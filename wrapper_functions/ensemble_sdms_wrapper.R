@@ -14,213 +14,321 @@
 
 #' @return returns the AUC of the produced model. Outputs from the subsequent functions called within are saved within specific directories. See the vignette for recommended directory set up.
 
-ensemble_sdms_wrapper <- function(spp, models, training_years, test_years, dyn_names, release, spatial_temporal, mask_bathy, rm_corr, static_variables, skip = TRUE) {
+ensemble_sdms_wrapper <- function(
+  spp,
+  training_years,
+  test_years,
+  dyn_names,
+  release,
+  spatial_temporal,
+  mask_bathy,
+  rm_corr,
+  static_variables,
+  skip = TRUE
+) {
   # Wrap the entire wrapper function execution in a outer tryCatch
   # to guarantee no error kills the parallel worker thread.
-  tryCatch({
+  tryCatch(
+    {
+      # ==========================================================
+      # STEP 0: Set Up
+      # ==========================================================
+      #suffixes to help locate correct data
+      suffix <- if (spatial_temporal) "" else "_global"
+      bathy_suffix <- if (mask_bathy) "masked" else ""
+      corr_suffix <- if (rm_corr) "rmcorr" else ""
 
-  # ==========================================================
-  # STEP 0: Set Up
-  # ==========================================================
-  #suffixes to help locate correct data
-  suffix <- if(spatial_temporal) "" else "_global"
-  bathy_suffix <- if(mask_bathy) "masked" else ""
-  corr_suffix <- if(rm_corr) "rmcorr" else ""
-
-  # Define standard paths
-  spp_dir        <- file.path(getwd(), spp)
-  model_path     <- file.path(spp_dir, 'model_output', 'models',  'ENSEMBLE.rds')
-  predictions_path <- file.path(spp_dir, 'output_rasters', paste0('ENSEMBLE_hindcast_', release, '_', bathy_suffix, suffix, '.tif'))
-  evaluation_path <- file.path(spp_dir, 'model_output', 'eval_metrics', 'ENSEMBLE.rds')
-
-  # Set up the logger to output to your specific file
-  log_file <- file.path(getwd(), 'logs', 'ensemble.log')
-  log_appender(appender_file(log_file))
-
-  log_info("Making {spp} ensemble")
-
-  # Load training data
-  training_name <- file.path(spp_dir, paste0('training_', training_years[1], '_', training_years[2], '_', corr_suffix, '_hindcast_', release, '_', bathy_suffix, suffix, '.csv'))
-  test_name     <- file.path(spp_dir, paste0('test_', test_years[1], '_', test_years[2], '_', corr_suffix, '_hindcast_', release, '_', bathy_suffix, suffix, '.csv'))
-
-  if (!file.exists(training_name) | !file.exists(test_name)) {
-    log_error("Data file missing for species: {spp}")
-    stop("Aborting: training or test dataset not found.")
-  }
-  dfT <- read.csv(file.path(training_name))
-
-  # ==========================================================
-  # STEP 1: Model Building
-  # ==========================================================
-  model_exists <- file.exists(model_path)
-
-  if (skip && model_exists) {
-    log_warn("Ensemble model file already exists for {spp}. Skipping model generation.")
-    load(model_path)
-  } else {
-    log_info("Building ensemble model for {spp}...")
-
-
-    #Put together preds
-    mod.preds <- dir(file.path(spp_dir, 'output_rasters'), full.names = T, pattern = paste0('_hindcast_', release, '_', bathy_suffix, suffix, '.tif')) #get list of models
-    if(any(grepl('ENSEMBLE', mod.preds))){
-      mod.preds <- mod.preds[-grep('ENSEMBLE', mod.preds)] #remove ensemble if present (should only be true if overwriting data)
-    }
-    
-    #subset list to desired models 
-    ind <- grepl(paste(toupper(models),collapse = "|"), mod.preds)
-    mod.preds <- mod.preds[ind]
-
-    pList <- vector('list', length = length(mod.preds)) #initiate blank list of preds
-
-    dfTest <- read.csv(file.path(test_name)) #load test data
-
-    #make list of data frames
-    for(x in 1:length(mod.preds)){
-      r <- terra::rast(mod.preds[x])
-      p <- build_preds_df(observations = dfTest,
-                                   xy_col = c("grid.lon", "grid.lat"),
-                                   prediction_rasters = r)
-     #format for EFHSDM::ValidateEnsemble
-       p$abund <- p$pa
-      p$lon <- p$grid.lon
-      p$lat <- p$grid.lat
-      p$pred <- p$predicted
-
-      pList[[x]] <- p
-    }
-
-    #put together weights
-    #load in AUCs
-    evalFlist <- dir(
-      file.path(getwd(), spp, 'model_output', 'eval_metrics'),
-      pattern = '.rds',
-      full.names = T
-    )
-    if(any(grepl('ENSEMBLE', evalFlist))){
-      evalFlist <- evalFlist[-grep('ENSEMBLE', evalFlist)] #remove ensemble if present (should only be true if overwriting data)
-    }
-    
-    #subset list to desired models 
-    evalFlist <- evalFlist[grepl(paste(toupper(models),collapse = "|"), evalFlist)]
-
-    eval <- vector(length = length(evalFlist))
-    for (y in 1:length(evalFlist)) {
-      load(evalFlist[y])
-      eval[y] <- ev
-    }
-    #rescale using gini index to get scores between 0-1 rather than 0.5 and 1
-    gini <- (2*eval) -1
-
-    #generate weights
-    weights <- gini / sum(gini) #we need to make weights like this since AUC bigger = better; whereas RMSE smaller = better
-    names(weights) <- toupper(models[order(models[ind])])
-    save(
-      weights,
-      file = file.path(getwd(), spp, 'model_output',
-                       'ensemble_weights.rds')
-    )
-
-    # Wrap model building in tryCatch to log errors cleanly
-    mod <- tryCatch({
-      build_sdm(
-        model = 'ensemble',
-        ensemble_preds = pList,
-        ensemble_weights = weights
+      # Define standard paths
+      spp_dir <- file.path(here::here("SDMs"), spp)
+      model_path <- file.path(spp_dir, 'model_output', 'models', 'ENSEMBLE.rds')
+      importance_path <- file.path(
+        spp_dir,
+        'model_output',
+        'importance',
+        'ENSEMBLE.rds'
       )
-    }, error = function(e) {
-      log_error("Failed to build ensemble for {spp}: {e$message}")
-      return(NULL)
-    })
-
-    # If model creation failed, return early
-    if (is.null(mod)) return(NULL)
-
-    save(mod, file = model_path)
-    log_info("Ensemble successfully saved to {model_path}")
-  }
-
-  # ==========================================================
-  # STEP 2: Predictions
-  # ==========================================================
-  predictions_exists <- file.exists(predictions_path)
-
-  if (skip && predictions_exists) {
-    log_warn("Ensemble predictions already exist for {spp}. Skipping calculation.")
-  } else {
-    log_info("Predicting Ensemble for {spp}...")
-
-    if (!exists("weights")) load(file.path(getwd(), spp, 'model_output', 'ensemble_weights.rds'))
-
-    #load in prediction rasters from other models
-    mod.preds <- dir(file.path(spp_dir, 'output_rasters'), full.names = T, pattern = paste0('_hindcast_', release, '_', bathy_suffix, suffix, '.tif')) #get list of models
-    if(any(grepl('ENSEMBLE', mod.preds))){
-      mod.preds <- mod.preds[-grep('ENSEMBLE', mod.preds)] #remove ensemble if present (should only be true if overwriting data)
-    }
-    
-    #subset list to desired models 
-    mod.preds <- mod.preds[grepl(paste(toupper(models),collapse = "|"), mod.preds)]
-
-    pred_rasters <- vector(mode = 'list', length = length(mod.preds))
-    for (x in 1:length(mod.preds)) {
-      pred_rasters[[x]] <- terra::rast(mod.preds[x])
-    }
-
-    preds <- tryCatch({
-      make_sdm_predictions(
-        model = 'ensemble',
-        rasts = pred_rasters,
-        weights = weights
+      predictions_path <- file.path(
+        spp_dir,
+        'output_rasters',
+        paste0('ENSEMBLE_hindcast_', release, '_', bathy_suffix, suffix, '.tif')
+      )
+      evaluation_path <- file.path(
+        spp_dir,
+        'model_output',
+        'eval_metrics',
+        'ENSEMBLE.rds'
       )
 
-    }, error = function(e) {
-      log_error("Failed to predict ensemble for {spp}: {e$message}")
-      return(NULL)
-    })
+      # Set up the logger to output to your specific file
+      log_file <- file.path(here::here("SDMs"), 'logs', 'ensemble.log')
+      log_appender(appender_file(log_file))
 
-    if (is.null(preds)) return(NULL)
+      log_info("Making {spp} ensemble")
 
-    terra::writeRaster(preds, file = predictions_path, overwrite = T)
-    log_info("ensemble predictions for {spp} successfully saved to {predictions_path}")
-  }
-
-
-  # ==========================================================
-  # STEP 3: EVALUATE
-  # ==========================================================
-  evaluation_exists <- file.exists(evaluation_path)
-
-  if (skip && evaluation_exists) {
-    log_warn("Ensemble has already been evaluated for {spp}. Skipping calculation.")
-  } else {
-    log_info("Evaluating ensemble for {spp}...")
-
-    if (!exists("preds")) preds <- terra::rast(predictions_path)
-
-    dfTest <- read.csv(file.path(test_name))
-
-    ev <- tryCatch({
-      calculate_sdm_auc(
-        model = 'ensemble',
-        data_type = 'external',
-        data = dfTest,
-        prediction_rasters = preds
+      # Load training data
+      training_name <- file.path(
+        spp_dir,
+        paste0(
+          'training_',
+          training_years[1],
+          '_',
+          training_years[2],
+          '_',
+          corr_suffix,
+          '_hindcast_',
+          release,
+          '_',
+          bathy_suffix,
+          suffix,
+          '.csv'
+        )
       )
-    }, error = function(e) {
-      log_error("Failed to evaluate ensemble for {spp}: {e$message}")
+      test_name <- file.path(
+        spp_dir,
+        paste0(
+          'test_',
+          test_years[1],
+          '_',
+          test_years[2],
+          '_',
+          corr_suffix,
+          '_hindcast_',
+          release,
+          '_',
+          bathy_suffix,
+          suffix,
+          '.csv'
+        )
+      )
+
+      if (!file.exists(training_name) | !file.exists(test_name)) {
+        log_error("Data file missing for species: {spp}")
+        stop("Aborting: training or test dataset not found.")
+      }
+      dfT <- read.csv(file.path(training_name))
+
+      # ==========================================================
+      # STEP 1: Model Building
+      # ==========================================================
+      model_exists <- file.exists(model_path)
+
+      if (skip && model_exists) {
+        log_warn(
+          "Ensemble model file already exists for {spp}. Skipping model generation."
+        )
+        load(model_path)
+      } else {
+        log_info("Building ensemble model for {spp}...")
+
+        #Put together preds
+        mod.preds <- dir(
+          file.path(spp_dir, 'output_rasters'),
+          full.names = T,
+          pattern = paste0(
+            '_hindcast_',
+            release,
+            '_',
+            bathy_suffix,
+            suffix,
+            '.tif'
+          )
+        ) #get list of models
+        if (any(grepl('ENSEMBLE', mod.preds))) {
+          mod.preds <- mod.preds[-grep('ENSEMBLE', mod.preds)] #remove ensemble if present (should only be true if overwriting data)
+        }
+
+        pList <- vector('list', length = length(mod.preds)) #initiate blank list of preds
+
+        dfTest <- read.csv(file.path(test_name)) #load test data
+
+        #make list of data frames
+        for (x in 1:length(mod.preds)) {
+          r <- terra::rast(mod.preds[x])
+          p <- build_preds_df(
+            observations = dfTest,
+            xy_col = c("grid.lon", "grid.lat"),
+            prediction_rasters = r
+          )
+          #format for EFHSDM::ValidateEnsemble
+          p$abund <- p$pa
+          p$lon <- p$grid.lon
+          p$lat <- p$grid.lat
+          p$pred <- p$predicted
+
+          pList[[x]] <- p
+        }
+
+        #put together weights
+        #load in AUCs
+        evalFlist <- dir(
+          file.path(here::here("SDMs"), spp, 'model_output', 'eval_metrics'),
+          pattern = '.rds',
+          full.names = T
+        )
+        if (any(grepl('ENSEMBLE', evalFlist))) {
+          evalFlist <- evalFlist[-grep('ENSEMBLE', evalFlist)] #remove ensemble if present (should only be true if overwriting data)
+        }
+
+        eval <- vector(length = length(evalFlist))
+        for (y in 1:length(evalFlist)) {
+          load(evalFlist[y])
+          eval[y] <- ev
+        }
+        #rescale using gini index to get scores between 0-1 rather than 0.5 and 1
+        gini <- (2 * eval) - 1
+
+        #generate weights
+        weights <- gini / sum(gini) #we need to make weights like this since AUC bigger = better; whereas RMSE smaller = better
+        save(
+          weights,
+          file = file.path(
+            here::here("SDMs"),
+            spp,
+            'model_output',
+            'ensemble_weights.rds'
+          )
+        )
+
+        # Wrap model building in tryCatch to log errors cleanly
+        mod <- tryCatch(
+          {
+            build_sdm(
+              model = 'ensemble',
+              ensemble_preds = pList,
+              ensemble_weights = weights
+            )
+          },
+          error = function(e) {
+            log_error("Failed to build ensemble for {spp}: {e$message}")
+            return(NULL)
+          }
+        )
+
+        # If model creation failed, return early
+        if (is.null(mod)) {
+          return(NULL)
+        }
+
+        save(mod, file = model_path)
+        log_info("Ensemble successfully saved to {model_path}")
+      }
+
+      # ==========================================================
+      # STEP 2: Predictions
+      # ==========================================================
+      predictions_exists <- file.exists(predictions_path)
+
+      if (skip && predictions_exists) {
+        log_warn(
+          "Ensemble predictions already exist for {spp}. Skipping calculation."
+        )
+      } else {
+        log_info("Predicting Ensemble for {spp}...")
+
+        if (!exists("weights")) {
+          load(file.path(
+            here::here("SDMs"),
+            spp,
+            'model_output',
+            'ensemble_weights.rds'
+          ))
+        }
+
+        #load in prediction rasters from other models
+        mod.preds <- dir(
+          file.path(spp_dir, 'output_rasters'),
+          full.names = T,
+          pattern = paste0(
+            '_hindcast_',
+            release,
+            '_',
+            bathy_suffix,
+            suffix,
+            '.tif'
+          )
+        ) #get list of models
+        if (any(grepl('ENSEMBLE', mod.preds))) {
+          mod.preds <- mod.preds[-grep('ENSEMBLE', mod.preds)] #remove ensemble if present (should only be true if overwriting data)
+        }
+
+        pred_rasters <- vector(mode = 'list', length = length(mod.preds))
+        for (x in 1:length(mod.preds)) {
+          pred_rasters[[x]] <- terra::rast(mod.preds[x])
+        }
+
+        preds <- tryCatch(
+          {
+            make_sdm_predictions(
+              model = 'ensemble',
+              rasts = pred_rasters,
+              weights = weights
+            )
+          },
+          error = function(e) {
+            log_error("Failed to predict ensemble for {spp}: {e$message}")
+            return(NULL)
+          }
+        )
+
+        if (is.null(preds)) {
+          return(NULL)
+        }
+
+        terra::writeRaster(preds, file = predictions_path, overwrite = T)
+        log_info(
+          "ensemble predictions for {spp} successfully saved to {predictions_path}"
+        )
+      }
+
+      # ==========================================================
+      # STEP 3: EVALUATE
+      # ==========================================================
+      evaluation_exists <- file.exists(evaluation_path)
+
+      if (skip && evaluation_exists) {
+        log_warn(
+          "Ensemble has already been evaluated for {spp}. Skipping calculation."
+        )
+      } else {
+        log_info("Evaluating ensemble for {spp}...")
+
+        if (!exists("preds")) {
+          preds <- terra::rast(predictions_path)
+        }
+
+        dfTest <- read.csv(file.path(test_name))
+
+        ev <- tryCatch(
+          {
+            calculate_sdm_auc(
+              model = 'ensemble',
+              data_type = 'external',
+              data = dfTest,
+              prediction_rasters = preds
+            )
+          },
+          error = function(e) {
+            log_error("Failed to evaluate ensemble for {spp}: {e$message}")
+            return(NULL)
+          }
+        )
+
+        if (is.null(ev)) {
+          return(NULL)
+        }
+
+        save(ev, file = evaluation_path)
+        log_info(
+          "Ensemble evaluation for {spp} successfully saved to {evaluation_path}"
+        )
+      }
+
+      return(ev)
+    },
+    error = function(e) {
+      # Catches any unexpected base R errors not caught inside individual steps
+      log_error("Unexpected error in wrapper for {spp}: {e$message}")
       return(NULL)
-    })
-
-    if (is.null(ev)) return(NULL)
-
-    save(ev, file = evaluation_path)
-    log_info("Ensemble evaluation for {spp} successfully saved to {evaluation_path}")
-  }
-
-  return(ev)
-  }, error = function(e) {
-    # Catches any unexpected base R errors not caught inside individual steps
-    log_error("Unexpected error in wrapper for {spp}: {e$message}")
-    return(NULL)
-  })
+    }
+  )
 }
