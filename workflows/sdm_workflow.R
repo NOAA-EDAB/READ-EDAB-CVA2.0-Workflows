@@ -851,17 +851,19 @@ plan(sequential)
 plan(multisession, workers = 8)
 combs <- future_map(
   1:length(spp.list$Name),
-  ~ensemble_sdms_wrapper(spp = spp.list$Name[.x],
-                         models = c('brt', 'gam', 'maxent', 'sdmtmb'),
-                         dyn_names = var.list$Short.Name,
-                         release = 'r20250715',
-                         spatial_temporal = FALSE,
-                         mask_bathy = T,
-                         rm_corr = T,
-                         static_variables = statics,
-                         training_years = c(1993, 2019),
-                         test_years = c(2020, 2023),
-                         skip = F),
+  ~ ensemble_sdms_wrapper(
+    spp = spp.list$Name[.x],
+    models = c('brt', 'gam', 'maxent', 'sdmtmb'),
+    dyn_names = var.list$Short.Name,
+    release = 'r20250715',
+    spatial_temporal = FALSE,
+    mask_bathy = T,
+    rm_corr = T,
+    static_variables = statics,
+    training_years = c(1993, 2019),
+    test_years = c(2020, 2023),
+    skip = F
+  ),
   .progress = T,
   .options = furrr_options(scheduling = FALSE)
 )
