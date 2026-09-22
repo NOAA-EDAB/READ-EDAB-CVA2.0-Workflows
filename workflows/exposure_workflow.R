@@ -424,11 +424,11 @@ var.names <- c(
 
 
 #2014-23 v 2025 - 2035
-plan(multisession, workers = 8)
-combs <- future_map(
-  1:nrow(spp.list),
-  ~ variable_exposures_wrapper(
-    spp = spp.list$Name[.x],
+#plan(multisession, workers = 8)
+#combs <- future_map(
+ for(x in  1:nrow(spp.list)){
+  variable_exposures_wrapper(
+    spp = spp.list$Name[x],
     forecast_release = 'r20250925',
     forecast_init = 'i202501',
     hindcast_release = 'r20250715',
@@ -438,11 +438,13 @@ combs <- future_map(
     rm_corr = T,
     dyn_vars = var.names,
     training_years = c(1993, 2019)
-  ),
-  .progress = T,
-  .options = furrr_options(scheduling = FALSE)
-)
-plan(sequential)
+  )
+   print(x)
+ }
+  #.progress = T,
+  #.options = furrr_options(scheduling = FALSE)
+#)
+#plan(sequential)
 
 ##################################
 
@@ -451,20 +453,22 @@ plan(sequential)
 ##################################
 
 #2009-2019 v 2025 - 2035
-plan(multisession, workers = 8)
-combs <- future_map(
-  1:nrow(spp.list),
-  ~ total_exposures_wrapper(
-    spp = spp.list$Name[.x],
+#plan(multisession, workers = 8)
+#combs <- future_map(
+for(x in  1:nrow(spp.list)){
+  total_exposures_wrapper(
+    spp = spp.list$Name[x],
     forecast_release = 'r20250925',
     forecast_init = 'i202501',
     hindcast_release = 'r20250715',
     hindcast_yr_range = '20142023'
-  ),
-  .progress = T,
-  .options = furrr_options(scheduling = FALSE)
-)
-plan(sequential)
+  )
+  print(x)
+}
+ # .progress = T,
+  #.options = furrr_options(scheduling = FALSE)
+#)
+#plan(sequential)
 
 ##################################
 

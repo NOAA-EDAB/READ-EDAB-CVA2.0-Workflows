@@ -85,6 +85,7 @@ total_exposures_wrapper <- function(
       pattern = 'rds'
     )
   )
+  imp_list <- imp_list[names(imp_list) %in% names(weights)]
 
   #pull variable names from mapexp
   dyn_vars <- names(mapExp)
