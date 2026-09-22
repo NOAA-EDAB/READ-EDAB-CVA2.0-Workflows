@@ -3,6 +3,8 @@
 ##################################
 #####SET UP - LOAD EVERY TIME ####
 ##################################
+#describe where you are so that here:here works correctly
+here::i_am('workflows/READ-EDAB-CVA2.0-Workflows/workflows/exposure_workflow.R')
 
 setwd(here::here('Exposure'))
 #load in package
