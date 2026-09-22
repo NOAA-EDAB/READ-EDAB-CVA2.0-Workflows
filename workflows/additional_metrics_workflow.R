@@ -10,15 +10,15 @@ library(spatialcva)
 ##############################
 
 setwd(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/AdditionalMetrics/Directionality"
+  here::here("/AdditionalMetrics/Directionality")
 )
 
 #create combined data.frame
-flist <- dir('./raw_csvs', pattern = '.csv')
+flist <- dir('./raw_csvs', pattern = '.csv', full.names = T)
 scorers <- sub(".*/NECVA2.0_Directional_Scores_(.*)\\.csv$", "\\1", flist)
 direct <- NULL
 #this presumes a similar set up and naming scheme to the model confidence spreadsheets
-for(x in 1:length(flist)){
+for (x in 1:length(flist)) {
   #load in data frame & clean
   f <- read.csv(flist[x], skip = 2) #remove header when loading in
 
@@ -32,8 +32,8 @@ write.csv(direct, file = 'combined_directionality.csv') #save for prosperity (th
 
 #now we calculate metric similar to sensitivity
 species.data.list <- split(direct, direct$Species)
-species.direct <- lapply(species.data.list, directionality, bootstrap = F) #calculate sensitivity w/o bootstrap
-direct.bootstrap <- lapply(species.data.list, directionality, bootstrap = T) #this only takes ~5 minutes for 42 species
+species.direct <- lapply(species.data.list, calculate_directionality, bootstrap = F) #calculate sensitivity w/o bootstrap
+direct.bootstrap <- lapply(species.data.list, calculate_directionality, bootstrap = T) #this only takes ~5 minutes for 42 species
 
 #get certainty
 direct.certainty <- mapply(
@@ -53,18 +53,24 @@ write.csv(directDF, 'directionality_scores.csv') #save results
 #### DISTRIBUTION CHANGE #####
 ##############################
 setwd(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/AdditionalMetrics/DistributionChange"
+  here::here("/AdditionalMetrics/DistributionChange")
 )
 
 
 spp.list <- read.csv(
-  '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/spp_list.csv'
+  file.path(here::here('SDMs'), , 'spp_list.csv')
 )
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
 
 #create species specific folders
 for (x in 1:nrow(spp.list)) {
-  dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main folder
+  dir.create(
+    file.path(
+      here::here("/AdditionalMetrics/DistributionChange"),
+      spp.list$Name[x]
+    ),
+    showWarnings = T
+  ) #main folder
 }
 
 ##calculate for each time frame of interest

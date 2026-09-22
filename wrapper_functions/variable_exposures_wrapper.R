@@ -1,92 +1,214 @@
-#' @title Make Timeseries and Maps of Species-Specific Exposure for each variable
+#' @title Make Timeseries and Maps of Variable Exposure
 #' @description A wrapper function for \code{make_variable_exposure} that handles object loading, and generating mean SDMs from timeseries, and produces both maps and timeseries
 #'
 #' @param spp species name. Used to pull correct data and save outputs in species-specific folders.
-#' @param ens_name name of ensemble species distribution model file to pull
+#' @param spatial_temporal TRUE/FALSE to determine method for normalizing. Helps pull correct ensemble model associated with the MOM6 data with the same name
+#' @param mask_bathy TRUE/FALSE indicating whether or not bathymetry data was used as a mask for raw data before normalization. Helps pull correct ensemble model associated with the MOM6 data with the same name
+#' @param rm_corr TRUE/FALSE indicating whether or not correlated environmental covariates were removed. Helps to pull correct training/test dataframes
+#' @param release release code for MOM6 data. Helps pull correct ensemble predictions associated with the MOM6 data with the same name
+#' @param training_years vector with length equal to 2, indicating the maximum and minimum years that identify the desired training datasets. Used to help select correct environmental variables
 #' @param sdm_threshold value between 0 and 1. Will remove values lower than this threshold from average ensemble model results to help reduce weird aliasing that can occur in workflow. Defaults to 0.1.
-#' @param present_time,future_time character strings indicating the present and future time series to compare. Example: '1993-2019'. Used to pull correct ranked exposure values and save the data properly
+#' @param spp species name. Used to pull correct data and save outputs in species-specific folders.
+#' @param forecast_release,hindcast_release MOM6 release codes for the (f)orecast and (h)indcasts used. Used to pull correct variable exposures
+#' @param forecast_init forecast_initialization code corresponding to the forecast_initalization date of the desired forecast data. Used to pull correct variable exposures
+#' @param hindcast_hindcast_yr_range character string corresponding to the years in the hindcast data used. Used to pull correct ranked exposure values and save the data properly
 #'
 #' @return Nothing is returned. The outputs from \code{make_variable_exposure(type = 'map')} and \code{make_variable_exposure(type = 'timeseries')} are saved in the appropriate folders
 
 variable_exposures_wrapper <- function(
   spp,
-  ens_name,
+  forecast_release,
+  forecast_init,
+  hindcast_release,
+  hindcast_yr_range,
+  spatial_temporal,
+  mask_bathy,
+  rm_corr,
   sdm_threshold = 0.1,
-  present_time,
-  future_time
+  dyn_vars,
+  training_years
 ) {
-  #open log file
-  sink(file = file.path(getwd(), 'logs', 'variable_averages.log'), append = T)
+  # ==========================================================
+  # STEP 0: Set Up
+  # ==========================================================
+  # Set up the logger to output to your specific file
+  log_file <- file.path(here::here('Exposure'), 'logs', 'variable_exposure.log')
+  log_appender(appender_file(log_file))
 
-  # Ensure the sinks are closed when the function exits, regardless of how it exits.
-  on.exit({
-    #sink(type = "message")
-    sink()
-  })
+  log_info("Calculating variable exposures for {spp}")
 
-  print(Sys.time())
-  print(spp)
+  #suffixes to help locate correct data
+  suffix <- if (spatial_temporal) "" else "_global"
+  bathy_suffix <- if (mask_bathy) "masked" else ""
+  corr_suffix <- if (rm_corr) "rmcorr" else ""
 
-  #load SDM results and average monthly
-  load(paste0('./', spp, '/output_rasters/', ens_name, '.RData')) #abund
+  # Define standard paths
+  predictions_path <- file.path(
+    here::here('SDMs'),
+    spp,
+    'output_rasters',
+    paste0(
+      'ENSEMBLE_hindcast_',
+      hindcast_release,
+      '_',
+      bathy_suffix,
+      suffix,
+      '.tif'
+    )
+  )
+
+  # Load training data
+  training_name <- file.path(
+    here::here('SDMs'),
+    spp,
+    paste0(
+      'training_',
+      training_years[1],
+      '_',
+      training_years[2],
+      '_',
+      corr_suffix,
+      '_hindcast_',
+      hindcast_release,
+      '_',
+      bathy_suffix,
+      suffix,
+      '.csv'
+    )
+  )
+
+  if (!file.exists(training_name)) {
+    log_error("Data file missing for species: {spp}.")
+    return(NULL) # Exit function gracefully
+  }
+
+  dfT <- read.csv(file.path(training_name))
+
+  # Get covariates in dataframe
+  d_names <- dyn_vars[dyn_vars %in% names(dfT)]
+
+  # ==========================================================
+  # STEP 1: Load in Data
+  # ==========================================================
+  #model
+  if (!file.exists(predictions_path)) {
+    log_error("Ensemble model missing for species: {spp}")
+    stop("Aborting: Ensemble model not found.")
+  }
+  abund <- terra::rast(predictions_path)
 
   #avg ensemble HSM
-  avgHSM <- vector(mode = 'list', length = 12)
-  for (y in 1:12) {
-    mn <- seq(y, length(abund), by = 12)
-    MNS <- raster::stack(abund[mn])
-    avgHSM[[y]] <- raster::calc(MNS, fun = mean, na.rm = T)
-  } #end for
-  avgHSM <- raster::stack(avgHSM)
+  avgHSM <- terra::tapp(
+    abund,
+    rep(1:12, times = terra::nlyr(abund) / 12),
+    fun = 'mean'
+  ) #assuming ensemble is predicted on monthly timesteps and encompases complete years (ie starts in a January and stops in a December), create monthly average data
   names(avgHSM) <- month.abb
 
-  ###remove hsm with less than 0.1 to avoid weird aliasing
-  avgHSM[avgHSM < sdm_threshold] <- NA
+  ###remove hsm with less than threshold to avoid weird aliasing
+  avgHSM <- terra::ifel(avgHSM <= sdm_threshold, NA, avgHSM)
 
-  ###to add: subset avgHSM here by stock area if needed to calculate exposure across time and space appropriately
+  #ranked exposure data
+  exp_rasters <- vector(mode = 'list', length = length(d_names))
+  for (x in seq_along(d_names)) {
+    raster_path <- paste0(
+      './RawExposure/Data/',
+      d_names[x],
+      '_rankedexposure_',
+      forecast_release,
+      '_',
+      forecast_init,
+      '_',
+      hindcast_release,
+      '_',
+      hindcast_yr_range,
+      '_global.tif'
+    )
+    if (!file.exists(raster_path)) {
+      log_error("Missing upstream raster for {spp}: {raster_path}")
+      return(NULL)
+    }
 
-  #load in ranked data
-  load(paste0(
-    './RawExposure/Data/',
-    present_time,
-    ' vs ',
-    future_time,
-    '_exposure_ranked.RData'
-  )) #expRanked
+    exp <- terra::rast(raster_path)
 
+    #reproject because there are slight differences in resolution/extent for some reason, especially with the forecasts
+    exp_aligned <- terra::resample(exp, avgHSM, method = "bilinear")
+
+    exp_rasters[[x]] <- exp_aligned
+  }
+  names(exp_rasters) <- d_names
+
+  # ==========================================================
+  # STEP 2: Calculate Exposures Across Space
+  # ==========================================================
   #map
   mapExp <- make_variable_exposure(
     type = 'map',
-    ranked_exposure = expRanked,
+    ranked_exposure = exp_rasters,
     sdm_raster = avgHSM
   )
-  save(
-    mapExp,
-    file = paste0(
-      file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/variable_exposure_maps.RData'
-    )
+  terra::writeRaster(
+    x = mapExp,
+    filename = paste0(
+      file.path(here::here('Exposure'), spp, 'Data'),
+      paste0(
+        '/variable_exposure_maps_',
+        forecast_release,
+        '_',
+        forecast_init,
+        '_',
+        hindcast_release,
+        '_',
+        hindcast_yr_range,
+        '.tif'
+      )
+    ),
+    overwrite = TRUE
   )
+
+  log_info('spatial variable exposures for {spp} complete.')
+
+  # ==========================================================
+  # STEP 3: Calculate Exposures Across Time
+  # ==========================================================
+
+  if (file.exists(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))) {
+    stocks <- terra::vect(paste0(
+      '../shpfiles/species_stock_areas/',
+      spp,
+      '.shp'
+    ))
+  } else {
+    stocks <- NULL
+    log_info(
+      'No stock shpfiles found for {spp}. Only calculating global variable exposure timeseries'
+    )
+  }
 
   #timeseries
   vecExp <- make_variable_exposure(
     type = 'timeseries',
-    ranked_exposure = expRanked,
-    sdm_raster = avgHSM
+    ranked_exposure = exp_rasters,
+    sdm_raster = avgHSM,
+    stock_polys = stocks
   )
-  save(
+  saveRDS(
     vecExp,
     file = paste0(
-      file.path(getwd(), spp, 'Data'),
-      '/',
-      present_time,
-      ' vs ',
-      future_time,
-      '/variable_exposure_timeseries.RData'
+      file.path(here::here('Exposure'), spp, 'Data'),
+      paste0(
+        '/variable_exposure_timeseries_',
+        forecast_release,
+        '_',
+        forecast_init,
+        '_',
+        hindcast_release,
+        '_',
+        hindcast_yr_range,
+        '.rds'
+      )
     )
   )
+
+  log_info('variable exposure timeseries for {spp} complete.')
 }
