@@ -3,14 +3,21 @@
 ##################################
 #####SET UP - LOAD EVERY TIME ####
 ##################################
+#describe where you are so that here:here works correctly
+here::i_am('workflows/READ-EDAB-CVA2.0-Workflows/workflows/exposure_workflow.R')
 
-setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/Exposure')
-### source functions
+setwd(here::here('Exposure'))
+#load in package
 library(spatialcva)
+
+#load additional packages needed for workflows
+library(future)
+library(furrr)
+library(logger)
 
 #load species list for loops
 spp.list <- read.csv(
-  '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/spp_list.csv'
+  '../SDMs/spp_list.csv'
 )
 #spp.list <- spp.list[,c(1:6)]
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name) #make clean names to make folders if necessary/match to folder names
@@ -19,461 +26,277 @@ spp.list <- spp.list[-42, ]
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
-  dir.create(file.path(getwd(), spp.list$Name[x]), showWarnings = T) #main species folder
-  dir.create(file.path(getwd(), spp.list$Name[x], 'Data'), showWarnings = T) #data folder
-  dir.create(file.path(getwd(), spp.list$Name[x], 'Figures'), showWarnings = T) #figures folder
+  dir.create(
+    file.path(here::here('Exposure'), spp.list$Name[x]),
+    showWarnings = T
+  ) #main species folder
+  dir.create(
+    file.path(here::here('Exposure'), spp.list$Name[x], 'Data'),
+    showWarnings = T
+  ) #data folder
+  dir.create(
+    file.path(here::here('Exposure'), spp.list$Name[x], 'Figures'),
+    showWarnings = T
+  ) #figures folder
 }
 ##################################
 
 ##################################
 ### calculate & rank exposure
 ##################################
-###############step 1 - calculate exposure
+
+#load in variables
+var.names <- c(
+  'bottomT',
+  'bottomO2',
+  'bottomS',
+  'bottomArg',
+  'surfaceT',
+  'surfaceS',
+  'surfacepH',
+  'MLD',
+  'diazPP',
+  'smallPP',
+  'mediumPP',
+  'largePP',
+  'smallZoo',
+  'mediumZoo',
+  'largeZoo',
+  'intNPP',
+  'POC'
+)
+
+#load in bathy for masking
+staticR <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif') #staticR
+#bathy object = staticR$bathy
+bathy <- terra::wrap(staticR$bathy) #this is required because of the way terra holds rasters in memory and how things are distributed in parallel with future_map; the bathy raster gets unwrapped within the wrapper function
+
+
 #only needs to be done once for each time period
-
-#1993-08 v 2009-2019
-load(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_082025.RData"
-) #load MOM6 raw data (object name = raw)
-#data cleanup
-pre <- fut <- vector(mode = 'list', length = length(raw))
-for (x in 1:length(raw)) {
-  pre[[x]] <- list(raster::subset(raw[[x]][[1]], 1:192))
-}
-
-for (x in 1:length(raw)) {
-  fut[[x]] <- list(raster::subset(raw[[x]][[1]], 193:324))
-}
-
-exp9309 <- calcExposure(pre, fut)
-names(exp9309) <- names(raw)
-save(exp9309, file = './RawExposure/Data/1993_2008_v_2009_2019_exposure.RData')
-
-#make and save nice plots of each variable
-for (x in 1:length(exp9309)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/1993-2008 vs 2009-19/',
-      names(exp9309[x]),
-      '_exposure.pdf'
-    ),
-    width = 11,
-    height = 8
+#2014-2023 v 2025-2035
+for (x in var.names) {
+  hindcast_path <- paste0(
+    '../SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_hindcast_r20250715_global.tif'
   )
-  plot(exp9309[[x]], main = month.abb, zlim = range(exp9309[[x]][], na.rm = T))
-  dev.off()
-  print(x)
-}
+  hindcast <- terra::rast(hindcast_path)
+  hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
 
-##plot raw differences - may help with explanations?
-#make climatologies (and present sd while we're here )
-mPres <- mFut <- sdPres <- vector(mode = 'list', length = length(pre))
-for (v in 1:length(pre)) {
-  climP <- climF <- sdP <- vector(mode = 'list', length = 12)
-  for (x in 1:12) {
-    #take mean of 'present' and 'future'
-    climP[[x]] <- raster::calc(
-      raster::subset(
-        pre[[v]][[1]],
-        seq(x, raster::nlayers(pre[[v]][[1]]), by = 12)
-      ),
-      mean
-    )
-    climF[[x]] <- raster::calc(
-      raster::subset(
-        fut[[v]][[1]],
-        seq(x, raster::nlayers(fut[[v]][[1]]), by = 12)
-      ),
-      mean
-    )
+  #get years from names to help with naming output
+  yrs <- as.numeric(sub(".*\\.", "", names(hindcast)))
 
-    ##calculate SD
-    sdP[[x]] <- raster::calc(
-      raster::subset(
-        pre[[v]][[1]],
-        seq(x, raster::nlayers(pre[[v]][[1]]), by = 12)
-      ),
-      sd
-    )
-  }
-  mPres[[v]] <- raster::stack(climP)
-  mFut[[v]] <- raster::stack(climF)
-  sdPres[[v]] <- raster::stack(sdP)
-}
-#### plot climatologies
-#1993-2008
-for (x in 1:length(mPres)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/climatologies/',
-      names(raw[x]),
-      '_1993_2008_climatology.pdf'
-    ),
-    width = 11,
-    height = 8
+  forecast_path <- paste0(
+    '../SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_forecast_r20250925_i202501_global_average.tif'
   )
-  plot(mPres[[x]], main = month.abb, zlim = range(mPres[[x]][], na.rm = T))
-  dev.off()
-  print(x)
+  forecast <- terra::rast(forecast_path)
+
+  #raw exposure
+  raw_exp <- calculate_raw_exposure(
+    present = hindcast,
+    future = forecast,
+    spatial_temporal = T,
+    mask_bathy = T,
+    bathy = bathy,
+    bathy_range = c(-1000, 0)
+  )
+  terra::writeRaster(
+    raw_exp,
+    filename = paste0(
+      './RawExposure/Data/',
+      x,
+      '_rawexposure_r20250925_i202501_r20250715_',
+      min(yrs),
+      max(yrs),
+      '_global.tif'
+    ),
+    overwrite = T
+  )
+
+  #rank exposure
+  ranked_exp <- rank_exposure(
+    exposure = raw_exp,
+    flip = !(x %in% c('bottomT', 'surfaceT', 'bottomArg', 'MLD'))
+  ) #if x is one of these names, set flip to F; if not, flip will be T
+  terra::writeRaster(
+    ranked_exp,
+    filename = paste0(
+      './RawExposure/Data/',
+      x,
+      '_rankedexposure_r20250925_i202501_r20250715_',
+      min(yrs),
+      max(yrs),
+      '_global.tif'
+    ),
+    overwrite = T
+  )
 }
 
-#2009-2019
-for (x in 1:length(mPres)) {
+#make and save nice plots of raw exposure, ranked exposure, and climatologies
+#climatologies
+#2014-2023
+for (x in var.names) {
+  hindcast_path <- paste0(
+    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_hindcast_r20250715_global.tif'
+  )
+  hindcast <- terra::rast(hindcast_path)
+  hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
+
+  avgs <- terra::tapp(
+    hindcast,
+    rep(1:12, times = terra::nlyr(hindcast) / 12),
+    fun = 'mean'
+  )
+
   pdf(
     paste0(
       './RawExposure/Figures/climatologies/',
-      names(raw[x]),
-      '_2009_2019_climatology.pdf'
+      x,
+      '_climatology_hindcast_r20250715.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(mFut[[x]], main = month.abb, zlim = range(mFut[[x]][], na.rm = T))
+  terra::plot(avgs, main = month.abb, range = range(avgs[], na.rm = T))
   dev.off()
   print(x)
 }
 
-###plot differences
-for (x in 1:length(mPres)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/1993-2008 vs 2009-19/differences/',
-      names(raw[x]),
-      '_difference.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  df <- mFut[[x]] - mPres[[x]]
-  plot(df, main = month.abb, zlim = range(df[], na.rm = T))
-  dev.off()
-  print(x)
-}
-
-###plot present standard deviations
-for (x in 1:length(sdPres)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/1993-2008 vs 2009-19/present_sds/',
-      names(raw[x]),
-      '_sds.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(sdPres[[x]], main = month.abb, zlim = range(sdPres[[x]][], na.rm = T))
-  dev.off()
-  print(x)
-}
-
-
-################
-#2009-2019 v 2020 - 2030
-#get 09-19 data
-load(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_082025.RData"
-) #load MOM6 raw data (object name = raw)
-#data cleanup
-pre <- fut <- vector(mode = 'list', length = length(raw))
-for (x in 1:length(raw)) {
-  pre[[x]] <- list(raster::subset(raw[[x]][[1]], 193:324))
-}
-#2020-2030 data
-load(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_decadalforecast_2020_2030_102025.RData"
-) #load MOM6 raw data (object name = raw)
-fut <- raw
-
-exp0920 <- calcExposure(pre, fut)
-names(exp0920) <- names(raw)
-save(exp0920, file = './RawExposure/Data/2009_2019_v_2020_2030_exposure.RData')
-
-#make and save nice plots of each variable
-for (x in 1:length(exp0920)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/2009-19 vs 2020-30/',
-      names(exp0920[x]),
-      '_exposure.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(exp0920[[x]], main = month.abb, zlim = range(exp0920[[x]][], na.rm = T))
-  dev.off()
-  print(x)
-}
-
-#make climatologies (and present sd while we're here )
-mPres <- mFut <- sdPres <- vector(mode = 'list', length = length(pre))
-for (v in 1:length(pre)) {
-  climP <- climF <- sdP <- vector(mode = 'list', length = 12)
-  for (x in 1:12) {
-    #take mean of 'present' and 'future'
-    climP[[x]] <- raster::calc(
-      raster::subset(
-        pre[[v]][[1]],
-        seq(x, raster::nlayers(pre[[v]][[1]]), by = 12)
-      ),
-      mean
-    )
-    climF[[x]] <- raster::calc(
-      raster::subset(
-        fut[[v]][[1]],
-        seq(x, raster::nlayers(fut[[v]][[1]]), by = 12)
-      ),
-      mean
-    )
-
-    ##calculate SD
-    sdP[[x]] <- raster::calc(
-      raster::subset(
-        pre[[v]][[1]],
-        seq(x, raster::nlayers(pre[[v]][[1]]), by = 12)
-      ),
-      sd
-    )
-  }
-  mPres[[v]] <- raster::stack(climP)
-  mFut[[v]] <- raster::stack(climF)
-  sdPres[[v]] <- raster::stack(sdP)
-}
-#### plot climatologies (just fut since we already have 09-19)
-#2020-2030
-for (x in 1:length(mFut)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/climatologies/',
-      names(raw[x]),
-      '_2020_2030_climatology.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(mFut[[x]], main = month.abb, zlim = range(mFut[[x]][], na.rm = T))
-  dev.off()
-  print(x)
-}
-
-###plot differences
-for (x in 1:length(mPres)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/2009-19 vs 2020-30/differences/',
-      names(raw[x]),
-      '_difference.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  df <- mFut[[x]] - mPres[[x]]
-  plot(df, main = month.abb, zlim = range(df[], na.rm = T))
-  dev.off()
-  print(x)
-}
-
-###plot present standard deviations
-for (x in 1:length(sdPres)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/2009-19 vs 2020-30/present_sds/',
-      names(raw[x]),
-      '_sds.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(sdPres[[x]], main = month.abb, zlim = range(sdPres[[x]][], na.rm = T))
-  dev.off()
-  print(x)
-}
-
-############
-#2009-2019 v 2025-2035
-#get 09-19 data
-load(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_082025.RData"
-) #load MOM6 raw data (object name = raw)
-#data cleanup
-pre <- fut <- vector(mode = 'list', length = length(raw))
-for (x in 1:length(raw)) {
-  pre[[x]] <- list(raster::subset(raw[[x]][[1]], 193:324))
-}
-load(
-  "/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_decadalforecast_2025_2035_102025.RData"
-) #load MOM6 raw data (object name = raw)
-fut <- raw
-
-exp0925 <- calcExposure(pre, fut)
-names(exp0925) <- names(raw)
-save(exp0925, file = './RawExposure/Data/2009_2019_v_2025_2035_exposure.RData')
-
-#make and save nice plots of each variable
-for (x in 1:length(exp0925)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/2009-19 vs 2025-35/',
-      names(exp0925[x]),
-      '_exposure.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(exp0925[[x]], main = month.abb, zlim = range(exp0925[[x]][], na.rm = T))
-  dev.off()
-  print(x)
-}
-
-#make climatologies
-mPres <- mFut <- sdPres <- vector(mode = 'list', length = length(pre))
-for (v in 1:length(pre)) {
-  climP <- climF <- sdP <- vector(mode = 'list', length = 12)
-  for (x in 1:12) {
-    #take mean of 'present' and 'future'
-    climP[[x]] <- raster::calc(
-      raster::subset(
-        pre[[v]][[1]],
-        seq(x, raster::nlayers(pre[[v]][[1]]), by = 12)
-      ),
-      mean
-    )
-    climF[[x]] <- raster::calc(
-      raster::subset(
-        fut[[v]][[1]],
-        seq(x, raster::nlayers(fut[[v]][[1]]), by = 12)
-      ),
-      mean
-    )
-
-    ##calculate SD
-    # sdP[[x]] <- raster::calc(raster::subset(pre[[v]][[1]], seq(x, raster::nlayers(pre[[v]][[1]]), by = 12)), sd)
-  }
-  mPres[[v]] <- raster::stack(climP)
-  mFut[[v]] <- raster::stack(climF)
-  #sdPres[[v]] <- raster::stack(sdP)
-}
-#don't need SD again since we've already done it for 09-19 - copied from other folder
-
-#### plot climatologies (just fut since we already have 09-19)
 #2025-2035
-for (x in 1:length(mFut)) {
+for (x in var.names) {
+  forecast_path <- paste0(
+    '../SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_forecast_r20250925_i202501_global_average.tif'
+  )
+  forecast <- terra::rast(forecast_path)
+
+  avgs <- terra::tapp(
+    forecast,
+    rep(1:12, times = terra::nlyr(forecast) / 12),
+    fun = 'mean'
+  )
+
   pdf(
     paste0(
       './RawExposure/Figures/climatologies/',
-      names(raw[x]),
-      '_2025_2035_climatology.pdf'
+      x,
+      '_climatology_forecast_r20250925_i202501.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(mFut[[x]], main = month.abb, zlim = range(mFut[[x]][], na.rm = T))
+  terra::plot(avgs, main = month.abb, range = range(avgs[], na.rm = T))
   dev.off()
   print(x)
 }
 
-###plot differences
-for (x in 1:length(mPres)) {
+#forecast - hindcast
+for (x in var.names) {
+  hindcast_path <- paste0(
+    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_hindcast_r20250715_global.tif'
+  )
+  hindcast <- terra::rast(hindcast_path)
+  hindcast <- hindcast[[253:372]] #last ten years of hindcast (2014-2023)
+  hAvg <- avg_model_data(hindcast, spatial_temporal = T)
+
+  forecast_path <- paste0(
+    '../SDMs/Data/MOM6/raw_MOM6_',
+    x,
+    '_forecast_r20250925_i202501_global_average.tif'
+  )
+  forecast <- terra::rast(forecast_path)
+
+  fAvg <- terra::tapp(
+    forecast,
+    rep(1:12, times = terra::nlyr(forecast) / 12),
+    fun = 'mean'
+  )
+  fAvg <- terra::resample(fAvg, hAvg, method = "bilinear")
+
+  diff_rast <- fAvg - hAvg
+
   pdf(
     paste0(
-      './RawExposure/Figures/2009-19 vs 2025-35/differences/',
-      names(raw[x]),
-      '_difference.pdf'
+      './RawExposure/Figures/differences/',
+      x,
+      '_differences.pdf'
     ),
     width = 11,
     height = 8
   )
-  df <- mFut[[x]] - mPres[[x]]
-  plot(df, main = month.abb, zlim = range(df[], na.rm = T))
+  terra::plot(
+    diff_rast,
+    main = month.abb,
+    range = range(diff_rast[], na.rm = T)
+  )
   dev.off()
   print(x)
 }
 
-##don't need to plot SD again since we did it already - figures copied to this folder for consistency
-
-########################step 2 - rank exposure
-#1993-08 v 2009-2019
-load('./RawExposure/Data/1993_2008_v_2009_2019_exposure.RData') #load raw exposure (exp9309)
-expRanked <- rankExposure(
-  exp9309,
-  flip = T,
-  noflipList = c('bottomT', 'surfaceT', 'bottomArg', 'MLD')
-)
-save(
-  expRanked,
-  file = './RawExposure/Data/1993_2008_v_2009_2019_exposure_ranked.RData'
-)
-
-#make and save nice plots of each variable
-for (x in 1:length(expRanked)) {
+#raw exposure
+for (x in var.names) {
+  raw <- terra::rast(paste0(
+    './RawExposure/Data/',
+    x,
+    '_rawexposure_r20250925_i202501_r20250715_20142023_global.tif'
+  ))
   pdf(
     paste0(
-      './RawExposure/Figures/1993-2008 vs 2009-19/',
-      names(expRanked[x]),
-      '_exposure_ranked.pdf'
+      './RawExposure/Figures/raw/',
+      x,
+      '_exposure.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(expRanked[[x]], main = month.abb)
+  terra::plot(raw, main = month.abb, range = range(raw[], na.rm = T))
   dev.off()
   print(x)
 }
 
-#2009-2019 v 2020-30
-load('./RawExposure/Data/2009_2019_v_2020_2030_exposure.RData') #load raw exposure (exp0920)
-expRanked <- rankExposure(
-  exp0920,
-  flip = T,
-  noflipList = c('bottomT', 'surfaceT', 'bottomArg', 'MLD')
-)
-save(
-  expRanked,
-  file = './RawExposure/Data/2009_2019_v_2020_2030_exposure_ranked.RData'
-)
+#ranked exposure
+for (x in var.names) {
+  ranked <- terra::rast(paste0(
+    './RawExposure/Data/',
+    x,
+    '_rankedexposure_r20250925_i202501_r20250715_20142023_global.tif'
+  ))
 
-#make and save nice plots of each variable
-for (x in 1:length(expRanked)) {
+  # 1. Create a duplicate of your raster specifically for plotting
+  plot_ranked <- ranked
+
+  # 2. Define your 4 categories
+  categories <- data.frame(id = 1:4, class = as.character(1:4))
+
+  # 3. Apply these categorical levels ONLY to the temporary plot object
+  levels(plot_ranked) <- replicate(
+    terra::nlyr(plot_ranked),
+    categories,
+    simplify = FALSE
+  )
+
   pdf(
     paste0(
-      './RawExposure/Figures/2009-19 vs 2020-30/',
-      names(expRanked[x]),
-      '_exposure_ranked.pdf'
+      './RawExposure/Figures/ranked/',
+      x,
+      '_ranked_exposure.pdf'
     ),
     width = 11,
     height = 8
   )
-  plot(expRanked[[x]], main = month.abb)
+  # 4. Plot the temporary object
+  terra::plot(plot_ranked, main = month.abb, range = c(1, 4), all_levels = T)
   dev.off()
   print(x)
 }
 
-#2009-2019 v 2025-35
-load('./RawExposure/Data/2009_2019_v_2025_2035_exposure.RData') #load raw exposure (exp0925)
-expRanked <- rankExposure(
-  exp0925,
-  flip = T,
-  noflipList = c('bottomT', 'surfaceT', 'bottomArg', 'MLD')
-)
-save(
-  expRanked,
-  file = './RawExposure/Data/2009_2019_v_2025_2035_exposure_ranked.RData'
-)
-
-#make and save nice plots of each variable
-for (x in 1:length(expRanked)) {
-  pdf(
-    paste0(
-      './RawExposure/Figures/2009-19 vs 2025-35/',
-      names(expRanked[x]),
-      '_exposure_ranked.pdf'
-    ),
-    width = 11,
-    height = 8
-  )
-  plot(expRanked[[x]], main = month.abb)
-  dev.off()
-  print(x)
-}
 ##################################
 
 ##################################
@@ -601,11 +424,11 @@ var.names <- c(
 
 
 #2014-23 v 2025 - 2035
-plan(multisession, workers = 8)
-combs <- future_map(
-  1:nrow(spp.list),
-  ~ variable_exposures_wrapper(
-    spp = spp.list$Name[.x],
+#plan(multisession, workers = 8)
+#combs <- future_map(
+for (x in 1:nrow(spp.list)) {
+  variable_exposures_wrapper(
+    spp = spp.list$Name[x],
     forecast_release = 'r20250925',
     forecast_init = 'i202501',
     hindcast_release = 'r20250715',
@@ -615,11 +438,13 @@ combs <- future_map(
     rm_corr = T,
     dyn_vars = var.names,
     training_years = c(1993, 2019)
-  ),
-  .progress = T,
-  .options = furrr_options(scheduling = FALSE)
-)
-plan(sequential)
+  )
+  print(x)
+}
+#.progress = T,
+#.options = furrr_options(scheduling = FALSE)
+#)
+#plan(sequential)
 
 ##################################
 
@@ -628,20 +453,22 @@ plan(sequential)
 ##################################
 
 #2009-2019 v 2025 - 2035
-plan(multisession, workers = 8)
-combs <- future_map(
-  1:nrow(spp.list),
-  ~ total_exposures_wrapper(
-    spp = spp.list$Name[.x],
+#plan(multisession, workers = 8)
+#combs <- future_map(
+for (x in 1:nrow(spp.list)) {
+  total_exposures_wrapper(
+    spp = spp.list$Name[x],
     forecast_release = 'r20250925',
     forecast_init = 'i202501',
     hindcast_release = 'r20250715',
     hindcast_yr_range = '20142023'
-  ),
-  .progress = T,
-  .options = furrr_options(scheduling = FALSE)
-)
-plan(sequential)
+  )
+  print(x)
+}
+# .progress = T,
+#.options = furrr_options(scheduling = FALSE)
+#)
+#plan(sequential)
 
 ##################################
 
