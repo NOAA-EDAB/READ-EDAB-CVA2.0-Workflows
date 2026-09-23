@@ -848,12 +848,12 @@ plan(sequential)
 
 #ENSEMBLE
 #runtime:
-sppnames <- spp.list$Name[c(28, 30, 32:34)]
-plan(multisession, workers = 5)
+plan(multisession, workers = 8)
 combs <- future_map(
-  1:length(sppnames),
+  1:length(spp.list$Name),
   ~ ensemble_sdms_wrapper(
-    spp = sppnames[.x],
+    spp = spp.list$Name[.x],
+    models = c('brt', 'gam', 'maxent', 'sdmtmb'),
     dyn_names = var.list$Short.Name,
     release = 'r20250715',
     spatial_temporal = FALSE,
