@@ -179,7 +179,8 @@ total_exposures_wrapper <- function(
   allRasts <- c(mapTot, mapImp, mapExp)
 
   #calculate global means
-  globals <- terra::global(allRasts, fun = 'mean', na.rm = T)
+  globalAvg <- terra::global(allRasts, fun = 'mean', na.rm = T)
+  globalSD <- terra::global(allRasts, fun = 'sd', na.rm = T)
 
   #if stock polygons exist for the species, calculate averages within stocks
   if (file.exists(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))) {
@@ -190,16 +191,21 @@ total_exposures_wrapper <- function(
     ))
     #average within polygons
     expAvg <- terra::extract(allRasts, stocks, fun = 'mean', na.rm = T)
+    expSD <- terra::extract(allRasts, stocks, fun = 'sd', na.rm = T)
 
     #combine
-    expAvg <- rbind(t(globals), expAvg[, -1])
+    expAvg <- rbind(t(globalAvg), expAvg[, -1])
+    expSD <- rbind(t(globalSD), expSD[, -1])
+    
     #add stock column
     expAvg$stock <- c('global', stocks$stock_area)
+    expSD$stock <- c('global', stocks$stock_area)
   } else {
     log_info(
       'No stock shpfiles found for {spp}. Only calculating global total exposure from maps'
     )
-    expAvg <- t(globals)
+    expAvg <- t(globalAvg)
+    expSD <- t(globalSD)
   }
 
   saveRDS(
@@ -219,6 +225,25 @@ total_exposures_wrapper <- function(
       )
     )
   )
+  
+  saveRDS(
+    expSD,
+    file = paste0(
+      file.path(getwd(), spp, 'Data'),
+      paste0(
+        '/total_exposure_map_stdevs_',
+        forecast_release,
+        '_',
+        forecast_init,
+        '_',
+        hindcast_release,
+        '_',
+        hindcast_yr_range,
+        '.rds'
+      )
+    )
+  )
+
   # ==========================================================
   # STEP 4: Calculate Exposures Across Time
   # ==========================================================
