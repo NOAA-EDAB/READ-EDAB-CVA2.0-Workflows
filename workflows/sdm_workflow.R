@@ -1041,7 +1041,7 @@ statics <- terra::rast('./Data/staticVariables_masked_norm_terra.tif')
 statics <- resample(statics, norm_forecast[[1]], method = "bilinear") #using raw data from pull_mom6_hindcast
 statics <- terra::wrap(statics)
 
-mods <- c("BRT", "GAM", "MAXENT", "RF", "SDMTMB")
+mods <- c("BRT", "GAM", "MAXENT", "SDMTMB")
 
 # 1. Load parallel packages
 library(foreach)
