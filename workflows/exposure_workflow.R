@@ -715,6 +715,8 @@ stock_key <- c(
   "global" = "Range"
 )
 
+ns_stocks <- c('Range', 'Northern', 'Eastern Gulf of Maine', 'Western Gulf of Maine', 'Gulf of Maine', 'Gulf of Maine/Georges Bank', 'Georges Bank', 'Gulf of Maine/Cape Cod', 'Southern New England', 'MA/RI', 'NJ/NY', 'Southern New England/Mid-Atlantic', 'Long Island Sound', 'Mid Atlantic Bight', 'DE/MA/VA', 'Southern')
+
 make_exposure_plots(
   species = spp.list$Name,
   type = c('variable', 'total', 'important', 'radar'),
@@ -736,6 +738,7 @@ make_exposure_table(
   hindcast_yr_range = '20142023',
   variable_df = varDF,
   stock_key = stock_key,
+  stock_order = ns_stocks,
   table_dir = './Summary_Tables/'
 )
 
