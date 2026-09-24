@@ -3,6 +3,7 @@
 ##################################
 #####SET UP - LOAD EVERY TIME ####
 ##################################
+here::i_am('workflows/READ-EDAB-CVA2.0-Workflows/workflows/exposure_workflow.R')
 
 setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/Exposure')
 ### source functions
@@ -699,6 +700,20 @@ varDF <- data.frame(
   )
 )
 
+# Map raw abbreviations to long display names
+stock_key <- c(
+  "EGOM"   = "Eastern Gulf of Maine",
+  "GBK"    = "Georges Bank",
+  "SNE"    = "Southern New England",
+  "WGOM"   = "Western Gulf of Maine",
+  "GOM" = "Gulf of Maine",
+  "GBGOM" = "Gulf of Maine/Georges Bank",
+  "SNEMA"    = "Southern New England/Mid-Atlantic",
+  "CCGOM" = "Gulf of Maine/Cape Cod",
+  "NORTH" = "Northern",
+  "SOUTH" = 'Southern',
+  "global" = "Range"
+)
 
 make_exposure_plots(
   species = spp.list$Name,
@@ -713,11 +728,15 @@ make_exposure_plots(
 )
 
 ## make exposure summary tables
-makereport_exposuretable(
+make_exposure_table(
   species = spp.list$Name,
-  presentTime = '2009-2019',
-  futureTime = '2025-2035',
-  variableDF = varDF
+  forecast_release = 'r20250925',
+  forecast_init = 'i202501',
+  hindcast_release = 'r20250715',
+  hindcast_yr_range = '20142023',
+  variable_df = varDF,
+  stock_key = stock_key,
+  table_dir = './Summary_Tables/'
 )
 
 ##################################
