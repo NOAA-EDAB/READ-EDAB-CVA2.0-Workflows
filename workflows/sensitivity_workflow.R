@@ -264,3 +264,78 @@ for(x in 1:length(unique(sensitivityDF$Species))){
   print(unique(sensitivityDF$Species)[x])
   plot(srast, main = unique(sensitivityDF$Species)[x])
 }
+
+###save plots
+# Map raw abbreviations to match stock names
+stock_key <- c(
+  "EGOM"   = "Eastern Gulf of Maine",
+  "GBK"    = "Georges Bank",
+  "SNE"    = "Southern New England",
+  "WGOM"   = "Western Gulf of Maine",
+  "GOM" = "Gulf of Maine",
+  "GBGOM" = "Gulf of Maine/Georges Bank",
+  "SNEMA"    = "Southern New England/Mid-Atlantic",
+  "CCGOM" = "Gulf of Maine/Cape Cod",
+  "NORTH" = "Northern",
+  "SOUTH" = 'Southern',
+  "global" = "Range"
+)
+
+
+#get bathymetry for plotting
+statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+bathy <- statics$bathy
+
+#get coastline for plotting
+land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+landNE <- terra::crop(land, bathy)
+
+#quick species fix 
+sensitivityDF$Species <- replace(sensitivityDF$Species, sensitivityDF$Species == 'Monkfish Goosefish', 'Monkfish')
+sensitivityDF$Species <- replace(sensitivityDF$Species, sensitivityDF$Species == 'Long finned squid', 'Long fin squid')
+sensitivityDF$Species <- replace(sensitivityDF$Species, sensitivityDF$Species == 'Short finned squid', 'Short fin squid')
+
+for(x in 1:length(unique(sensitivityDF$Species))){
+
+  #load it in
+  srast <- terra::rast(paste0(
+      here::here('Sensitivity/Final/rasters'),
+      paste0(
+        '/',
+        gsub(" ", '', unique(sensitivityDF$Species)[x]),
+        '_',
+        'sensitivity_v1.tif'
+      )
+    )
+  )
+  
+  #load stocks if available
+  if (file.exists(paste0('../shpfiles/species_stock_areas/', gsub(" ", '', unique(sensitivityDF$Species)[x]), '.shp'))) {
+    stocks <- terra::vect(paste0(
+      '../shpfiles/species_stock_areas/',
+      gsub(" ", '', unique(sensitivityDF$Species)[x]),
+      '.shp'
+    ))
+  } else {
+    stocks <- NULL
+  }
+  
+  plot_total_map_timeseries(map = srast,
+                            timeseries = NULL,
+                            metric = 'sensitivity',
+                            stocks= stocks,
+                            stock_key = stock_key,
+                            fig_name = paste0(
+                              here::here('Sensitivity/Final/rasters'),
+                              paste0(
+                                '/',
+                                gsub(" ", '', unique(sensitivityDF$Species)[x]),
+                                '_',
+                                'sensitivity_v1.pdf'
+                              )
+                            ),
+                            coastline = landNE, 
+                            bathymetry = bathy)
+  
+  print(unique(sensitivityDF$Species)[x])
+}
