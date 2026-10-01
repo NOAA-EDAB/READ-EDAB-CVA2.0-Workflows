@@ -182,7 +182,7 @@ build_summary_tables_wrapper <- function(
   
   ### Vulnerability ###
 ##load means and standard deviations
-rastMeans <- readRDS(paste0(
+vulnMeans <- readRDS(paste0(
   file.path(here::here('Vulnerability'), spp, 'Data'),
   paste0(
     '/total_vulnerability_map_averages_',
@@ -198,7 +198,7 @@ rastMeans <- readRDS(paste0(
 ))
 
 
-rastSD <- readRDS(paste0(
+vulnSD <- readRDS(paste0(
   file.path(here::here('Vulnerability'), spp, 'Data'),
   paste0(
     '/total_vulnerability_map_stdevs_',
@@ -214,11 +214,11 @@ rastSD <- readRDS(paste0(
 ))
 
 #make sure everything is a data.frame
-rastMeans <- as.data.frame(rastMeans)
-rastSD <- as.data.frame(rastSD)
+vulnMeans <- as.data.frame(vulnMeans)
+vulnSD <- as.data.frame(vulnSD)
 
 #load in maps
-rasts <- terra::rast(paste0(
+vulnRasts <- terra::rast(paste0(
   file.path(here::here('Vulnerability'), spp, 'Data'),
   paste0(
     '/vulnerability_',
@@ -236,10 +236,10 @@ rasts <- terra::rast(paste0(
 
 vTable <- make_summary_table(species = spp, 
                              metric = 'vulnerability', 
-                             mean_metric = rastMeans, 
-                   certainty_metric = rastSD, 
-                   raw_data = rasts, 
-                   raw_names = names(rasts), 
+                             mean_metric = vulnMeans, 
+                   certainty_metric = vulnSD, 
+                   raw_data = vulnRasts, 
+                   raw_names = names(vulnRasts), 
                    clean_names = c("Total Vulnerability", 
                                    "Total Vulnerability - Important Variables"), 
                    stocks = stocks, 
