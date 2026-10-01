@@ -717,17 +717,20 @@ stock_key <- c(
 
 ns_stocks <- c('Range', 'Northern', 'Eastern Gulf of Maine', 'Western Gulf of Maine', 'Gulf of Maine', 'Gulf of Maine/Georges Bank', 'Georges Bank', 'Gulf of Maine/Cape Cod', 'Southern New England', 'MA/RI', 'NJ/NY', 'Southern New England/Mid-Atlantic', 'Long Island Sound', 'Mid Atlantic Bight', 'DE/MA/VA', 'Southern')
 
-make_exposure_plots(
-  species = spp.list$Name,
-  type = c('variable', 'total', 'important', 'radar'),
-  forecast_release = 'r20250925',
-  forecast_init = 'i202501',
-  hindcast_release = 'r20250715',
-  hindcast_yr_range = '20142023',
-  variable_df = varDF,
-  coastline = landNE,
-  bathymetry = bathy
-)
+for(x in 1:nrow(spp.list)){
+  plot_exposure_wrapper(
+    spp = spp.list$Name[x],
+    forecast_release = 'r20250925',
+    forecast_init = 'i202501',
+    hindcast_release = 'r20250715',
+    hindcast_yr_range = '20142023',
+    variable_df = varDF,
+    coastline = landNE,
+    bathymetry = bathy,
+    stock_key = stock_key
+  )
+  print(x)
+}
 
 ## make exposure summary tables
 make_exposure_table(
