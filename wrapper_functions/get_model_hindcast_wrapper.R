@@ -15,7 +15,7 @@ get_model_hindcast_wrapper <- function(
   in_par = TRUE,
   n_cores,
   json_url,
-  release, 
+  release,
   spatial.temporal
 ) {
   raw <- avg <- sds <- norm <- vector(mode = 'list', length = nrow(var_df))
@@ -49,7 +49,17 @@ get_model_hindcast_wrapper <- function(
     }
   }
   names(raw) <- var_df$Short.Name
-  save(raw, file = paste0('./Data/MOM6/raw_MOM6_hindcast_', release, '.RData'))
+  save(
+    raw,
+    file = file.path(
+      here::here("SDMs/Data/MOM6/"),
+      paste0(
+        'raw_MOM6_hindcast_',
+        release,
+        '.RData'
+      )
+    )
+  )
 
   if (in_par == TRUE) {
     cluster <- parallel::makeCluster(n_cores, type = 'PSOCK')
@@ -71,12 +81,30 @@ get_model_hindcast_wrapper <- function(
     }
   }
   names(avg) <- var_df$Short.Name
-  if(spatial.temporal){
-    save(avg, 
-         file = paste0('./Data/MOM6/avg_MOM6_hindcast_', release, '.RData'))
+  if (spatial.temporal) {
+    save(
+      avg,
+      file = file.path(
+        here::here("SDMs/Data/MOM6/"),
+        paste0(
+          'avg_MOM6_hindcast_',
+          release,
+          '.RData'
+        )
+      )
+    )
   } else {
-    save(avg, 
-         file = paste0('./Data/MOM6/avg_MOM6_hindcast_', release, '_global.RData'))
+    save(
+      avg,
+      file = file.path(
+        here::here("SDMs/Data/MOM6/"),
+        paste0(
+          'avg_MOM6_hindcast_',
+          release,
+          '_global.RData'
+        )
+      )
+    )
   }
 
   if (in_par == TRUE) {
@@ -99,12 +127,30 @@ get_model_hindcast_wrapper <- function(
     }
   }
   names(sds) <- var_df$Short.Name
-  if(spatial.temporal){
-    save(sds, 
-         file = paste0('./Data/MOM6/sd_MOM6_hindcast_', release, '.RData'))
+  if (spatial.temporal) {
+    save(
+      sds,
+      file = file.path(
+        here::here("SDMs/Data/MOM6/"),
+        paste0(
+          'sd_MOM6_hindcast_',
+          release,
+          '.RData'
+        )
+      )
+    )
   } else {
-    save(sds, 
-         file = paste0('./Data/MOM6/sd_MOM6_hindcast_', release, '_global.RData'))
+    save(
+      sds,
+      file = file.path(
+        here::here("SDMs/Data/MOM6/"),
+        paste0(
+          'sd_MOM6_hindcast_',
+          release,
+          '_global.RData'
+        )
+      )
+    )
   }
 
   if (in_par == TRUE) {
@@ -137,12 +183,30 @@ get_model_hindcast_wrapper <- function(
     }
   }
   names(norm) <- var_df$Short.Name
-  if(spatial.temporal){
-    save(norm, 
-         file = paste0('./Data/MOM6/norm_MOM6_hindcast_', release, '.RData'))
+  if (spatial.temporal) {
+    save(
+      norm,
+      file = file.path(
+        here::here("SDMs/Data/MOM6/"),
+        paste0(
+          'norm_MOM6_hindcast_',
+          release,
+          '.RData'
+        )
+      )
+    )
   } else {
-    save(norm, 
-         file = paste0('./Data/MOM6/norm_MOM6_hindcast_', release, '_global.RData'))
+    save(
+      norm,
+      file = file.path(
+        here::here("SDMs/Data/MOM6/"),
+        paste0(
+          'norm_MOM6_hindcast_',
+          release,
+          '_global.RData'
+        )
+      )
+    )
   }
 
   return(norm)
