@@ -4,6 +4,7 @@
 ##################################
 #####SET UP - LOAD EVERY TIME ####
 ##################################
+here::i_am('workflows/READ-EDAB-CVA2.0-Workflows/workflows/sdm_workflow.R')
 
 ### set working directory
 setwd('/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs')
@@ -22,6 +23,7 @@ library(logger)
 #create species folders and appropriate subfolders
 spp.list <- read.csv('spp_list.csv')
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
+spp.list <- spp.list[-42]
 
 #make directory for each species if it doesn't exist; if directory exists, it is not changed
 for (x in 1:nrow(spp.list)) {
@@ -622,6 +624,8 @@ for (x in 1:length(flist)) {
 }
 
 ##############################
+
+##############################
 ##### MAKE MODELS  ###########
 ##############################
 
@@ -1160,25 +1164,74 @@ parallel::stopCluster(cl)
 ##############################
 ##### PLOT MODEL RESULTS  ####
 ##############################
-######average ensembles
-load(
-  "~/ClimateVulnerabilityAssessment2.0/Exposure/RawExposure/Data/coastline.RData"
-)
-load(
-  "~/ClimateVulnerabilityAssessment2.0/SDMs/Data/staticVariables_cropped.RData"
-)
-bathyR <- staticVars$bathy
 
-metrics <- read.csv('species_evaluation_metrics.csv')
+#get bathymetry for plotting
+statics <- terra::rast('./Data/staticVariables_cropped_terra_reproj.tif')
+bathy <- statics$bathy
 
-plot_SDMS(
-  species = spp.list$Name,
-  yrStart = 1993,
-  yrEnd = 2019,
-  coastline = coastCropped,
-  bathy = bathyR,
-  model.metrics = metrics
+#get coastline for plotting
+land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+landNE <- terra::crop(land, bathy)
+
+
+var.list <- data.frame(
+  Long.Name = c(
+    'Bottom Temperature',
+    'Bottom Oxygen',
+    'Sea Water Salinity at Sea Floor',
+    'Bottom Aragonite Solubility',
+    'Sea Surface Temperature',
+    'Sea Surface Salinity',
+    'Surface pH',
+    'Mixed layer depth (delta rho = 0.03)',
+    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
+    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Small zooplankton nitrogen biomass in upper 100m',
+    'Medium zooplankton nitrogen biomass in upper 100m',
+    'Large zooplankton nitrogen biomass in upper 100m',
+    'Water column net primary production vertical integral',
+    'Downward Flux of Particulate Organic Carbon'
+  ),
+  Short.Name = c(
+    'bottomT',
+    'bottomO2',
+    'bottomS',
+    'bottomArg',
+    'surfaceT',
+    'surfaceS',
+    'surfacepH',
+    'MLD',
+    'diazPP',
+    'smallPP',
+    'mediumPP',
+    'largePP',
+    'smallZoo',
+    'mediumZoo',
+    'largeZoo',
+    'intNPP',
+    'POC'
+  )
 )
+
+
+for(x in 1:nrow(spp.list)){
+  plot_sdm_wrapper(
+    spp = spp.list$Name[x],
+    model = 'ensemble',
+    type = 'hindcast', 
+    release = 'r20250715',
+    init = NULL,
+    spatial_temporal = FALSE,
+    mask_bathy = TRUE,
+    rm_corr = TRUE,
+    var_names = c(var.list$Short.Name, 'bathy', 'rugosity', 'dist2coast'),
+    coastline = landNE,
+    bathymetry = bathy
+  )
+  print(x)
+}
 
 ##gifs - same as above, if desired, they can be integrated into the plotting function
 library(gifski)
