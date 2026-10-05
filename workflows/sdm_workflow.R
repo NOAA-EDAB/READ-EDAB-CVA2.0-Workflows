@@ -1456,7 +1456,7 @@ speciesMC <- do.call(rbind, species.conf)
 speciesMC$Species <- rownames(speciesMC)
 write.csv(speciesMC, file = './ConfidenceScores/Preliminary/mean_sd_scores.csv')
 
-speciesMC <- speciesMC[-which(is.nan(speciesMC$meanConfidence)),]
+#speciesMC <- speciesMC[-which(is.nan(speciesMC$meanConfidence)),]
 
 #make histograms
 pdf(
