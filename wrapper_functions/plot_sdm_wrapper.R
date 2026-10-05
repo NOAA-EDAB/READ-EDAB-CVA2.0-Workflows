@@ -18,6 +18,8 @@ plot_sdm_wrapper <- function(
     spatial_temporal = FALSE,
     mask_bathy = TRUE,
     rm_corr = TRUE,
+    training_years,
+    component_models,
     var_names,
     coastline, 
     bathymetry) {
@@ -55,7 +57,7 @@ plot_sdm_wrapper <- function(
     )
   ))
   
-  #avg ensemble HSM
+  #avg ensemble HSM monthly
   avgHSM <- terra::tapp(
     abund,
     index = rep(1:12, times = terra::nlyr(abund) / 12),
@@ -64,11 +66,12 @@ plot_sdm_wrapper <- function(
   names(avgHSM) <- month.abb
   
   
-  #plot maps 
+  #plot monthly maps 
   plot_sdms(sdm = avgHSM,
                                stocks = stocks,
                                coastline = coastline, 
                                bathymetry = bathymetry,
+            panel_names = month.abb,
                                type = 'model',
                                fig_name = paste0(
                                  file.path(
@@ -76,7 +79,7 @@ plot_sdm_wrapper <- function(
                                    spp,
                                    'Figures',
                                    paste0(
-                                     'mean_SDM_',
+                                     'mean_SDM_monthly_',
                                      toupper(model), 
                                      '_',
                                      type,
@@ -88,7 +91,39 @@ plot_sdm_wrapper <- function(
                                  )
                                ))
   
-
+  #avg ensemble HSM annually
+  avgHSM <- terra::tapp(
+    abund,
+    index = rep(1:(terra::nlyr(abund) / 12), each = 12),
+    fun = 'mean'
+  ) #average by year
+  names(avgHSM) <- 1993:2023
+  
+  
+  #plot annual maps 
+  plot_sdms(sdm = avgHSM,
+            stocks = stocks,
+            coastline = coastline, 
+            bathymetry = bathymetry,
+            panel_names = 1993:2023,
+            type = 'model',
+            fig_name = paste0(
+              file.path(
+                here::here("SDMs"),
+                spp,
+                'Figures',
+                paste0(
+                  'mean_SDM_annual_',
+                  toupper(model), 
+                  '_',
+                  type,
+                  '_',
+                  release,
+                  ifelse(type == 'forecast', paste0('_', init), ''),
+                  '.pdf'
+                )
+              )
+            ))
   
   #### 2 plot residuals 
   #load observations
@@ -111,7 +146,8 @@ plot_sdm_wrapper <- function(
   plot_sdms(sdm = abund, #need to pass raw data here to match observations/sdm correctly
             obs = obs,
             xy_col = c("grid.lon", "grid.lat"),
-            month_col = 'month',
+            time_col = 'month',
+            panel_names = month.abb,
             stocks = stocks,
             coastline = coastline, 
             bathymetry = bathymetry,

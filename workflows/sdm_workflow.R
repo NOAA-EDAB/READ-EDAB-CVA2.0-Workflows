@@ -1226,6 +1226,8 @@ for(x in 1:nrow(spp.list)){
     spatial_temporal = FALSE,
     mask_bathy = TRUE,
     rm_corr = TRUE,
+    training_years = c(1993, 2019),
+    component_models = c('brt', 'gam', 'maxent', 'sdmtmb'),
     var_names = c(var.list$Short.Name, 'bathy', 'rugosity', 'dist2coast'),
     coastline = landNE,
     bathymetry = bathy
