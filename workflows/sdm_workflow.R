@@ -1443,6 +1443,8 @@ for (x in 1:length(flist)) {
 #clean up 
 modConf <- modConf[,c('Species', 'Score.y', 'Scorer')]
 colnames(modConf)[2] <- "Score"
+modConf$Score <- replace(modConf$Score, modConf$Score == 'no model', NA)
+modConf$Score <- as.numeric(modConf$Score)
 
 write.csv(
   modConf,
@@ -1460,7 +1462,7 @@ write.csv(speciesMC, file = './ConfidenceScores/Preliminary/mean_sd_scores.csv')
 
 #make histograms
 pdf(
-  file = './ConfidenceScores/Preliminary/preliminary_histograms.pdf',
+  file = './ConfidenceScores/Preliminary/preliminary_histograms2.pdf',
   height = 11,
   width = 8
 )
