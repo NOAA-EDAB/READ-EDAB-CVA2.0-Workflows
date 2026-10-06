@@ -49,7 +49,8 @@ Imports:
     survdat,
     terra,
     tidyr,
-    tinytex
+    tinytex,
+    logger
 Remotes:
   NOAA-EDAB/survdat,
   andybeet/dbutils,

@@ -35,13 +35,26 @@ get_model_data_wrapper <- function(
   bathy_suffix <- if (mask_bathy) "masked" else ""
   init_suffix <- if (source == 'forecast') paste0("_", init) else ""
 
+  #check for log directory
+  if (
+    !dir.exists(file.path(
+      here::here("SDMs"),
+      'logs'
+    ))
+  ) {
+    dir.create(file.path(
+      here::here("SDMs"),
+      'logs'
+    ))
+  }
+
   log_path <- file.path(
     here::here("SDMs"),
     'logs',
     paste0('mom6_', source, '.log')
   )
-  log_appender(appender_file(log_path))
-  log_info("Starting variable: {short_name} using source: {source}")
+  logger::log_appender(appender_file(log_path))
+  logger::log_info("Starting variable: {short_name} using source: {source}")
 
   # Define the raw file path up front to check for its existence
   raw_filename <- file.path(
@@ -61,7 +74,7 @@ get_model_data_wrapper <- function(
 
   # --- CHECKPOINT CHECK: Skip Pulling if Raw File Exists ---
   if (file.exists(raw_filename) && !force_overwrite) {
-    log_info(
+    logger::log_info(
       "{short_name} ({source}): Raw file already exists. Skipping download/pull step."
     )
 
@@ -70,7 +83,7 @@ get_model_data_wrapper <- function(
         terra::rast(raw_filename)
       },
       error = function(e) {
-        log_error(
+        logger::log_error(
           "Failed to read existing raw file {raw_filename}: {e$message}. Attempting re-download."
         )
         NULL
@@ -83,11 +96,11 @@ get_model_data_wrapper <- function(
   # --- Step 1: Dynamic Data Pulling (Only runs if file doesn't exist OR force_overwrite = TRUE) ---
   if (is.null(raw_data)) {
     if (force_overwrite && file.exists(raw_filename)) {
-      log_info(
+      logger::log_info(
         "{short_name} ({source}): Raw file exists, but force_overwrite = TRUE. Re-downloading..."
       )
     } else {
-      log_info(
+      logger::log_info(
         "{short_name} ({source}): Raw file not found. Beginning download..."
       )
     }
@@ -115,7 +128,7 @@ get_model_data_wrapper <- function(
         )
       },
       error = function(e) {
-        log_error(
+        logger::log_error(
           "Failed to pull data for {short_name} from {source}: {e$message}"
         )
         return(NULL)
@@ -129,10 +142,55 @@ get_model_data_wrapper <- function(
 
     # Save the processed raw raster to disk
     #dir.create(dirname(raw_filename), recursive = TRUE, showWarnings = FALSE)
-    terra::writeRaster(raw_data, filename = raw_filename, overwrite = TRUE)
-    log_info("{short_name} raw {source} data saved to disk")
+    switch(
+      tolower(source),
+      "hindcast" = {
+        terra::writeRaster(raw_data, filename = raw_filename, overwrite = TRUE)
+        logger::log_info("{short_name} raw {source} data saved to disk")
+      },
+      "forecast" = {
+        r <- raw_data$raw
+        terra::writeRaster(
+          r,
+          filename = paste0(
+            './Data/MOM6/raw_MOM6_',
+            short_name,
+            '_',
+            source,
+            '_',
+            release,
+            init_suffix,
+            suffix,
+            '_ensembles.tif'
+          ),
+          overwrite = TRUE
+        )
+
+        a <- raw_data$average
+        terra::writeRaster(
+          a,
+          filename = paste0(
+            './Data/MOM6/raw_MOM6_',
+            short_name,
+            '_',
+            source,
+            '_',
+            release,
+            init_suffix,
+            suffix,
+            '_average.tif'
+          ),
+          overwrite = TRUE
+        )
+        logger::log_info("{short_name} raw {source} data saved to disk")
+      },
+      # Default fallback error if you pass a typo
+      stop(paste("Unknown data source specified:", source))
+    )
   }
 
+  ##assume you want to move forward with the average of the ensembles
+  raw_data <- raw_data$average
   # Step 1.5 - mask raw data if necessary BEFORE saving
   if (mask_bathy) {
     # CRITICAL FIX: Unwrap the bathymetry raster inside the worker
@@ -147,7 +205,7 @@ get_model_data_wrapper <- function(
       NA,
       raw_data
     )
-    log_info(
+    logger::log_info(
       "{short_name} raw {source} data masked with bathymetry between {bathy_range[1]} and {bathy_range[2]}"
     )
   }
@@ -229,7 +287,7 @@ get_model_data_wrapper <- function(
       )
     )
   }
-  log_info("{short_name} average and standard deviations saved")
+  logger::log_info("{short_name} average and standard deviations saved")
 
   # --- Step 4: Normalize ---
   norm_data <- normalize_model_data(
@@ -255,7 +313,7 @@ get_model_data_wrapper <- function(
   )
   terra::writeRaster(norm_data, filename = norm_filename, overwrite = TRUE)
 
-  log_info("{short_name} data normalized and saved")
+  logger::log_info("{short_name} data normalized and saved")
 
   return(norm_data)
 } #end function

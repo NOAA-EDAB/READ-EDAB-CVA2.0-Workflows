@@ -32,8 +32,16 @@ write.csv(direct, file = 'combined_directionality.csv') #save for prosperity (th
 
 #now we calculate metric similar to sensitivity
 species.data.list <- split(direct, direct$Species)
-species.direct <- lapply(species.data.list, calculate_directionality, bootstrap = F) #calculate sensitivity w/o bootstrap
-direct.bootstrap <- lapply(species.data.list, calculate_directionality, bootstrap = T) #this only takes ~5 minutes for 42 species
+species.direct <- lapply(
+  species.data.list,
+  calculate_directionality,
+  bootstrap = F
+) #calculate sensitivity w/o bootstrap
+direct.bootstrap <- lapply(
+  species.data.list,
+  calculate_directionality,
+  bootstrap = T
+) #this only takes ~5 minutes for 42 species
 
 #get certainty
 direct.certainty <- mapply(
