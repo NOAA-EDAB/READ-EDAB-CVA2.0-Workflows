@@ -55,26 +55,25 @@ write.csv(directDF, 'directionality_scores.csv') #save results
 #### DISTRIBUTION CHANGE #####
 ##############################
 setwd(
-  here::here("/AdditionalMetrics/DistributionChange")
+  here::here("AdditionalMetrics/DistributionChange")
 )
-
 
 spp.list <- read.csv(
-  file.path(here::here('SDMs'), , 'spp_list.csv')
+  file.path(here::here('SDMs'), 'spp_list.csv')
 )
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
+spp.list <- spp.list[-42,]
 
 #create species specific folders
 for (x in 1:nrow(spp.list)) {
   dir.create(
     file.path(
-      here::here("/AdditionalMetrics/DistributionChange"),
+      here::here("AdditionalMetrics/DistributionChange"),
       spp.list$Name[x]
     ),
     showWarnings = T
   ) #main folder
 }
-
 
 ##########################################
 ##### PREDICT MODELS TO FORECAST  ########
@@ -216,7 +215,7 @@ statics <- terra::rast('./Data/staticVariables_masked_norm_terra.tif')
 statics <- resample(statics, norm_forecast[[1]], method = "bilinear") #using raw data from pull_mom6_hindcast
 statics <- terra::wrap(statics)
 
-mods <- c("BRT", "GAM", "MAXENT", "RF", "SDMTMB")
+mods <- c("BRT", "GAM", "MAXENT", "SDMTMB")
 
 # 1. Load parallel packages
 library(foreach)
@@ -330,5 +329,15 @@ foreach(
 # 5. Stop the cluster when finished
 parallel::stopCluster(cl)
 ##########################################
+
+###############################
+#### CALCULATE SHIFTS #########
+###############################
+statics <- terra::rast(here::here('SDMs/Data/staticVariables_cropped_terra_reproj.tif'))
+bathy <- statics$bathy
+
+land <- vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
+landNE <- terra::crop(land, bathy)
+
 
 ##############################
