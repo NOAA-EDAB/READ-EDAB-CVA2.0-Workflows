@@ -35,31 +35,40 @@ distribution_shifts_wrapper <- function(spp,
     ))
     
   #calculate dynamics on raw timeseries - we only need metrics from this one 
-  hind_dyn <- calculate_distribution_shift(hindcast, poly_dir = NULL)$metrics
-  fore_dyn <- calculate_distribution_shift(forecast, poly_dir = NULL)$metrics
+  hind_dyn <- calculate_distribution_shift(hindcast, poly_dir = file.path(
+    here::here('AdditionalMetrics/DistributionChange'), 
+    spp,
+    'monthly_polys'
+  ))
+  fore_dyn <- calculate_distribution_shift(forecast, poly_dir = file.path(
+    here::here('AdditionalMetrics/DistributionChange'), 
+    spp,
+    'monthly_polys'
+  ))
   
-  #format timestep and merge 
-  hind_dyn$timestamp <- as.Date(paste0("15.", hind_dyn$layer), format = "%d.%m.%Y")
-  hind_dyn$year <- lubridate::year(hind_dyn$timestamp)
-  fore_dyn$timestamp <- as.Date(paste0("15.", fore_dyn$layer), format = "%d.%m.%Y")
-  fore_dyn$year <- lubridate::year(fore_dyn$timestamp)
+  hind_dyn$metrics$year <- lubridate::year(as.Date(paste0("15.", hind_dyn$metrics$layer), format = "%d.%m.%Y"))
+  fore_dyn$metrics$year <- lubridate::year(as.Date(paste0("15.", fore_dyn$metrics$layer), format = "%d.%m.%Y"))
   
-  hind_dyn$data_source <- 'hindcast'
-  fore_dyn$data_source <- 'forecast'
   
-  all_dyns <- rbind(hind_dyn, fore_dyn)
-  
-  #create point and color flags
-  all_colors <- ifelse(all_dyns$data_source == "hindcast", "grey", "goldenrod4")
-  all_shapes <- ifelse(all_dyns$data_source == "hindcast", 19, 17) # 16 = solid circle, 17 = solid triangle
-  
-  ##calculate dynamics on annual timeseries - we only need metrics again from this one
+  ##calculate dynamics on annual timeseries
   #subset
-  hind_annual <- terra::tapp(hindcast, index = hind_dyn$year, fun = 'mean', na.rm = T) 
-  fore_annual <- terra::tapp(forecast, index = fore_dyn$year, fun = 'mean', na.rm = T)
+  hind_annual <- terra::tapp(hindcast, index = hind_dyn$metrics$year, fun = 'mean', na.rm = T) 
+  fore_annual <- terra::tapp(forecast, index = fore_dyn$metrics$year, fun = 'mean', na.rm = T)
   
-  hind_annual_dyn <- calculate_distribution_shift(hind_annual, poly_dir = NULL)$metrics
-  fore_annual_dyn <- calculate_distribution_shift(fore_annual, poly_dir = NULL)$metrics
+  hind_annual_dyn <- calculate_distribution_shift(hind_annual, poly_dir = file.path(
+    here::here('AdditionalMetrics/DistributionChange'), 
+    spp,
+    'annual_avgs'
+  ))
+  fore_annual_dyn <- calculate_distribution_shift(fore_annual, poly_dir = file.path(
+    here::here('AdditionalMetrics/DistributionChange'), 
+    spp,
+    'annual_avgs'
+  ))
+  
+  #isolate metrics 
+  hind_annual_dyn <- hind_annual_dyn$metrics
+  fore_annual_dyn <- fore_annual_dyn$metrics
   
   #format timestamp and merge
   hind_annual_dyn$timestamp <- as.Date(gsub(pattern = 'X', replacement = "15.06.", x = hind_annual_dyn$layer), format = "%d.%m.%Y")
@@ -70,31 +79,45 @@ distribution_shifts_wrapper <- function(spp,
   
   annual_dyns <- rbind(hind_annual_dyn, fore_annual_dyn)
   
-  #create point and color flags
-  annual_colors <- ifelse(annual_dyns$data_source == "hindcast", "black", "goldenrod4")
-  annual_shapes <- ifelse(annual_dyns$data_source == "hindcast", 19, 17) # 16 = solid circle, 17 = solid triangle
   
   ##calculate dynamics on first and last 5 years of hindcast
   #create index
-  find <- which(hind_dyn$year >= min(hind_dyn$year) & hind_dyn$year <= (min(hind_dyn$year))+4)
-  lind <- which(hind_dyn$year >= (max(hind_dyn$year)-4) & hind_dyn$year <= max(hind_dyn$year))
+  find <- which(hind_dyn$metrics$year >= min(hind_dyn$metrics$year) & hind_dyn$metrics$year <= (min(hind_dyn$metrics$year)+4))
+  lind <- which(hind_dyn$metrics$year >= (max(hind_dyn$metrics$year)-4) & hind_dyn$metrics$year <= max(hind_dyn$metrics$year))
   
   #subset
   hind_first5 <- terra::app(hindcast[[find]], fun = 'mean', na.rm = T) 
   hind_last5 <- terra::app(hindcast[[lind]], fun = 'mean', na.rm = T)
   
   #only do last 5 years for forecast
-  lind <- which(fore_dyn$year >= (max(fore_dyn$year)-4) & fore_dyn$year <= max(fore_dyn$year))
+  lind <- which(fore_dyn$metrics$year >= (max(fore_dyn$metrics$year)-4) & fore_dyn$metrics$year <= max(fore_dyn$metrics$year))
   fore_last5 <- terra::app(forecast[[lind]], fun = 'mean', na.rm = T)
   #resample to get to the same extent as the hindcast
   fore_last5 <- terra::resample(fore_last5, hind_last5, method = "bilinear")
   
   fives <- c(hind_first5, hind_last5, fore_last5)
-  fives_dyn <- calculate_distribution_shift(fives, poly_dir = NULL)
+  fives_dyn <- calculate_distribution_shift(fives, poly_dir = file.path(
+    here::here('AdditionalMetrics/DistributionChange'), 
+    spp,
+    'five_year_avgs'
+  ))
+  
+  #clean up metrics and save 
+  mets <- fives_dyn$metrics
+  mets$range_y <- mets$leading_edge_y - mets$trailing_edge_y
+  mets$range_x <- mets$leading_edge_x - mets$trailing_edge_x
+  
+  mets <- mets[,-1]
+  mets$timestep <- c('1993-1997', '2019-2023', '2031-2035')
 
   
   #plot static
-  pdf('SDM_static_plot_test2.pdf', width = 11, height = 8)
+  pdf(file.path(
+    here::here('AdditionalMetrics/DistributionChange'), 
+    spp,
+    'distribution_shifts_static.pdf'
+  ),
+   width = 12, height = 6)
   ###all together
   layout(matrix(c(1,1,1,1,2,4,3,5), byrow=F, nrow = 2, ncol = 4), heights = c(3,3), widths = c(1,1,1,1))
   par(mar=c(4,4,1,1), oma = c(0,0,3,0))
@@ -134,7 +157,7 @@ distribution_shifts_wrapper <- function(spp,
              legend = c("1993-1997", "2019-2023", '2031-2035'),
              cex = 1.5, bty = 'n')
   
-  terra::add_legend(x = -70.1, y = 37.5, 
+  terra::add_legend(x = -70.2, y = 38, 
              pch = c(NA, NA, 21),
              lty = c(1, 3, NA),
              lwd = c(2,2,NA),
@@ -142,72 +165,117 @@ distribution_shifts_wrapper <- function(spp,
              legend = c('Core Habitat', 'Species Range', 'Weighted Centroid'),
              cex = 1.5, bty = 'n')
   
-  
-  text(-71, 35.5, paste0('Centroid Displacement = ', round(fives_dyn$metrics$centroid_step_dist_km[1], digits = 1), ' km ', deg_to_cardinal_16(fives_dyn$metrics$centroid_bearing_deg[1])), adj = 0.5, cex = 1.5, font = 2)
-  #needs second line on predicted future shifts
-  
   #time series 
   #change in areas through time
   #core
-  #monthly
-  plot(kde_core_area/1000 ~ timestamp, data = all_dyns, t = 'b', pch = all_shapes, cex = 0.5, lwd = 0.5, col = all_colors, ylab = 'Area (10^3 km2)', cex.axis = 1.25, xlab = '', main = 'Core Habitat Area')
-  #annually
-  lines(kde_core_area/1000 ~ timestamp, data = annual_dyns, t = 'b', pch = annual_shapes, cex = 1.5, lwd = 1.5, col = annual_colors)
+  #monthly hindcast 
+  plot(kde_core_area/1000 ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black', ylab = 'Area (10^3 km2)', cex.axis = 1.25, xlab = '', main = 'Core Habitat Area', xlim = range(annual_dyns$timestamp), ylim = range(annual_dyns$kde_core_area/1000))
+  #annual hindcast
+  #lines(kde_core_area/1000 ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black')
   #linear model
-  m <- lm(kde_core_area ~ timestep, data = hind_dyn)
+  m <- lm(kde_core_area ~ timestep, data = hind_annual_dyn)
   # Extract key statistics & plot if significant
   p_val     <- summary(m)$coefficients["timestep", "Pr(>|t|)"]
   if(p_val <= 0.05){
     y_pred <- predict(m)
-    lines(hind_dyn$timestamp, y_pred/1000, col = "firebrick", lty = 2, lwd = 2)
+    lines(hind_annual_dyn$timestamp, y_pred/1000, col = "firebrick", lty = 2, lwd = 2)
   }
-  text(median(hind_dyn$timestamp), min(hind_dyn$kde_core_area/1000,na.rm=T), paste0(if(hind_annual_dyn$kde_core_area[nrow(hind_annual_dyn)] - hind_annual_dyn$kde_core_area[1] < 0) "Loss" else 'Gain', ' of ', abs(round( hind_annual_dyn$kde_core_area[nrow(hind_annual_dyn)] - hind_annual_dyn$kde_core_area[1], digits = 0)), ' km2'), adj = 0.5, cex = 1.2, font = 2)
+  #repeat for forecast
+  #monthly 
+  lines(kde_core_area/1000 ~ timestamp, data = fore_annual_dyn, t = 'b', pch = 17, cex = 1.5, lwd = 1.5, col = 'goldenrod4', ylab = 'Area (10^3 km2)', cex.axis = 1.25, xlab = '')
+  #annual 
+  #lines(kde_core_area/1000 ~ timestamp, data = fore_annual_dyn, t = 'b', pch = 17, cex = 1.5, lwd = 1.5, col = 'goldenrod4')
+  #linear model
+  m <- lm(kde_core_area ~ timestep, data = fore_annual_dyn)
+  # Extract key statistics & plot if significant
+  p_val     <- summary(m)$coefficients["timestep", "Pr(>|t|)"]
+  if(p_val <= 0.05){
+    y_pred <- predict(m)
+    lines(fore_annual_dyn$timestamp, y_pred/1000, col = "blue4", lty = 2, lwd = 2)
+  }
   
-  #all (95% kde) 
-  plot(kde_all_area/1000 ~ timestamp, data = all_dyns, t = 'b', pch = all_shapes, cex = 0.5, lwd = 0.5, col = all_colors, ylab = '', cex.axis = 1.25, xlab = '', main = 'Total Habitat Area')
-  lines(kde_all_area/1000 ~ timestamp, data = hind_annual_dyn, t = 'b', pch = annual_shapes, cex = 1.5, lwd = 1.5, col = annual_colors)
+  #all (95% kde)   
+  #monthly hindcast 
+  plot(kde_all_area/1000 ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black', ylab = 'Area (10^3 km2)', cex.axis = 1.25, xlab = '', main = 'Habitat Range Area', xlim = range(annual_dyns$timestamp), ylim = range(annual_dyns$kde_all_area/1000))
+  #annual hindcast
+ # lines(kde_all_area/1000 ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black')
   #linear model
-  m <- lm(kde_all_area ~ timestep, data = hind_dyn)
+  m <- lm(kde_all_area ~ timestep, data = hind_annual_dyn)
   # Extract key statistics & plot if significant
   p_val     <- summary(m)$coefficients["timestep", "Pr(>|t|)"]
   if(p_val <= 0.05){
     y_pred <- predict(m)
-    lines(hind_dyn$timestamp, y_pred/1000, col = "firebrick", lty = 2, lwd = 2)
+    lines(hind_annual_dyn$timestamp, y_pred/1000, col = "firebrick", lty = 2, lwd = 2)
   }
-  text(median(hind_dyn$timestamp), min(hind_dyn$kde_all_area/1000,na.rm=T), paste0(if(hind_annual_dyn$kde_all_area[nrow(hind_annual_dyn)] - hind_annual_dyn$kde_all_area[1] < 0) "Loss" else 'Gain', ' of ', abs(round( hind_annual_dyn$kde_all_area[nrow(hind_annual_dyn)] - hind_annual_dyn$kde_all_area[1], digits = 0)), ' km2'), adj = 0.5, cex = 1.2, font = 2)
+  #repeat for forecast
+  #monthly 
+  lines(kde_all_area/1000 ~ timestamp, data = fore_annual_dyn, t = 'b', pch = 17, cex = 1.5, lwd = 1.5, col = 'goldenrod4', ylab = 'Area (10^3 km2)', cex.axis = 1.25, xlab = '')
+  #annual 
+ # lines(kde_all_area/1000 ~ timestamp, data = fore_annual_dyn, t = 'b', pch = 17, cex = 1.5, lwd = 1.5, col = 'goldenrod4')
+  #linear model
+  m <- lm(kde_all_area ~ timestep, data = fore_annual_dyn)
+  # Extract key statistics & plot if significant
+  p_val     <- summary(m)$coefficients["timestep", "Pr(>|t|)"]
+  if(p_val <= 0.05){
+    y_pred <- predict(m)
+    lines(fore_annual_dyn$timestamp, y_pred/1000, col = "blue4", lty = 2, lwd = 2)
+  }
   
   #change in ranges
-  hind_dyn$range_y <- hind_dyn$leading_edge_y - hind_dyn$trailing_edge_y
-  hind_annual_dyn$range_y <- hind_annual_dyn$leading_edge_y - hind_annual_dyn$trailing_edge_y
+
   #latitude
-  plot(range_y ~ timestamp, data = hind_dyn, t = 'b', pch = 19, cex = 0.5, lwd = 0.5, col = 'grey', ylab = 'Degrees', cex.axis = 1.25, xlab = 'Year', main = 'Latitude Range')
-  lines(range_y ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black')
+  #hindcast
+  plot(range_y_deg ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black', ylab = 'Degrees', cex.axis = 1.25, xlab = 'Year', main = 'Latitude Range', xlim = range(hind_annual_dyn$timestamp), ylim = range(annual_dyns$range_y))
+ # lines(range_y ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black')
   #linear model
-  m <- lm(range_y ~ timestep, data = hind_dyn)
+  m <- lm(range_y_deg ~ timestep, data = hind_annual_dyn)
   # Extract key statistics & plot if significant
   p_val     <- summary(m)$coefficients["timestep", "Pr(>|t|)"]
   if(p_val <= 0.05){
     y_pred <- predict(m)
-    lines(hind_dyn$timestamp, y_pred, col = "firebrick", lty = 2, lwd = 2)
+    lines(hind_annual_dyn$timestamp, y_pred, col = "firebrick", lty = 2, lwd = 2)
   }
-  text(median(hind_dyn$timestamp), min(hind_dyn$range_y,na.rm=T), paste0(if(hind_annual_dyn$range_y[nrow(hind_annual_dyn)] - hind_annual_dyn$range_y[1] < 0) "Loss" else 'Gain', ' of ', abs(round( hind_annual_dyn$range_y[nrow(hind_annual_dyn)] - hind_annual_dyn$range_y[1], digits = 2)), ' deg'), adj = 0.5, cex = 1.2, font = 2)
+  #repeat for forecast
+  #monthly 
+  lines(range_y_deg~ timestamp, data = fore_annual_dyn, t = 'b', pch = 17, cex = 1.5, lwd = 1.5, col = 'goldenrod4', ylab = 'Degrees', cex.axis = 1.25, xlab = '')
+  #annual 
+ # lines(range_y ~ timestamp, data = fore_annual_dyn, t = 'b', pch = 17, cex = 1.5, lwd = 1.5, col = 'goldenrod4')
+  #linear model
+  m <- lm(range_y_deg ~ timestep, data = fore_annual_dyn)
+  # Extract key statistics & plot if significant
+  p_val     <- summary(m)$coefficients["timestep", "Pr(>|t|)"]
+  if(p_val <= 0.05){
+    y_pred <- predict(m)
+    lines(fore_annual_dyn$timestamp, y_pred, col = "blue4", lty = 2, lwd = 2)
+  }
   
   #longitude
-  hind_dyn$range_x <- hind_dyn$leading_edge_x - hind_dyn$trailing_edge_x
-  hind_annual_dyn$range_x <- hind_annual_dyn$leading_edge_x - hind_annual_dyn$trailing_edge_x
-  plot(range_x ~ timestamp, data = hind_dyn, t = 'b', pch = 19, cex = 0.5, lwd = 0.5, col = 'grey', ylab = '', cex.axis = 1.25, xlab = 'Year', main = 'Longitude Range')
-  lines(range_x ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black')
+  
+  plot(range_x_deg ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black', ylab = '', cex.axis = 1.25, xlab = 'Year', main = 'Longitude Range', xlim = range(annual_dyns$timestamp), ylim = range(annual_dyns$range_x))
+ # lines(range_x ~ timestamp, data = hind_annual_dyn, t = 'b', pch = 19, cex = 1.5, lwd = 1.5, col = 'black')
   #linear model
-  m <- lm(range_x ~ timestep, data = hind_dyn)
+  m <- lm(range_x_deg ~ timestep, data = hind_annual_dyn)
   # Extract key statistics & plot if significant
   p_val     <- summary(m)$coefficients["timestep", "Pr(>|t|)"]
   if(p_val <= 0.05){
     y_pred <- predict(m)
-    lines(hind_dyn$timestamp, y_pred, col = "firebrick", lty = 2, lwd = 2)
+    lines(hind_annual_dyn$timestamp, y_pred, col = "firebrick", lty = 2, lwd = 2)
   }
-  text(median(hind_dyn$timestamp), min(hind_dyn$range_x,na.rm=T), paste0(if(hind_annual_dyn$range_x[nrow(hind_annual_dyn)] - hind_annual_dyn$range_x[1] < 0) "Loss" else 'Gain', ' of ', abs(round( hind_annual_dyn$range_x[nrow(hind_annual_dyn)] - hind_annual_dyn$range_x[1], digits = 2)), ' deg'), adj = 0.5, cex = 1.2, font = 2)
+  #repeat for forecast
+  #monthly 
+  lines(range_x_deg~ timestamp, data = fore_annual_dyn, t = 'b', pch = 17, cex = 1.5, lwd = 1.5, col = 'goldenrod4', ylab = 'Degrees', cex.axis = 1.25, xlab = '')
+  #annual 
+ # lines(range_x ~ timestamp, data = fore_annual_dyn, t = 'b', pch = 17, cex = 1.5, lwd = 1.5, col = 'goldenrod4')
+  #linear model
+  m <- lm(range_x_deg ~ timestep, data = fore_annual_dyn)
+  # Extract key statistics & plot if significant
+  p_val     <- summary(m)$coefficients["timestep", "Pr(>|t|)"]
+  if(p_val <= 0.05){
+    y_pred <- predict(m)
+    lines(fore_annual_dyn$timestamp, y_pred, col = "blue4", lty = 2, lwd = 2)
+  }
   
   dev.off()
   
-  
+  return(mets)
 }

@@ -339,5 +339,26 @@ bathy <- statics$bathy
 land <- vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
 landNE <- terra::crop(land, bathy)
 
+for(x in 1:nrow(spp.list)){
+  distMat <- distribution_shifts_wrapper(
+    spp = spp.list$Name[x],
+    model = 'ensemble',
+    hindcast_release = 'r20250715',
+    forecast_release = 'r20250925',
+    forecast_init = 'i202501',
+    spatial_temporal = F,
+    mask_bathy = T,
+    bathymetry = bathy,
+    coastline = landNE
+  )
+  saveRDS(distMat, file = 
+            file.path(
+              here::here('AdditionalMetrics/DistributionChange'), 
+              spp.list$Name[x],
+              'distribution_shift_metrics.rds'
+            ))
+  print(x)
+}
+
 
 ##############################
