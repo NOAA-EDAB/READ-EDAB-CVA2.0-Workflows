@@ -148,24 +148,24 @@ plan(sequential)
 
 #because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
 
-#for(x in c(9, 15)){
-#print(Sys.time())
-#get_model_data_wrapper(
-#   var_name = forecast.list$Long.Name[x],
-#  short_name = forecast.list$Short.Name[x],
-# json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
-#release = 'r20250925',
-#    init = 'i202501',
-#   spatial_temporal = FALSE,
-#  source = "forecast",
-# mask_bathy = T,
-#bathy = bathy,
-#    bathy_range = c(-1000, 0),
-#   force_overwrite = T
-#)
-#  print(x)
-# print(Sys.time())
-#}
+for(x in c(12)){
+print(Sys.time())
+get_model_data_wrapper(
+   var_name = forecast.list$Long.Name[x],
+  short_name = forecast.list$Short.Name[x],
+ json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+release = 'r20250925',
+    init = 'i202501',
+   spatial_temporal = FALSE,
+  source = "forecast",
+ mask_bathy = T,
+bathy = bathy,
+    bathy_range = c(-1000, 0),
+   force_overwrite = T
+)
+  print(x)
+ print(Sys.time())
+}
 
 #second, normalize forecast data to HINDCAST MEAN/SD
 norm_forecast <- vector(
@@ -225,7 +225,7 @@ for(x in 1:length(norm_forecast)){
 #third, predict models
 statics <- terra::rast(here::here('SDMs/Data/staticVariables_masked_norm_terra.tif'))
 #reproject statics to forecast grid because somehow they are always different
-statics <- resample(statics, norm_forecast[[1]], method = "bilinear") #using raw data from pull_mom6_hindcast
+statics <- terra::resample(statics, norm_forecast[[1]], method = "bilinear") #using raw data from pull_mom6_hindcast
 statics <- terra::wrap(statics)
 
 mods <- c("BRT", "GAM", "MAXENT", "SDMTMB")
@@ -236,9 +236,9 @@ library(doParallel)
 library(terra)
 
 # 2. Set up the parallel cluster
-num_cores <- 2
-cl <- parallel::makeCluster(num_cores)
-doParallel::registerDoParallel(cl)
+#num_cores <- 2
+#cl <- parallel::makeCluster(num_cores)
+#doParallel::registerDoParallel(cl)
 
 # 3. CRITICAL: Wrap any SpatRaster objects in the global environment
 
@@ -258,12 +258,8 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
  # ),
 #  .errorhandling = "pass"
 #) %dopar%
-  for(s in 1:nrow(spp.list)){
+  for(s in 4:nrow(spp.list)){
     # a. Unwrap the spatial data inside the worker environment
-
-    # New: Apply unwrap to each wrapped object in the list
-    norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
-    static_vars_worker <- terra::unwrap(statics)
 
     # b. Load in training data for the species
     dfT <- read.csv(file.path(
@@ -275,6 +271,12 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
 
     # c. Predict component models
     for (m in 1:length(mods)) {
+      
+      # New: Apply unwrap to each wrapped object in the list
+      norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
+      static_vars_worker <- terra::unwrap(statics)
+      
+      
       #check to see if model has already been predicted
       out_path <- file.path(
         here::here("SDMs"),
@@ -294,7 +296,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
       )
       if(file.exists(mod_path)){
         load(mod_path) #mod
-
+        
         p <- make_sdm_predictions(
         mod = mod,
         model = tolower(mods[m]),
