@@ -79,6 +79,8 @@ for (x in 1:nrow(spp.list)) {
 ##### PREDICT MODELS TO FORECAST  ########
 ##########################################
 
+setwd(here::here('SDMs'))
+
 statics <- terra::rast(here::here('SDMs/Data/staticVariables_masked_norm_terra.tif'))
 bathy <- terra::wrap(statics$bathy)
 
@@ -258,7 +260,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
  # ),
 #  .errorhandling = "pass"
 #) %dopar%
-  for(s in 4:nrow(spp.list)){
+  for(s in 1:nrow(spp.list)){
     # a. Unwrap the spatial data inside the worker environment
 
     # b. Load in training data for the species
