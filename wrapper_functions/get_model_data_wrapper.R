@@ -55,7 +55,7 @@ get_model_data_wrapper <- function(
     'logs',
     paste0('mom6_', source, '.log')
   )
-  logger::log_appender(appender_file(log_path))
+  logger::log_appender(logger::appender_file(log_path))
   logger::log_info("Starting variable: {short_name} using source: {source}")
 
   # Define the raw file path up front to check for its existence
