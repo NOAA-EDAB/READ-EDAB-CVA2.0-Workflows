@@ -42,9 +42,10 @@ get_model_data_wrapper <- function(
       'logs'
     ))
   ) {
-    dir.create(file.path(
-      here::here("SDMs"),
-      'logs'
+    dir.create(
+      file.path(
+        here::here("SDMs"),
+        'logs'
       ),
       recursive = TRUE
     )
