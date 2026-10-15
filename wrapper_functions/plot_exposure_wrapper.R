@@ -5,12 +5,12 @@
 #' @param forecast_release,hindcast_release MOM6 release codes for the (f)orecast and (h)indcasts used. Used to pull correct variable exposures
 #' @param forecast_init forecast_initialization code corresponding to the forecast_initalization date of the desired forecast data. Used to pull correct variable exposures
 #' @param hindcast_yr_range character string corresponding to the years in the hindcast data used. Used to pull correct ranked exposure values and save the data properly
-#' @param stock_key a named vector containing the abbreviations and long names of stocks to match exposure and sensitivity timeseries 
+#' @param stock_key a named vector containing the abbreviations and long names of stocks to match exposure and sensitivity timeseries
 #' @param coastline shapefile used to plot land in model prediction plots
 #' @param bathymetry spatRaster file of bathymetry data; used to plot bathymetry in stock boundary plots
 #'
-#' @return no returns; figures saved in desired folder 
-#' 
+#' @return no returns; figures saved in desired folder
+#'
 plot_exposure_wrapper <- function(
     spp,
     forecast_release,
@@ -19,13 +19,13 @@ plot_exposure_wrapper <- function(
     hindcast_yr_range,
     variable_df,
     stock_key,
-    coastline, 
+    coastline,
     bathymetry) {
-  
-  
+
+
   #### 1) Variable Exposures
-  #### load in data 
-  
+  #### load in data
+
   #load stocks if available
   if (file.exists(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))) {
     stocks <- terra::vect(paste0(
@@ -36,7 +36,7 @@ plot_exposure_wrapper <- function(
   } else {
     stocks <- NULL
   }
-  
+
   #load maps
   varMaps <- terra::rast(file.path(
     here::here("Exposure"),
@@ -55,12 +55,12 @@ plot_exposure_wrapper <- function(
     )
   ))
 
-  
-  #plot maps 
+
+  #plot maps
   plot_variable_map_timeseries(data = varMaps,
                                stocks = stocks,
                                stock_key = stock_key,
-                               coastline = coastline, 
+                               coastline = coastline,
                                bathymetry = bathymetry,
                                variable_df = variable_df,
                                fig_name = paste0(
@@ -76,12 +76,11 @@ plot_exposure_wrapper <- function(
                                      '_',
                                      hindcast_release,
                                      '_',
-                                     hindcast_yr_range,
-                                     '.pdf'
+                                     hindcast_yr_range
                                    )
                                  )
                                ))
-  
+
   #timeseries
   #load timeseries
   vecExp <- readRDS(
@@ -102,12 +101,12 @@ plot_exposure_wrapper <- function(
       )
     )
   )
-  
-  #plot timeseries 
+
+  #plot timeseries
   plot_variable_map_timeseries(data = vecExp,
                                stocks = stocks,
                                stock_key = stock_key,
-                               coastline = coastline, 
+                               coastline = coastline,
                                bathymetry = bathymetry,
                                variable_df = variable_df,
                                fig_name = paste0(
@@ -123,13 +122,12 @@ plot_exposure_wrapper <- function(
                                      '_',
                                      hindcast_release,
                                      '_',
-                                     hindcast_yr_range,
-                                     '.pdf'
+                                     hindcast_yr_range
                                    )
                                  )
                                ))
-  
-  ##2 total exposure 
+
+  ##2 total exposure
   #load maps
   expMaps <- terra::rast(file.path(
     here::here("Exposure"),
@@ -147,7 +145,7 @@ plot_exposure_wrapper <- function(
       '.tif'
     )
   ))
-  
+
   #load timeseries
   vecExp <- readRDS(
     file.path(
@@ -170,14 +168,14 @@ plot_exposure_wrapper <- function(
   if (!is.null(nrow(vecExp))) {
     rownames(vecExp)[1] <- 'All Stocks'
   }
-  
-  #plot for all variables 
+
+  #plot for all variables
   plot_total_map_timeseries(map = expMaps,
-                            timeseries = vecExp, 
-                            stocks = stocks, 
+                            timeseries = vecExp,
+                            stocks = stocks,
                             stock_key = stock_key,
                             metric = 'exposure',
-                            coastline = coastline, 
+                            coastline = coastline,
                             bathymetry = bathymetry,
                             fig_name = paste0(
                               file.path(here::here('Exposure'), spp, 'Figures'),
@@ -189,18 +187,17 @@ plot_exposure_wrapper <- function(
                                 '_',
                                 hindcast_release,
                                 '_',
-                                hindcast_yr_range,
-                                '.pdf'
+                                hindcast_yr_range
                               )
                             ))
-  
+
   #plot just map
   plot_total_map_timeseries(map = expMaps,
-                            timeseries = NULL, 
-                            stocks = stocks, 
+                            timeseries = NULL,
+                            stocks = stocks,
                             stock_key = stock_key,
                             metric = 'exposure',
-                            coastline = coastline, 
+                            coastline = coastline,
                             bathymetry = bathymetry,
                             fig_name = paste0(
                               file.path(here::here('Exposure'), spp, 'Figures'),
@@ -212,12 +209,11 @@ plot_exposure_wrapper <- function(
                                 '_',
                                 hindcast_release,
                                 '_',
-                                hindcast_yr_range,
-                                '.pdf'
+                                hindcast_yr_range
                               )
                             ))
-  
-  ##important variables 
+
+  ##important variables
   #load maps
   expMaps <- terra::rast(file.path(
     here::here("Exposure"),
@@ -235,7 +231,7 @@ plot_exposure_wrapper <- function(
       '.tif'
     )
   ))
-  
+
   #load timeseries
   vecExp <- readRDS(
     file.path(
@@ -258,13 +254,13 @@ plot_exposure_wrapper <- function(
   if (!is.null(nrow(vecExp))) {
     rownames(vecExp)[1] <- 'All Stocks'
   }
-  #plot for all variables 
+  #plot for all variables
   plot_total_map_timeseries(map = expMaps,
-                            timeseries = vecExp, 
-                            stocks = stocks, 
+                            timeseries = vecExp,
+                            stocks = stocks,
                             stock_key = stock_key,
                             metric = 'exposure',
-                            coastline = coastline, 
+                            coastline = coastline,
                             bathymetry = bathymetry,
                             fig_name = paste0(
                               file.path(here::here('Exposure'), spp, 'Figures'),
@@ -276,18 +272,17 @@ plot_exposure_wrapper <- function(
                                 '_',
                                 hindcast_release,
                                 '_',
-                                hindcast_yr_range,
-                                '.pdf'
+                                hindcast_yr_range
                               )
                             ))
-  
+
   #plot jusst map
   plot_total_map_timeseries(map = expMaps,
-                            timeseries = NULL, 
-                            stocks = stocks, 
+                            timeseries = NULL,
+                            stocks = stocks,
                             stock_key = stock_key,
                             metric = 'exposure',
-                            coastline = coastline, 
+                            coastline = coastline,
                             bathymetry = bathymetry,
                             fig_name = paste0(
                               file.path(here::here('Exposure'), spp, 'Figures'),
@@ -299,26 +294,25 @@ plot_exposure_wrapper <- function(
                                 '_',
                                 hindcast_release,
                                 '_',
-                                hindcast_yr_range,
-                                '.pdf'
+                                hindcast_yr_range
                               )
                             ))
-  
+
   ####3 Plot Dynamic Variable Importance
   imp <- readRDS(
     file.path(
-      here::here('Exposure'), 
+      here::here('Exposure'),
       spp,
       'Data',
       'normalized_dynamic_variable_importance.rds'
     )
   )
-  
-  plot_variable_radars(variable_importance = imp, 
+
+  plot_variable_radars(variable_importance = imp,
                        fig_name = paste0(
     file.path(here::here('Exposure'), spp, 'Figures'),
     paste0(
-      '/dynamic_variable_importance_all.pdf'
+      '/dynamic_variable_importance_all'
     )
   ))
 }

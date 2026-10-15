@@ -105,7 +105,7 @@ sensitivity.certainty <- mapply(
 )
 sensitivityDF <- do.call(rbind, sensitivity.certainty)
 
-##calculate "global" sensitivities for species with multiple stocks 
+##calculate "global" sensitivities for species with multiple stocks
 sensG <- sens[!is.na(sens$Stock),] #remove species with Stock == NA to subset to only species that had stocks
 
 #create list of data.frames for each species/stock
@@ -130,7 +130,7 @@ sensitivity.certainty <- mapply(
 )
 sensitivityG <- do.call(rbind, sensitivity.certainty)
 
-#add 'global' tag to sensitivityG to merge 
+#add 'global' tag to sensitivityG to merge
 rownames(sensitivityG) <- paste(rownames(sensitivityG), 'global', sep = '-')
 
 #combine
@@ -141,7 +141,7 @@ sensitivity <- sensitivity[order(rownames(sensitivity)),]
 write.csv(sensitivity, './Final/sensitivity_2_0_final_scores_v2.csv') #save results
 
 ##### make data.quality spreadsheet
-#by stocks 
+#by stocks
 species.data.list <- split(sens, sens$Stock.Name)
 dq <- lapply(species.data.list, calculate_data_quality)
 attributeDQ <- do.call(rbind, dq)
@@ -153,7 +153,7 @@ dq.per <- lapply(species.data.list, function(x) {
 dq.per <- do.call(rbind, dq.per)
 attributeDQ$Percent.2 <- dq.per[, 1]
 
-#globally 
+#globally
 species.data.list <- split(sensG, sensG$Species)
 dqG <- lapply(species.data.list, calculate_data_quality, id_col = 'Species')
 attributeG <- do.call(rbind, dqG)
@@ -165,7 +165,7 @@ dq.per <- lapply(species.data.list, function(x) {
 dq.per <- do.call(rbind, dq.per)
 attributeG$Percent.2 <- dq.per[, 1]
 
-#add 'global' tag to attributeG to merge 
+#add 'global' tag to attributeG to merge
 rownames(attributeG) <- paste(rownames(attributeG), 'global', sep = '-')
 
 #combine
@@ -178,7 +178,7 @@ write.csv(attribute, './Final/data_quality_2_0_final_scores_v2.csv') #save resul
 #barplot reports aren't needed for final results, so just make the final tables for species narratives
 
 #make sensitivity tables
-#reload things in if they aren't in already 
+#reload things in if they aren't in already
 sens <- read.csv('./Final/cva2.0_sensitivity_final_raw_scores.csv') #load in final csv file
 sens <- sens[sens$Attributes != 'Exposure Factor', ] #make sure that only sensitivity is included - expert scores were only used in sensitivity for CVA2.0 but this just makes sure there aren't any empty columns
 sens$Stock.Name <- replace(sens$Stock.Name, sens$Stock.Name == 'Short-finned squid', 'Short finned squid')
@@ -186,7 +186,7 @@ sens$Stock.Name <- replace(sens$Stock.Name, sens$Stock.Name == 'Long-finned squi
 sens$Stock.Name <- replace(sens$Stock.Name, sens$Stock.Name == "Smooth dogfish shark-Atlantic", 'Smooth dogfish')
 sens <- split_species_stocks(sens, 'Stock.Name')
 
-##calculate "global" sensitivities for species with multiple stocks 
+##calculate "global" sensitivities for species with multiple stocks
 sensG <- sens[!is.na(sens$Stock),] #remove species with Stock == NA to subset to only species that had stocks
 sensG$Stock.Name <- paste(sensG$Species, 'global', sep = '-')
 sensG$Stock <- 'global'
@@ -224,12 +224,12 @@ make_sensitivity_table(
   table_dir = './Final/Summary_Tables/'
 )
 
-#### make rasters for vulnerability calculation 
+#### make rasters for vulnerability calculation
 #get bathymetry for masking
 statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
 bathy <- statics$bathy
 
-#load a exposure raster to use as a template 
+#load a exposure raster to use as a template
 template <- terra::rast(paste0(
   file.path(here::here('Exposure'), 'Atlanticcod', 'Data',
     'total_exposure_map_all_var_r20250925_i202501_r20250715_20142023.tif')
@@ -246,7 +246,7 @@ for(x in 1:length(unique(sensitivityDF$Species))){
       bathymetry_range = c(-1000, 0),
       r_template = template
     )
-  
+
   terra::writeRaster(
     x = srast,
     filename = paste0(
@@ -260,7 +260,7 @@ for(x in 1:length(unique(sensitivityDF$Species))){
     ),
     overwrite = TRUE
   )
-  
+
   print(unique(sensitivityDF$Species)[x])
   plot(srast, main = unique(sensitivityDF$Species)[x])
 }
@@ -283,14 +283,14 @@ stock_key <- c(
 
 
 #get bathymetry for plotting
-statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+statics <- terra::rast(here::here('SDMs/Data/staticVariables_cropped_terra_reproj.tif'))
 bathy <- statics$bathy
 
 #get coastline for plotting
-land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+land <- terra::vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
 landNE <- terra::crop(land, bathy)
 
-#quick species fix 
+#quick species fix
 sensitivityDF$Species <- replace(sensitivityDF$Species, sensitivityDF$Species == 'Monkfish Goosefish', 'Monkfish')
 sensitivityDF$Species <- replace(sensitivityDF$Species, sensitivityDF$Species == 'Long finned squid', 'Long fin squid')
 sensitivityDF$Species <- replace(sensitivityDF$Species, sensitivityDF$Species == 'Short finned squid', 'Short fin squid')
@@ -308,7 +308,7 @@ for(x in 1:length(unique(sensitivityDF$Species))){
       )
     )
   )
-  
+
   #load stocks if available
   if (file.exists(paste0('../shpfiles/species_stock_areas/', gsub(" ", '', unique(sensitivityDF$Species)[x]), '.shp'))) {
     stocks <- terra::vect(paste0(
@@ -319,7 +319,7 @@ for(x in 1:length(unique(sensitivityDF$Species))){
   } else {
     stocks <- NULL
   }
-  
+
   plot_total_map_timeseries(map = srast,
                             timeseries = NULL,
                             metric = 'sensitivity',
@@ -331,11 +331,11 @@ for(x in 1:length(unique(sensitivityDF$Species))){
                                 '/',
                                 gsub(" ", '', unique(sensitivityDF$Species)[x]),
                                 '_',
-                                'sensitivity_v1.pdf'
+                                'sensitivity_v1'
                               )
                             ),
-                            coastline = landNE, 
+                            coastline = landNE,
                             bathymetry = bathy)
-  
+
   print(unique(sensitivityDF$Species)[x])
 }

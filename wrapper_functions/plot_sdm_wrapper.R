@@ -7,11 +7,11 @@
 #' @param coastline shapefile used to plot land in model prediction plots
 #' @param bathymetry spatRaster file of bathymetry data; used to plot bathymetry in stock boundary plots
 #'
-#' @return no returns; figures saved in desired folder 
-#' 
+#' @return no returns; figures saved in desired folder
+#'
 plot_sdm_wrapper <- function(
     spp,
-    model, 
+    model,
     type = 'hindcast',
     release,
     init = NULL,
@@ -21,16 +21,16 @@ plot_sdm_wrapper <- function(
     training_years,
     component_models,
     var_names,
-    coastline, 
+    coastline,
     bathymetry) {
-  
+
   suffix <- if (spatial_temporal) "" else "_global"
   bathy_suffix <- if (mask_bathy) "_masked" else ""
   corr_suffix <- if (rm_corr) "rmcorr" else ""
-  
-  #### 1) Model results 
-  #### load in data 
-  
+
+  #### 1) Model results
+  #### load in data
+
   #load stocks if available
   if (file.exists(paste0('../shpfiles/species_stock_areas/', spp, '.shp'))) {
     stocks <- terra::vect(paste0(
@@ -41,7 +41,7 @@ plot_sdm_wrapper <- function(
   } else {
     stocks <- NULL
   }
-  
+
   #load maps
   abund <- terra::rast(file.path(
     here::here("SDMs"),
@@ -56,7 +56,7 @@ plot_sdm_wrapper <- function(
       '.tif'
     )
   ))
-  
+
   #avg ensemble HSM monthly
   avgHSM <- terra::tapp(
     abund,
@@ -64,12 +64,12 @@ plot_sdm_wrapper <- function(
     fun = 'mean'
   ) #average by month => assuming a monthly timeseries
   names(avgHSM) <- month.abb
-  
-  
-  #plot monthly maps 
+
+
+  #plot monthly maps
   plot_sdms(sdm = avgHSM,
                                stocks = stocks,
-                               coastline = coastline, 
+                               coastline = coastline,
                                bathymetry = bathymetry,
             panel_names = month.abb,
                                type = 'model',
@@ -80,17 +80,16 @@ plot_sdm_wrapper <- function(
                                    'Figures',
                                    paste0(
                                      'mean_SDM_monthly_',
-                                     toupper(model), 
+                                     toupper(model),
                                      '_',
                                      type,
                                      '_',
                                      release,
-                                     ifelse(type == 'forecast', paste0('_', init), ''),
-                                     '.pdf'
+                                     ifelse(type == 'forecast', paste0('_', init), '')
                                    )
                                  )
                                ))
-  
+
   #avg ensemble HSM annually
   avgHSM <- terra::tapp(
     abund,
@@ -98,12 +97,12 @@ plot_sdm_wrapper <- function(
     fun = 'mean'
   ) #average by year
   names(avgHSM) <- 1993:2023
-  
-  
-  #plot annual maps 
+
+
+  #plot annual maps
   plot_sdms(sdm = avgHSM,
             stocks = stocks,
-            coastline = coastline, 
+            coastline = coastline,
             bathymetry = bathymetry,
             panel_names = 1993:2023,
             type = 'model',
@@ -114,18 +113,17 @@ plot_sdm_wrapper <- function(
                 'Figures',
                 paste0(
                   'mean_SDM_annual_',
-                  toupper(model), 
+                  toupper(model),
                   '_',
                   type,
                   '_',
                   release,
-                  ifelse(type == 'forecast', paste0('_', init), ''),
-                  '.pdf'
+                  ifelse(type == 'forecast', paste0('_', init), '')
                 )
               )
             ))
-  
-  #### 2 plot residuals 
+
+  #### 2 plot residuals
   #load observations
   obs <- utils::read.csv(file.path(
     here::here("SDMs"),
@@ -142,14 +140,14 @@ plot_sdm_wrapper <- function(
     )
   ))
 
-  #plot  
+  #plot
   plot_sdms(sdm = abund, #need to pass raw data here to match observations/sdm correctly
             obs = obs,
             xy_col = c("grid.lon", "grid.lat"),
             time_col = 'month',
             panel_names = month.abb,
             stocks = stocks,
-            coastline = coastline, 
+            coastline = coastline,
             bathymetry = bathymetry,
             type = 'residuals',
             fig_name = paste0(
@@ -159,15 +157,14 @@ plot_sdm_wrapper <- function(
                 'Figures',
                 paste0(
                   'mean_residuals_',
-                  toupper(model), 
+                  toupper(model),
                   '_',
                   type,
                   '_',
-                  release,
-                  '.pdf'
+                  release
                 )
               )
-            ), 
+            ),
             hist_name = paste0(
               file.path(
                 here::here("SDMs"),
@@ -175,19 +172,18 @@ plot_sdm_wrapper <- function(
                 'Figures',
                 paste0(
                   'hist_residuals_',
-                  toupper(model), 
+                  toupper(model),
                   '_',
                   type,
                   '_',
-                  release,
-                  '.pdf'
+                  release
                 )
               )
             ))
-  
+
   ####3 Plot Variable Importance
   training_name <- file.path(
-    here::here('SDMs'), 
+    here::here('SDMs'),
     spp,
     paste0(
       'training_',
@@ -203,13 +199,13 @@ plot_sdm_wrapper <- function(
       '.csv'
     )
   )
-  
+
   dfT <- utils::read.csv(file.path(training_name))
-  
+
   #normalized variable importance
   #read in variable importance outputs & create list
   flist <- dir(
-    file.path(here::here('SDMs'), 
+    file.path(here::here('SDMs'),
               spp, 'model_output/importance'),
     full.names = T,
     pattern = 'rds'
@@ -223,43 +219,43 @@ plot_sdm_wrapper <- function(
     '.rds',
     '',
     dir(
-      file.path(here::here('SDMs'), 
+      file.path(here::here('SDMs'),
                 spp, 'model_output/importance'),
       full.names = F,
       pattern = 'rds'
     )
   )
-  
+
   imp_list <- imp_list[names(imp_list) %in% toupper(component_models)]
-  
-  load(file.path(here::here('SDMs'), 
+
+  load(file.path(here::here('SDMs'),
                  spp, 'model_output/ensemble_weights.rds')) #weights
-  
+
   #pull variable names from mapexp
   dyn_vars <- names(dfT)[names(dfT) %in% var_names]
-  
+
   #create variable importance
   var_imp <- normalize_variable_importance(
     vars = dyn_vars,
     ens_weights = weights,
     imp_list = imp_list
   )
-  
+
   #save
   saveRDS(var_imp,
     file.path(
-      here::here('SDMs'), 
+      here::here('SDMs'),
       spp,
       'model_output',
       'normalized_variable_importance.rds'
     )
   )
-  
-  plot_variable_radars(variable_importance = var_imp, 
+
+  plot_variable_radars(variable_importance = var_imp,
                        fig_name = paste0(
                          file.path(here::here('SDMs'), spp, 'Figures'),
                          paste0(
-                           '/variable_importance_all.pdf'
+                           '/variable_importance_all'
                          )
                        ))
 }

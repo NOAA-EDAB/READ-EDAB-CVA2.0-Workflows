@@ -549,16 +549,17 @@ stock_key <- stock_key[
 
 #merge with spp.list to subset to just species list
 stock_key <- merge(stock_key, spp.list, by = 'Name', all.x = F, all.y = T)
+stock_key <- stock_key[!is.na(stock_key$AREA),]
 
 ##load in CAM polygons
-stat_areas <- terra::vect('../NEFSC_GIS/Statistical_Areas_2010_withNames.shp')
+stat_areas <- terra::vect(here::here('shpfiles/NEFSC_GIS/Statistical_Areas_2010_withNames.shp'))
 
 #get bathymetry for plotting
-statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+statics <- terra::rast(here::here('SDMs/Data/staticVariables_cropped_terra_reproj.tif'))
 bathy <- statics$bathy
 
 #get coastline for plotting
-land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+land <- terra::vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
 landNE <- terra::crop(land, bathy)
 
 make_stock_polygons(
@@ -651,11 +652,11 @@ plan(sequential)
 ##################################
 
 #get bathymetry for plotting
-statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+statics <- terra::rast(here::here('SDMs/Data/staticVariables_cropped_terra_reproj.tif'))
 bathy <- statics$bathy
 
 #get coastline for plotting
-land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+land <- terra::vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
 landNE <- terra::crop(land, bathy)
 
 ### set up variable dataframe to make pretty names - not exact MOM6 names to make sure they fit
