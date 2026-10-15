@@ -60,7 +60,7 @@ setwd(
 
 
 spp.list <- read.csv(
-  file.path(here::here('SDMs'), , 'spp_list.csv')
+  file.path(here::here('SDMs'), 'spp_list.csv')
 )
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
 
@@ -330,5 +330,37 @@ foreach(
 # 5. Stop the cluster when finished
 parallel::stopCluster(cl)
 ##########################################
+
+
+###############################
+#### CALCULATE SHIFTS #########
+###############################
+statics <- terra::rast(here::here('SDMs/Data/staticVariables_cropped_terra_reproj.tif'))
+bathy <- statics$bathy
+
+land <- terra::vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
+landNE <- terra::crop(land, bathy)
+
+for(x in 1:nrow(spp.list)){
+  distMat <- distribution_shifts_wrapper(
+    spp = spp.list$Name[x],
+    model = 'ensemble',
+    hindcast_release = 'r20250715',
+    forecast_release = 'r20250925',
+    forecast_init = 'i202501',
+    spatial_temporal = F,
+    mask_bathy = T,
+    bathymetry = bathy,
+    coastline = landNE
+  )
+  saveRDS(distMat, file =
+            file.path(
+              here::here('AdditionalMetrics/DistributionChange'),
+              spp.list$Name[x],
+              'distribution_shift_metrics.rds'
+            ))
+  print(x)
+}
+
 
 ##############################
