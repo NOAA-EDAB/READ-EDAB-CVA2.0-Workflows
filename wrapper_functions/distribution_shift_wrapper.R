@@ -116,14 +116,14 @@ distribution_shifts_wrapper <- function(spp,
   mets <- mets[,-1]
   mets$timestep <- c('1993-1997', '2019-2023', '2031-2035')
   
-  pals <- data.frame(core = c('blue4', 'firebrick4', 'goldenrod4'), range = c('blue', 'firebrick', 'goldenrod'))
+  pals <- data.frame(core = c('cyan3', 'maroon2', 'gold'), range = c('cyan3', 'maroon2', 'gold'))
 
   #generate static plots 
   plot_distribution_shifts(
     plot_name = file.path(
       here::here('AdditionalMetrics/DistributionChange'), 
       spp,
-      'distribution_shifts_static.pdf'
+      'distribution_shifts_static'
     ),
     avg_core_polys = fives_dyn$core_polygons,
     avg_range_polys = fives_dyn$all_polygons,

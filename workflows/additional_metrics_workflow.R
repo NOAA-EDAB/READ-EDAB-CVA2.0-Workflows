@@ -260,24 +260,27 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
  # ),
 #  .errorhandling = "pass"
 #) %dopar%
-  for(s in 1:nrow(spp.list)){
+  for(s in 40:nrow(spp.list)){
+    # 1. Clear terra's hidden temporary files from previous iterations
+    terra::tmpFiles(remove = TRUE)
+    gc()
     # a. Unwrap the spatial data inside the worker environment
-
+# New: Apply unwrap to each wrapped object in the list
+      norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
+      static_vars_worker <- terra::unwrap(statics)
+      
     # b. Load in training data for the species
     dfT <- read.csv(file.path(
       here::here("SDMs"),
       spp.list$Name[s],
       'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'
     ))
-    preds <- vector(mode = 'list', length = length(mods))
+    
+    # 3. Use a character vector for file paths instead of a list for terra objects
+    pred_paths <- vector(mode = 'character', length = length(mods))
 
     # c. Predict component models
     for (m in 1:length(mods)) {
-      
-      # New: Apply unwrap to each wrapped object in the list
-      norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
-      static_vars_worker <- terra::unwrap(statics)
-      
       
       #check to see if model has already been predicted
       out_path <- file.path(
@@ -314,6 +317,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
       # Save prediction
       terra::writeRaster(p, file = out_path, overwrite = TRUE)
       print(mods[m])
+      
       } else {
         next
       }
@@ -324,10 +328,15 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
      # }
 
       # Add to list for ensemble
-      preds[[m]] <- p
+      # Store the file path instead of the raster pointer
+      pred_paths[m] <- out_path
+      
+      rm(p, mod)
+      gc()
     } #end m
     
-    preds <- Filter(Negate(is.null), preds)
+    # Drop empty strings if any models were skipped
+    pred_paths <- pred_paths[pred_paths != ""]
 
     # d. Now predict ensemble
     # FIX: Assigning weights via load() returns a character string. Use readRDS() instead.
@@ -339,10 +348,14 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
     )
     load(weights_path) #weights
     #mods as provided means that the model outputs in preds will be in the same order as they are in weights so no need to reorder
+    
+    # 6. Re-load the rasters directly from disk for the ensemble.
+    # This guarantees clean pointers that aren't tied to the previous loop's memory space.
+    preds_stack <- lapply(pred_paths, terra::rast)
 
     ens <- make_sdm_predictions(
       model = 'ensemble',
-      rasts = preds,
+      rasts = preds_stack,
       weights = weights,
       mod = NULL,
       static_variables = static_vars_worker,
@@ -365,6 +378,10 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
     # Return NULL to prevent foreach from saving massive raster lists into RAM
     #return(NULL)
   print(s)
+  
+  # Clear heavy variables at the end of the species loop
+  rm(ens, preds_stack, norm_forecast_worker, static_vars_worker, dfT, weights)
+  gc()
 }
 
 # 5. Stop the cluster when finished
