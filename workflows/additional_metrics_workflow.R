@@ -217,7 +217,7 @@ for (x in 1:length(forecast.list$Short.Name)) {
 
 names(norm_forecast) <- forecast.list$Short.Name
 
-#for some reason some of the forecast rasters are flipped, so flipping them back
+#for some reason some of the forecast rasters are flipped, so flipping them back 
 for(x in 1:length(norm_forecast)){
   if(names(norm_forecast)[x] %in% c('bottomO2', 'diazPP', 'smallPP', 'largePP', 'smallZoo', 'intNPP')){
     norm_forecast[[x]] <- terra::flip(norm_forecast[[x]])
@@ -260,7 +260,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
  # ),
 #  .errorhandling = "pass"
 #) %dopar%
-  for(s in 40:nrow(spp.list)){
+  for(s in 1:nrow(spp.list)){
     # 1. Clear terra's hidden temporary files from previous iterations
     terra::tmpFiles(remove = TRUE)
     gc()
@@ -281,16 +281,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
 
     # c. Predict component models
     for (m in 1:length(mods)) {
-<<<<<<< HEAD
       
-=======
-
-      # New: Apply unwrap to each wrapped object in the list
-      norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
-      static_vars_worker <- terra::unwrap(statics)
-
-
->>>>>>> e038f4ab8868acdaa7a4758cea7cdfe885748757
       #check to see if model has already been predicted
       out_path <- file.path(
         here::here("SDMs"),
@@ -298,7 +289,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
         'output_rasters',
         paste0(mods[m], '_forecast_r20250925_i202501.tif')
       )
-
+      
     #  if(!file.exists(out_path)){#if the file doesn't exist, make it
       # FIX: Use readRDS() for .rds files, not load()
       mod_path <- file.path(
@@ -310,7 +301,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
       )
       if(file.exists(mod_path)){
         load(mod_path) #mod
-
+        
         p <- make_sdm_predictions(
         mod = mod,
         model = tolower(mods[m]),
@@ -330,9 +321,9 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
       } else {
         next
       }
-
+      
      # } else {
-        #if the file exists
+        #if the file exists 
       #  p <- terra::rast(out_path)
      # }
 
@@ -343,14 +334,9 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
       rm(p, mod)
       gc()
     } #end m
-<<<<<<< HEAD
     
     # Drop empty strings if any models were skipped
     pred_paths <- pred_paths[pred_paths != ""]
-=======
-
-    preds <- Filter(Negate(is.null), preds)
->>>>>>> e038f4ab8868acdaa7a4758cea7cdfe885748757
 
     # d. Now predict ensemble
     # FIX: Assigning weights via load() returns a character string. Use readRDS() instead.
@@ -402,15 +388,13 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
 #parallel::stopCluster(cl)
 ##########################################
 
-
 ###############################
 #### CALCULATE SHIFTS #########
 ###############################
 statics <- terra::rast(here::here('SDMs/Data/staticVariables_cropped_terra_reproj.tif'))
 bathy <- statics$bathy
 
-
-land <- terra::vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
+land <- vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
 landNE <- terra::crop(land, bathy)
 
 for(x in 1:nrow(spp.list)){
@@ -425,9 +409,9 @@ for(x in 1:nrow(spp.list)){
     bathymetry = bathy,
     coastline = landNE
   )
-  saveRDS(distMat, file =
+  saveRDS(distMat, file = 
             file.path(
-              here::here('AdditionalMetrics/DistributionChange'),
+              here::here('AdditionalMetrics/DistributionChange'), 
               spp.list$Name[x],
               'distribution_shift_metrics.rds'
             ))
