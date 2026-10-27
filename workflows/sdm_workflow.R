@@ -1433,14 +1433,14 @@ for (x in 1:length(flist)) {
     strsplit(fname, "_")[[1]][5],
     sep = '.'
   )
-  
+
   ft <- merge(template, f, by = 'Species', all.x = T)
 
   #append to data.frame
   modConf <- rbind(modConf, ft)
   print(x)
 }
-#clean up 
+#clean up
 modConf <- modConf[,c('Species', 'Score.y', 'Scorer')]
 colnames(modConf)[2] <- "Score"
 modConf$Score <- replace(modConf$Score, modConf$Score == 'no model', NA)
@@ -1495,16 +1495,16 @@ for (x in 1:nrow(speciesMC)) {
   m <- speciesMC[x, 'meanConfidence']
   s <- speciesMC[x, 'sdConfidence']
   sp <- speciesMC[x, 'Species']
-  
+
   sp <- gsub('/', '', sp)
-  
+
   #use species.data.list to subset since that's already done and the list is in the same order as the summary stats spreadsheet
   spDF <- species.data.list[[x]]
-  
+
   png(
     file = paste0('./ConfidenceScores/Preliminary/histograms/', sp, '.png'),
     height = 6,
-    width = 6, 
+    width = 6,
     units = 'in',
     res = 300
   )
@@ -1519,5 +1519,119 @@ for (x in 1:nrow(speciesMC)) {
   ) #add species, and summary stats to main
   dev.off()
 }
+
+
+##FINAL
+###all submitted csvs should be added to the SDMs/ConfidenceScores/Final folder
+### make sure to grab only the third tab in the csv - the other two are just instructions; the third one is the only one with data
+
+#create combined data.frame
+flist <- dir('./ConfidenceScores/Final/submitted_csvs', pattern = 'NECVA2.0_Model_Confidence', full.names = T)
+
+template <- read.csv('./ConfidenceScores/Final/submitted_csvs/TEMPLATE.csv', skip = 2)
+template <- template[,1:3]
+
+modConf <- NULL
+for (x in 1:length(flist)) {
+  #load in data frame & clean
+  f <- read.csv(flist[x], skip = 2) #remove header when loading in
+  f <- f[, 1:3] #remove key in later columns
+  #add scorer column in case you want that information
+  fname <- gsub('.csv', '', flist[x])
+  f$Scorer <- paste(
+    strsplit(fname, "_")[[1]][4],
+    strsplit(fname, "_")[[1]][5],
+    sep = '.'
+  )
+
+  ft <- merge(template, f, by = 'Species', all.x = T)
+
+  #append to data.frame
+  modConf <- rbind(modConf, ft)
+  print(x)
+}
+#clean up
+modConf <- modConf[,c('Species', 'Score.y', 'Scorer')]
+colnames(modConf)[2] <- "Score"
+modConf$Score <- replace(modConf$Score, modConf$Score == 'no model', NA)
+modConf$Score <- as.numeric(modConf$Score)
+
+write.csv(
+  modConf,
+  file = './ConfidenceScores/Final/raw_combined_scores.csv'
+) #save for prosperity (the above should be quick but just in case)
+
+#check for missing scores - all should be 5 if everyone participated (they didn't)
+table(modConf$Species[-which(is.na(modConf$Score))])
+
+#run model.confidence - similar to sensitivity score workflows with lapply
+species.data.list <- split(modConf, modConf$Species)
+species.conf <- lapply(species.data.list, calculate_model_confidence)
+speciesMC <- do.call(rbind, species.conf)
+speciesMC$Species <- rownames(speciesMC)
+write.csv(speciesMC, file = './ConfidenceScores/Final/mean_sd_scores.csv')
+
+#speciesMC <- speciesMC[-which(is.nan(speciesMC$meanConfidence)),]
+
+#make histograms
+pdf(
+  file = './ConfidenceScores/Final/preliminary_histograms2.pdf',
+  height = 11,
+  width = 8
+)
+par(mfrow = c(3, 2))
+for (x in 1:nrow(speciesMC)) {
+  #pull data from mean/sd scores data.frame
+  m <- speciesMC[x, 'meanConfidence']
+  s <- speciesMC[x, 'sdConfidence']
+  sp <- speciesMC[x, 'Species']
+
+  #use species.data.list to subset since that's already done and the list is in the same order as the summary stats spreadsheet
+  spDF <- species.data.list[[x]]
+
+  #plot histogram
+  hist(
+    spDF$Score,
+    xlim = c(0, 3),
+    breaks = seq(0, 3, by = 0.5),
+    ylim = c(0, 5),
+    xlab = '', #make sure breaks and limits are consistent
+    main = paste0(sp, '\nMean: ', round(m, 2), " | SD: ", round(s,2))
+  ) #add species, and summary stats to main
+}
+dev.off()
+
+#individual pngs
+
+for (x in 1:nrow(speciesMC)) {
+  #pull data from mean/sd scores data.frame
+  m <- speciesMC[x, 'meanConfidence']
+  s <- speciesMC[x, 'sdConfidence']
+  sp <- speciesMC[x, 'Species']
+
+  sp <- gsub('/', '', sp)
+
+  #use species.data.list to subset since that's already done and the list is in the same order as the summary stats spreadsheet
+  spDF <- species.data.list[[x]]
+
+  png(
+    file = paste0('./ConfidenceScores/Final/histograms/', sp, '.png'),
+    height = 6,
+    width = 6,
+    units = 'in',
+    res = 300
+  )
+  #plot histogram
+  hist(
+    spDF$Score,
+    xlim = c(0, 3),
+    breaks = seq(0, 3, by = 0.5),
+    ylim = c(0, 5),
+    xlab = '', #make sure breaks and limits are consistent
+    main = paste0(sp, '\nMean: ', round(m, 2), " | SD: ", round(s,2))
+  ) #add species, and summary stats to main
+  dev.off()
+}
+
 
 ############################################
