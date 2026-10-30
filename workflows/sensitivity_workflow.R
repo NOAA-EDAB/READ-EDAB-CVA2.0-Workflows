@@ -229,40 +229,85 @@ make_sensitivity_table(
 statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
 bathy <- statics$bathy
 
-#load a exposure raster to use as a template
-template <- terra::rast(paste0(
-  file.path(here::here('Exposure'), 'Atlanticcod', 'Data',
-    'total_exposure_map_all_var_r20250925_i202501_r20250715_20142023.tif')
-))
+# 1. Create your master list and a cleaned, lowercase "key"
+#load species list for loops
+spp.list <- read.csv(
+  '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/spp_list.csv'
+)
+#spp.list <- spp.list[,c(1:6)]
+spp.list$Name <- gsub(' ', '', spp.list$Common.Name) #make clean names to make folders if necessary/match to folder names
+#save yourself the headache and remove the one that fails
+spp.list <- spp.list[-42, ]
+
+master_names <- spp.list$Name
+key_master <- tolower(master_names)
+
+# 2. Clean the second vector (remove spaces, make lowercase)
+key_target <- tolower(gsub(" ", "", sensitivityDF$Species))
+
+# 3. Manually align the three exceptions to match the master key
+key_target[key_target == "longfinnedsquid"] <- "longfinsquid"
+key_target[key_target == "shortfinnedsquid"] <- "shortfinsquid"
+key_target[key_target == "monkfishgoosefish"] <- "monkfish"
+
+# 4. Map the exact names from vector 1 onto vector 2
+# match() finds the index, which we use to pull the perfectly capitalized string
+sensitivityDF$File_Name <- master_names[match(key_target, key_master)]
+
+stock_key <- c(
+  "EGOM"   = "Eastern Gulf of Maine",
+  "GBK"    = "Georges Bank",
+  "SNE"    = "Southern New England",
+  "WGOM"   = "Western Gulf of Maine",
+  "GOM" = "Gulf of Maine",
+  "GBGOM" = "Gulf of Maine/Georges Bank",
+  "SNEMA"    = "Southern New England/Mid-Atlantic",
+  "CCGOM" = "Gulf of Maine/Cape Cod",
+  "NORTH" = "Northern",
+  "SOUTH" = 'Southern',
+  "global" = "Range"
+)
 
 for(x in 1:length(unique(sensitivityDF$Species))){
-  srast <- make_sensitivity_raster(
-      species = unique(sensitivityDF$Species)[x],
-      sensitivity = sensitivityDF,
-      species_col = 'Species',
-      stock_col = 'Stock',
-      total_sens_col = 'Total.Sensitivity',
-      bathymetry = bathy,
-      bathymetry_range = c(-1000, 0),
-      r_template = template
-    )
-
-  terra::writeRaster(
-    x = srast,
-    filename = paste0(
-      here::here('Sensitivity/Final/rasters'),
-      paste0(
-        '/',
-        gsub(" ", '', unique(sensitivityDF$Species)[x]),
-        '_',
-        'sensitivity_v1.tif'
+  
+  fname <- sensitivityDF$File_Name[sensitivityDF$Species == unique(sensitivityDF$Species)[x] ][1]
+  
+  if(!is.na(fname)){
+    #load a exposure raster to use as a template
+    template <- terra::rast(paste0(
+      file.path(here::here('Exposure'), fname, 'Data',
+                'total_exposure_map_all_var_r20250925_i202501_r20250715_20142023.tif')
+    ))
+    
+    srast <- make_sensitivity_raster(
+        species = unique(sensitivityDF$Species)[x],
+        sensitivity = sensitivityDF,
+        species_col = 'Species',
+        stock_col = 'Stock',
+        stock_key = stock_key,
+        total_sens_col = 'Total.Sensitivity',
+        bathymetry = bathy,
+        bathymetry_range = c(-1000, 0),
+        r_template = template
       )
-    ),
-    overwrite = TRUE
-  )
-
-  print(unique(sensitivityDF$Species)[x])
-  plot(srast, main = unique(sensitivityDF$Species)[x])
+  
+    terra::writeRaster(
+      x = srast,
+      filename = paste0(
+        here::here('Sensitivity/Final/rasters'),
+        paste0(
+          '/',
+          gsub(" ", '', unique(sensitivityDF$Species)[x]),
+          '_',
+          'sensitivity_v1.tif'
+        )
+      ),
+      overwrite = TRUE
+    )
+  
+    print(unique(sensitivityDF$Species)[x])
+    plot(srast, main = unique(sensitivityDF$Species)[x])
+  }
 }
 
 ###save plots
