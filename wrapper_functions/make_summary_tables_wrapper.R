@@ -310,7 +310,10 @@ img_vuln <- magick::image_trim(img_vuln)
 # 3. Stack them vertically (stack = TRUE) & save
 stacked_img <- magick::image_append(c(img_sens, img_exp, img_vuln), stack = TRUE)
 magick::image_write(stacked_img, paste0(here::here('Vulnerability'), 
-                                        '/', spp, '/Figures/combined_table_allvars_', spp, '.png'))
+                                        '/', spp, '/Figures/combined_table_allvars_', hindcast_release, '_',
+                                        hindcast_yr_range, '_',     
+                                        forecast_release, '_',
+                                        forecast_init, '.png'))
 
 ## do it again but with subsetted exposure and corresponding vulnerability
 img_exp <- magick::image_read(paste0(here::here('Exposure'), 
@@ -326,6 +329,9 @@ img_vuln <- magick::image_trim(img_vuln)
 # 3. Stack them vertically (stack = TRUE) & save
 stacked_img <- magick::image_append(c(img_sens, img_exp, img_vuln), stack = TRUE)
 magick::image_write(stacked_img, paste0(here::here('Vulnerability'), 
-                                        '/', spp, '/Figures/combined_table_impvars_', spp, '.png'))
+                                        '/', spp, '/Figures/combined_table_impvars_', hindcast_release, '_',
+                                        hindcast_yr_range, '_',     
+                                        forecast_release, '_',
+                                        forecast_init, '.png'))
 
 } #end function

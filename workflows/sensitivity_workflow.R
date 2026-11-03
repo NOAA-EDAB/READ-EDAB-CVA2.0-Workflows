@@ -299,14 +299,14 @@ for(x in 1:length(unique(sensitivityDF$Species))){
           '/',
           gsub(" ", '', unique(sensitivityDF$Species)[x]),
           '_',
-          'sensitivity_v1.tif'
+          'sensitivity_2.0.tif'
         )
       ),
       overwrite = TRUE
     )
   
     print(unique(sensitivityDF$Species)[x])
-    plot(srast, main = unique(sensitivityDF$Species)[x])
+   # plot(srast, main = unique(sensitivityDF$Species)[x])
   }
 }
 
@@ -349,7 +349,7 @@ for(x in 1:length(unique(sensitivityDF$Species))){
         '/',
         gsub(" ", '', unique(sensitivityDF$Species)[x]),
         '_',
-        'sensitivity_v1.tif'
+        'sensitivity_2.0.tif'
       )
     )
   )
@@ -376,7 +376,7 @@ for(x in 1:length(unique(sensitivityDF$Species))){
                                 '/',
                                 gsub(" ", '', unique(sensitivityDF$Species)[x]),
                                 '_',
-                                'sensitivity_v1'
+                                'sensitivity_2.0'
                               )
                             ),
                             coastline = landNE,

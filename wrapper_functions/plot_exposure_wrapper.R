@@ -357,7 +357,7 @@ plot_exposure_wrapper <- function(
                        fig_name = paste0(
     file.path(here::here('Exposure'), spp, 'Figures'),
     paste0(
-      '/dynamic_variable_importance_all'
+      '/dynamic_variable_importance_',  hindcast_release
     )
   ))
 }
