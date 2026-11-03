@@ -5,7 +5,7 @@
 #' @param forecast_release,hindcast_release MOM6 release codes for the (f)orecast and (h)indcasts used. Used to pull correct variable exposures
 #' @param forecast_init forecast_initialization code corresponding to the forecast_initalization date of the desired forecast data. Used to pull correct variable exposures
 #' @param hindcast_yr_range character string corresponding to the years in the hindcast data used. Used to pull correct ranked exposure values and save the data properly
-#' @param stock_key a named vector containing the abbreviations and long names of stocks to match exposure and sensitivity timeseries
+#' @param stock_key,var_key a named vector containing the abbreviations and long names of stocks to match exposure and sensitivity timeseries or the abbreviations and long names of variables for radar plots 
 #' @param coastline shapefile used to plot land in model prediction plots
 #' @param bathymetry spatRaster file of bathymetry data; used to plot bathymetry in stock boundary plots
 #'
@@ -19,6 +19,7 @@ plot_exposure_wrapper <- function(
     hindcast_yr_range,
     variable_df,
     stock_key,
+    var_key,
     coastline,
     bathymetry) {
 
@@ -212,6 +213,28 @@ plot_exposure_wrapper <- function(
                                 hindcast_yr_range
                               )
                             ))
+  
+  #plot just timeseries
+  plot_total_map_timeseries(map = NULL,
+                            timeseries = vecExp,
+                            stocks = stocks,
+                            stock_key = stock_key,
+                            metric = 'exposure',
+                            coastline = coastline,
+                            bathymetry = bathymetry,
+                            fig_name = paste0(
+                              file.path(here::here('Exposure'), spp, 'Figures'),
+                              paste0(
+                                '/total_exposure_timeseries_only_all_var_',
+                                forecast_release,
+                                '_',
+                                forecast_init,
+                                '_',
+                                hindcast_release,
+                                '_',
+                                hindcast_yr_range
+                              )
+                            ))
 
   ##important variables
   #load maps
@@ -298,6 +321,28 @@ plot_exposure_wrapper <- function(
                               )
                             ))
 
+  #plot just timeseries
+  plot_total_map_timeseries(map = NULL,
+                            timeseries = vecExp,
+                            stocks = stocks,
+                            stock_key = stock_key,
+                            metric = 'exposure',
+                            coastline = coastline,
+                            bathymetry = bathymetry,
+                            fig_name = paste0(
+                              file.path(here::here('Exposure'), spp, 'Figures'),
+                              paste0(
+                                '/total_exposure_timeseries_only_imp_var_',
+                                forecast_release,
+                                '_',
+                                forecast_init,
+                                '_',
+                                hindcast_release,
+                                '_',
+                                hindcast_yr_range
+                              )
+                            ))
+  
   ####3 Plot Dynamic Variable Importance
   imp <- readRDS(
     file.path(
@@ -308,7 +353,7 @@ plot_exposure_wrapper <- function(
     )
   )
 
-  plot_variable_radars(variable_importance = imp,
+  plot_variable_radars(variable_importance = imp, variable_key = var_key,
                        fig_name = paste0(
     file.path(here::here('Exposure'), spp, 'Figures'),
     paste0(

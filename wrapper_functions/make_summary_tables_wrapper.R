@@ -125,9 +125,12 @@ build_summary_tables_wrapper <- function(
   ))
   
   #stack all rasters
-  rastStack <- c(varExp, totAll, totImp)
-  nl <- terra::nlyr(rastStack)
-  names(rastStack)[(nl - 1):nl] <- c('totalAll', 'totalImp')
+  rastStackAll <- c(varExp, totAll)
+  names(rastStackAll)[terra::nlyr(rastStackAll)] <- c('totalAll')
+  
+  #stack with imp
+  rastStackImp <- c(varExp, totImp)
+  names(rastStackImp)[terra::nlyr(rastStackImp)] <- c('totalImp') #keeping name the same here 
   
   ##load means and standard deviations
   rastMeans <- readRDS(paste0(
@@ -160,16 +163,16 @@ build_summary_tables_wrapper <- function(
     )
   ))
   
+  #make exposure table with all variables 
   expTable <- make_summary_table(species = spp, 
                                  metric = 'exposure', 
                                  mean_metric = rastMeans, 
                                certainty_metric = rastSD, 
-                               raw_data = rastStack, 
-                               raw_names = names(rastStack), 
-                               clean_names = c(variable_df$Long.Name[variable_df$Short.Name %in% names(rastStack)],
-                                               "Total Exposure", 
-                                               "Total Exposure - Important Variables"), 
-                               var_imp = ens_imp,
+                               raw_data = rastStackAll, 
+                               raw_names = names(rastStackAll), 
+                               clean_names = c(variable_df$Long.Name[variable_df$Short.Name %in% names(rastStackAll)],
+                                               "Total Exposure"), 
+                               var_imp = NULL,
                                stocks = stocks, 
                                stock_key = stock_key, 
                                stock_order = stock_order, 
@@ -179,6 +182,26 @@ build_summary_tables_wrapper <- function(
                                imp_threshold = 0.1,
                                save = T,
                                table_dir = paste0(here::here('Exposure'), '/', spp, '/Figures'))
+  
+  #make it with only important variables 
+  expTableImp <- make_summary_table(species = spp, 
+                                 metric = 'exposure', 
+                                 mean_metric = rastMeans, 
+                                 certainty_metric = rastSD, 
+                                 raw_data = rastStackImp, 
+                                 raw_names = names(rastStackImp), 
+                                 clean_names = c(variable_df$Long.Name[variable_df$Short.Name %in% names(rastStackImp)],
+                                                 "Total Exposure"), 
+                                 var_imp = ens_imp,
+                                 stocks = stocks, 
+                                 stock_key = stock_key, 
+                                 stock_order = stock_order, 
+                                 stock_col = stock_col,
+                                 total_sens_col = NA,
+                                 certainty_col = NA,
+                                 imp_threshold = 0.1,
+                                 save = T,
+                                 table_dir = paste0(here::here('Exposure'), '/', spp, '/Figures'))
   
   ### Vulnerability ###
 ##load means and standard deviations
@@ -234,34 +257,50 @@ vulnRasts <- terra::rast(paste0(
 )
 )
 
-vTable <- make_summary_table(species = spp, 
+vTableA <- make_summary_table(species = spp, 
                              metric = 'vulnerability', 
-                             mean_metric = vulnMeans, 
-                   certainty_metric = vulnSD, 
-                   raw_data = vulnRasts, 
-                   raw_names = names(vulnRasts), 
-                   clean_names = c("Total Vulnerability", 
-                                   "Total Vulnerability - Important Variables"), 
+                             mean_metric = if (is.null(stocks)) vulnMeans["all_variables"] else as.data.frame(vulnMeans)[, c(1, 3), drop = FALSE], 
+                   certainty_metric = if (is.null(stocks)) vulnSD["all_variables"] else as.data.frame(vulnSD)[, c(1, 3), drop = FALSE], 
+                   raw_data = vulnRasts$all_variables, 
+                   raw_names = names(vulnRasts)[1], 
+                   clean_names = c("Total Vulnerability"), 
                    stocks = stocks, 
                    stock_key = stock_key, 
                    stock_order = ns_stocks, 
                    stock_col = stock_col,
                    total_sens_col = NA,
                    certainty_col = NA,
-                   var_imp = NA,
+                   var_imp = NULL,
                    save = T,
                    table_dir = paste0(here::here('Vulnerability'), '/', spp, '/Figures'))
+
+vTableI <- make_summary_table(species = spp, 
+                              metric = 'vulnerability', 
+                              mean_metric = if (is.null(stocks)) vulnMeans["important_variables"] else as.data.frame(vulnMeans)[, c(2, 3), drop = FALSE], 
+                              certainty_metric = if (is.null(stocks)) vulnSD["important_variables"] else as.data.frame(vulnSD)[, c(2, 3), drop = FALSE], 
+                              raw_data = vulnRasts$important_variables, 
+                              raw_names = names(vulnRasts)[2], 
+                              clean_names = c("Total Vulnerability"), 
+                              stocks = stocks, 
+                              stock_key = stock_key, 
+                              stock_order = ns_stocks, 
+                              stock_col = stock_col,
+                              total_sens_col = NA,
+                              certainty_col = NA,
+                              var_imp = ens_imp,
+                              save = T,
+                              table_dir = paste0(here::here('Vulnerability'), '/', spp, '/Figures'))
 
 
 ### combine the images 
 # 1. Read the saved images
 img_exp <- magick::image_read(paste0(here::here('Exposure'), 
-                                     '/', spp, '/Figures/exposure_table_', spp, '.png'))
+                                     '/', spp, '/Figures/exposure_table_allvar_', spp, '.png'))
 
 img_sens <- magick::image_read(paste0(here::here('Sensitivity/Final/Summary_Tables'), '/sensitivity_table_', spp, '.png'))
 
 img_vuln <- magick::image_read(paste0(here::here('Vulnerability'), 
-                                     '/', spp, '/Figures/vulnerability_table_', spp, '.png'))
+                                     '/', spp, '/Figures/vulnerability_table_allvar_', spp, '.png'))
 
 # 2. Trim the baked-in white margins off all sides
 img_exp <- magick::image_trim(img_exp)
@@ -271,6 +310,22 @@ img_vuln <- magick::image_trim(img_vuln)
 # 3. Stack them vertically (stack = TRUE) & save
 stacked_img <- magick::image_append(c(img_sens, img_exp, img_vuln), stack = TRUE)
 magick::image_write(stacked_img, paste0(here::here('Vulnerability'), 
-                                        '/', spp, '/Figures/combined_table_', spp, '.png'))
+                                        '/', spp, '/Figures/combined_table_allvars_', spp, '.png'))
+
+## do it again but with subsetted exposure and corresponding vulnerability
+img_exp <- magick::image_read(paste0(here::here('Exposure'), 
+                                     '/', spp, '/Figures/exposure_table_impvar_', spp, '.png'))
+
+img_vuln <- magick::image_read(paste0(here::here('Vulnerability'), 
+                                      '/', spp, '/Figures/vulnerability_table_impvar_', spp, '.png'))
+
+# 2. Trim the baked-in white margins off all sides
+img_exp <- magick::image_trim(img_exp)
+img_vuln <- magick::image_trim(img_vuln)
+
+# 3. Stack them vertically (stack = TRUE) & save
+stacked_img <- magick::image_append(c(img_sens, img_exp, img_vuln), stack = TRUE)
+magick::image_write(stacked_img, paste0(here::here('Vulnerability'), 
+                                        '/', spp, '/Figures/combined_table_impvars_', spp, '.png'))
 
 } #end function

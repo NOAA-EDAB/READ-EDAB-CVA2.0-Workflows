@@ -603,11 +603,11 @@ var.names <- c(
 
 
 #2014-23 v 2025 - 2035
-plan(multisession, workers = 8)
-combs <- future_map(
-  1:nrow(spp.list),
-  ~ variable_exposures_wrapper(
-    spp = spp.list$Name[.x],
+#plan(multisession, workers = 2)
+#combs <- future_map(
+ for(x in 1:nrow(spp.list)){
+  variable_exposures_wrapper(
+    spp = spp.list$Name[x],
     forecast_release = 'r20250925',
     forecast_init = 'i202501',
     hindcast_release = 'r20250715',
@@ -617,11 +617,13 @@ combs <- future_map(
     rm_corr = T,
     dyn_vars = var.names,
     training_years = c(1993, 2019)
-  ),
-  .progress = T,
-  .options = furrr_options(scheduling = FALSE)
-)
-plan(sequential)
+  )
+   print(x)
+ }
+ # .progress = T,
+ # .options = furrr_options(scheduling = FALSE)
+#)
+#plan(sequential)
 
 ##################################
 
@@ -630,20 +632,22 @@ plan(sequential)
 ##################################
 
 #2009-2019 v 2025 - 2035
-plan(multisession, workers = 8)
-combs <- future_map(
-  1:nrow(spp.list),
-  ~ total_exposures_wrapper(
-    spp = spp.list$Name[.x],
+#plan(multisession, workers = 8)
+#combs <- future_map(
+ for(x in 1:nrow(spp.list)){
+  total_exposures_wrapper(
+    spp = spp.list$Name[x],
     forecast_release = 'r20250925',
     forecast_init = 'i202501',
     hindcast_release = 'r20250715',
     hindcast_yr_range = '20142023'
-  ),
-  .progress = T,
-  .options = furrr_options(scheduling = FALSE)
-)
-plan(sequential)
+  )
+   print(x)
+ }
+ # .progress = T,
+ # .options = furrr_options(scheduling = FALSE)
+#)
+#plan(sequential)
 
 ##################################
 
@@ -718,6 +722,26 @@ stock_key <- c(
 
 ns_stocks <- c('Range', 'Northern', 'Eastern Gulf of Maine', 'Western Gulf of Maine', 'Gulf of Maine', 'Gulf of Maine/Georges Bank', 'Georges Bank', 'Gulf of Maine/Cape Cod', 'Southern New England', 'MA/RI', 'NJ/NY', 'Southern New England/Mid-Atlantic', 'Long Island Sound', 'Mid Atlantic Bight', 'DE/MA/VA', 'Southern')
 
+### set up variable dataframe to make pretty names - not exact MOM6 names to make sure they fit
+var_key <- c( 'bottomT' = 'Bottom\nTemperature',
+    'bottomO2' = 'Bottom\nOxygen',
+    'bottomS' = 'Bottom\nSalinity',
+    'bottomArg' = 'Bottom\nAragonite',
+    'surfaceT' = 'Surface\nTemperature',
+    'surfaceS' = 'Surface\nSalinity',
+    'surfacepH' = 'Surface pH',
+    'MLD' = 'Mixed layer\ndepth',
+    'diazPP' = 'Diazotroph\nprim. prod.',
+    'smallPP' = 'Small phyto.\nprim. prod.',
+    'mediumPP' = 'Medium phyto.\nprim. prod.',
+    'largePP' = 'Large phyto.\nprim. prod.',
+    'smallZoo' = 'Small\nzoo.\nbiomass',
+    'mediumZoo' = 'Medium\nzoo.\nbiomass',
+    'largeZoo' = 'Large\nzoo.\nbiomass',
+    'intNPP' = 'Net primary\nproduction',
+    'POC' = 'Downward Flux of\nParticulate\nOrganic Carbon'
+  )
+
 for(x in 1:nrow(spp.list)){
   plot_exposure_wrapper(
     spp = spp.list$Name[x],
@@ -728,7 +752,8 @@ for(x in 1:nrow(spp.list)){
     variable_df = varDF,
     coastline = landNE,
     bathymetry = bathy,
-    stock_key = stock_key
+    stock_key = stock_key,
+    var_key = var_key
   )
   print(x)
 }
