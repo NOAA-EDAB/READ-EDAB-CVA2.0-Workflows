@@ -123,7 +123,9 @@ distribution_shifts_wrapper <- function(spp,
     plot_name = file.path(
       here::here('AdditionalMetrics/DistributionChange'), 
       spp,
-      'distribution_shifts_static'
+      paste('distribution_shifts_static', hindcast_release,
+            forecast_release,
+            forecast_init, sep = '_')
     ),
     avg_core_polys = fives_dyn$core_polygons,
     avg_range_polys = fives_dyn$all_polygons,
@@ -137,7 +139,9 @@ distribution_shifts_wrapper <- function(spp,
   plot_distribution_shift_drivers(plot_name = file.path(
     here::here('AdditionalMetrics/DistributionChange'), 
     spp,
-    'distribution_shift_drivers.gif'
+    paste0('distribution_shift_drivers', hindcast_release, '_',
+    forecast_release, '_',
+    forecast_init, '.gif')
   ),
   sdm = c(hindcast, forecast),
   core_polys = monthly_core,
