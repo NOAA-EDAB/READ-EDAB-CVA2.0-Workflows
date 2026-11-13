@@ -269,19 +269,37 @@ stock_key <- c(
 )
 
 for(x in 1:length(unique(sensitivityDF$Species))){
-  
+
   fname <- sensitivityDF$File_Name[sensitivityDF$Species == unique(sensitivityDF$Species)[x] ][1]
-  
+
   if(!is.na(fname)){
     #load a exposure raster to use as a template
     template <- terra::rast(paste0(
       file.path(here::here('Exposure'), fname, 'Data',
                 'total_exposure_map_all_var_r20250925_i202501_r20250715_20142023.tif')
     ))
-    
+
+    #load stocks if available
+    if (
+      file.exists(paste0(
+        '../shpfiles/species_stock_areas/',
+        gsub(' ', '', unique(sensitivityDF$Species)[x]),
+        '.shp'
+      ))
+    ) {
+      stocks <- terra::vect(paste0(
+        '../shpfiles/species_stock_areas/',
+        gsub(' ', '', unique(sensitivityDF$Species)[x]),
+        '.shp'
+      ))
+    } else {
+      stocks <- NULL
+    }
+
     srast <- make_sensitivity_raster(
         species = unique(sensitivityDF$Species)[x],
         sensitivity = sensitivityDF,
+        stocks = stocks,
         species_col = 'Species',
         stock_col = 'Stock',
         stock_key = stock_key,
@@ -290,7 +308,7 @@ for(x in 1:length(unique(sensitivityDF$Species))){
         bathymetry_range = c(-1000, 0),
         r_template = template
       )
-  
+
     terra::writeRaster(
       x = srast,
       filename = paste0(
@@ -304,7 +322,7 @@ for(x in 1:length(unique(sensitivityDF$Species))){
       ),
       overwrite = TRUE
     )
-  
+
     print(unique(sensitivityDF$Species)[x])
    # plot(srast, main = unique(sensitivityDF$Species)[x])
   }
