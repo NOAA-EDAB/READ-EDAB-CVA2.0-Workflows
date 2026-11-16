@@ -1533,7 +1533,11 @@ for (x in 1:nrow(speciesMC)) {
 ### make sure to grab only the third tab in the csv - the other two are just instructions; the third one is the only one with data
 
 #create combined data.frame
-flist <- dir('./ConfidenceScores/Final/submitted_csvs', pattern = 'NECVA2.0_Model_Confidence', full.names = T)
+flist <- dir(
+  './ConfidenceScores/Final/submitted_csvs',
+  pattern = 'NECVA2.0_Model_Confidence',
+  full.names = T
+)
 
 template <- read.csv('./ConfidenceScores/Final/submitted_csvs/TEMPLATE.csv', skip = 2)
 template <- template[,1:3]
