@@ -217,7 +217,7 @@ for (x in 1:length(forecast.list$Short.Name)) {
 
 names(norm_forecast) <- forecast.list$Short.Name
 
-#for some reason some of the forecast rasters are flipped, so flipping them back
+#for some reason some of the forecast rasters are flipped, so flipping them back 
 for(x in 1:length(norm_forecast)){
   if(names(norm_forecast)[x] %in% c('bottomO2', 'diazPP', 'smallPP', 'largePP', 'smallZoo', 'intNPP')){
     norm_forecast[[x]] <- terra::flip(norm_forecast[[x]])
@@ -261,24 +261,27 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
 #  .errorhandling = "pass"
 #) %dopar%
   for(s in 1:nrow(spp.list)){
+    # 1. Clear terra's hidden temporary files from previous iterations
+    terra::tmpFiles(remove = TRUE)
+    gc()
     # a. Unwrap the spatial data inside the worker environment
-
+# New: Apply unwrap to each wrapped object in the list
+      norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
+      static_vars_worker <- terra::unwrap(statics)
+      
     # b. Load in training data for the species
     dfT <- read.csv(file.path(
       here::here("SDMs"),
       spp.list$Name[s],
       'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'
     ))
-    preds <- vector(mode = 'list', length = length(mods))
+    
+    # 3. Use a character vector for file paths instead of a list for terra objects
+    pred_paths <- vector(mode = 'character', length = length(mods))
 
     # c. Predict component models
     for (m in 1:length(mods)) {
-
-      # New: Apply unwrap to each wrapped object in the list
-      norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
-      static_vars_worker <- terra::unwrap(statics)
-
-
+      
       #check to see if model has already been predicted
       out_path <- file.path(
         here::here("SDMs"),
@@ -286,7 +289,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
         'output_rasters',
         paste0(mods[m], '_forecast_r20250925_i202501.tif')
       )
-
+      
     #  if(!file.exists(out_path)){#if the file doesn't exist, make it
       # FIX: Use readRDS() for .rds files, not load()
       mod_path <- file.path(
@@ -298,7 +301,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
       )
       if(file.exists(mod_path)){
         load(mod_path) #mod
-
+        
         p <- make_sdm_predictions(
         mod = mod,
         model = tolower(mods[m]),
@@ -314,20 +317,26 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
       # Save prediction
       terra::writeRaster(p, file = out_path, overwrite = TRUE)
       print(mods[m])
+      
       } else {
         next
       }
-
+      
      # } else {
-        #if the file exists
+        #if the file exists 
       #  p <- terra::rast(out_path)
      # }
 
       # Add to list for ensemble
-      preds[[m]] <- p
+      # Store the file path instead of the raster pointer
+      pred_paths[m] <- out_path
+      
+      rm(p, mod)
+      gc()
     } #end m
-
-    preds <- Filter(Negate(is.null), preds)
+    
+    # Drop empty strings if any models were skipped
+    pred_paths <- pred_paths[pred_paths != ""]
 
     # d. Now predict ensemble
     # FIX: Assigning weights via load() returns a character string. Use readRDS() instead.
@@ -339,10 +348,14 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
     )
     load(weights_path) #weights
     #mods as provided means that the model outputs in preds will be in the same order as they are in weights so no need to reorder
+    
+    # 6. Re-load the rasters directly from disk for the ensemble.
+    # This guarantees clean pointers that aren't tied to the previous loop's memory space.
+    preds_stack <- lapply(pred_paths, terra::rast)
 
     ens <- make_sdm_predictions(
       model = 'ensemble',
-      rasts = preds,
+      rasts = preds_stack,
       weights = weights,
       mod = NULL,
       static_variables = static_vars_worker,
@@ -365,12 +378,15 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
     # Return NULL to prevent foreach from saving massive raster lists into RAM
     #return(NULL)
   print(s)
+  
+  # Clear heavy variables at the end of the species loop
+  rm(ens, preds_stack, norm_forecast_worker, static_vars_worker, dfT, weights)
+  gc()
 }
 
 # 5. Stop the cluster when finished
 #parallel::stopCluster(cl)
 ##########################################
-
 
 ###############################
 #### CALCULATE SHIFTS #########
@@ -378,8 +394,7 @@ norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
 statics <- terra::rast(here::here('SDMs/Data/staticVariables_cropped_terra_reproj.tif'))
 bathy <- statics$bathy
 
-
-land <- terra::vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
+land <- vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
 landNE <- terra::crop(land, bathy)
 
 for(x in 1:nrow(spp.list)){
@@ -394,9 +409,9 @@ for(x in 1:nrow(spp.list)){
     bathymetry = bathy,
     coastline = landNE
   )
-  saveRDS(distMat, file =
+  saveRDS(distMat, file = 
             file.path(
-              here::here('AdditionalMetrics/DistributionChange'),
+              here::here('AdditionalMetrics/DistributionChange'), 
               spp.list$Name[x],
               'distribution_shift_metrics.rds'
             ))
