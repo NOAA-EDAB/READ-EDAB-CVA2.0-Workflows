@@ -152,7 +152,7 @@ get_model_data_wrapper <- function(
           ),
           overwrite = TRUE
         )
-        
+
         a <- raw_data$average
         terra::writeRaster(
           a,
@@ -175,7 +175,7 @@ get_model_data_wrapper <- function(
       stop(paste("Unknown data source specified:", source))
     )
   }
-  
+
   ##assume you want to move forward with the average of the ensembles
   raw_data <- raw_data$average
 
