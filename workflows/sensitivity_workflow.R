@@ -1,7 +1,9 @@
 ##################################
 #####SET UP - LOAD EVERY TIME ####
 ##################################
-here::i_am('workflows/READ-EDAB-CVA2.0-Workflows/workflows/sensitivity_workflow.R')
+here::i_am(
+  'workflows/READ-EDAB-CVA2.0-Workflows/workflows/sensitivity_workflow.R'
+)
 
 ### load packages
 library(spatialcva)
@@ -77,9 +79,21 @@ sens <- read.csv('./Final/cva2.0_sensitivity_final_raw_scores.csv') #load in fin
 sens <- sens[sens$Attributes != 'Exposure Factor', ] #make sure that only sensitivity is included - expert scores were only used in sensitivity for CVA2.0 but this just makes sure there aren't any empty columns
 
 #data cleaning
-sens$Stock.Name <- replace(sens$Stock.Name, sens$Stock.Name == 'Short-finned squid', 'Short finned squid')
-sens$Stock.Name <- replace(sens$Stock.Name, sens$Stock.Name == 'Long-finned squid', 'Long finned squid')
-sens$Stock.Name <- replace(sens$Stock.Name, sens$Stock.Name == "Smooth dogfish shark-Atlantic", 'Smooth dogfish')
+sens$Stock.Name <- replace(
+  sens$Stock.Name,
+  sens$Stock.Name == 'Short-finned squid',
+  'Short finned squid'
+)
+sens$Stock.Name <- replace(
+  sens$Stock.Name,
+  sens$Stock.Name == 'Long-finned squid',
+  'Long finned squid'
+)
+sens$Stock.Name <- replace(
+  sens$Stock.Name,
+  sens$Stock.Name == "Smooth dogfish shark-Atlantic",
+  'Smooth dogfish'
+)
 sens <- split_species_stocks(sens, 'Stock.Name')
 sens$Species <- gsub('/', ' ', sens$Species)
 
@@ -106,7 +120,7 @@ sensitivity.certainty <- mapply(
 sensitivityDF <- do.call(rbind, sensitivity.certainty)
 
 ##calculate "global" sensitivities for species with multiple stocks
-sensG <- sens[!is.na(sens$Stock),] #remove species with Stock == NA to subset to only species that had stocks
+sensG <- sens[!is.na(sens$Stock), ] #remove species with Stock == NA to subset to only species that had stocks
 
 #create list of data.frames for each species/stock
 species.data.list <- split(sensG, sensG$Species)
@@ -135,7 +149,7 @@ rownames(sensitivityG) <- paste(rownames(sensitivityG), 'global', sep = '-')
 
 #combine
 sensitivity <- rbind(sensitivityDF, sensitivityG)
-sensitivity <- sensitivity[order(rownames(sensitivity)),]
+sensitivity <- sensitivity[order(rownames(sensitivity)), ]
 
 #save
 write.csv(sensitivity, './Final/sensitivity_2_0_final_scores_v2.csv') #save results
@@ -170,7 +184,7 @@ rownames(attributeG) <- paste(rownames(attributeG), 'global', sep = '-')
 
 #combine
 attribute <- rbind(attributeDQ, attributeG)
-attribute <- attribute[order(rownames(attribute)),]
+attribute <- attribute[order(rownames(attribute)), ]
 
 write.csv(attribute, './Final/data_quality_2_0_final_scores_v2.csv') #save results
 
@@ -181,13 +195,25 @@ write.csv(attribute, './Final/data_quality_2_0_final_scores_v2.csv') #save resul
 #reload things in if they aren't in already
 sens <- read.csv('./Final/cva2.0_sensitivity_final_raw_scores.csv') #load in final csv file
 sens <- sens[sens$Attributes != 'Exposure Factor', ] #make sure that only sensitivity is included - expert scores were only used in sensitivity for CVA2.0 but this just makes sure there aren't any empty columns
-sens$Stock.Name <- replace(sens$Stock.Name, sens$Stock.Name == 'Short-finned squid', 'Short finned squid')
-sens$Stock.Name <- replace(sens$Stock.Name, sens$Stock.Name == 'Long-finned squid', 'Long finned squid')
-sens$Stock.Name <- replace(sens$Stock.Name, sens$Stock.Name == "Smooth dogfish shark-Atlantic", 'Smooth dogfish')
+sens$Stock.Name <- replace(
+  sens$Stock.Name,
+  sens$Stock.Name == 'Short-finned squid',
+  'Short finned squid'
+)
+sens$Stock.Name <- replace(
+  sens$Stock.Name,
+  sens$Stock.Name == 'Long-finned squid',
+  'Long finned squid'
+)
+sens$Stock.Name <- replace(
+  sens$Stock.Name,
+  sens$Stock.Name == "Smooth dogfish shark-Atlantic",
+  'Smooth dogfish'
+)
 sens <- split_species_stocks(sens, 'Stock.Name')
 
 ##calculate "global" sensitivities for species with multiple stocks
-sensG <- sens[!is.na(sens$Stock),] #remove species with Stock == NA to subset to only species that had stocks
+sensG <- sens[!is.na(sens$Stock), ] #remove species with Stock == NA to subset to only species that had stocks
 sensG$Stock.Name <- paste(sensG$Species, 'global', sep = '-')
 sensG$Stock <- 'global'
 
@@ -207,7 +233,24 @@ attributeDQ$Species <- gsub('/', ' ', attributeDQ$Species)
 clean_attributes <- unique(sens$Attribute.Name)
 clean_attributes[5] <- 'Historical Variability in Temperature'
 
-ns_stocks <- c('global', 'Northern', 'Eastern Gulf of Maine', 'Western Gulf of Maine', 'Gulf of Maine', 'Gulf of Maine/Georges Bank', 'Georges Bank', 'Gulf of Maine/Cape Cod', 'Southern New England', 'MA/RI', 'NJ/NY', 'Southern New England/Mid-Atlantic', 'Long Island Sound', 'Mid Atlantic Bight', 'DE/MA/VA', 'Southern')
+ns_stocks <- c(
+  'global',
+  'Northern',
+  'Eastern Gulf of Maine',
+  'Western Gulf of Maine',
+  'Gulf of Maine',
+  'Gulf of Maine/Georges Bank',
+  'Georges Bank',
+  'Gulf of Maine/Cape Cod',
+  'Southern New England',
+  'MA/RI',
+  'NJ/NY',
+  'Southern New England/Mid-Atlantic',
+  'Long Island Sound',
+  'Mid Atlantic Bight',
+  'DE/MA/VA',
+  'Southern'
+)
 
 make_sensitivity_table(
   species = unique(sensAll$Species),
@@ -255,28 +298,33 @@ key_target[key_target == "monkfishgoosefish"] <- "monkfish"
 sensitivityDF$File_Name <- master_names[match(key_target, key_master)]
 
 stock_key <- c(
-  "EGOM"   = "Eastern Gulf of Maine",
-  "GBK"    = "Georges Bank",
-  "SNE"    = "Southern New England",
-  "WGOM"   = "Western Gulf of Maine",
+  "EGOM" = "Eastern Gulf of Maine",
+  "GBK" = "Georges Bank",
+  "SNE" = "Southern New England",
+  "WGOM" = "Western Gulf of Maine",
   "GOM" = "Gulf of Maine",
   "GBGOM" = "Gulf of Maine/Georges Bank",
-  "SNEMA"    = "Southern New England/Mid-Atlantic",
+  "SNEMA" = "Southern New England/Mid-Atlantic",
   "CCGOM" = "Gulf of Maine/Cape Cod",
   "NORTH" = "Northern",
   "SOUTH" = 'Southern',
   "global" = "Range"
 )
 
-for(x in 1:length(unique(sensitivityDF$Species))){
+for (x in 1:length(unique(sensitivityDF$Species))) {
+  fname <- sensitivityDF$File_Name[
+    sensitivityDF$Species == unique(sensitivityDF$Species)[x]
+  ][1]
 
-  fname <- sensitivityDF$File_Name[sensitivityDF$Species == unique(sensitivityDF$Species)[x] ][1]
-
-  if(!is.na(fname)){
+  if (!is.na(fname)) {
     #load a exposure raster to use as a template
     template <- terra::rast(paste0(
-      file.path(here::here('Exposure'), fname, 'Data',
-                'total_exposure_map_all_var_r20250925_i202501_r20250715_20142023.tif')
+      file.path(
+        here::here('Exposure'),
+        fname,
+        'Data',
+        'total_exposure_map_all_var_r20250925_i202501_r20250715_20142023.tif'
+      )
     ))
 
     #load stocks if available
@@ -297,17 +345,17 @@ for(x in 1:length(unique(sensitivityDF$Species))){
     }
 
     srast <- make_sensitivity_raster(
-        species = unique(sensitivityDF$Species)[x],
-        sensitivity = sensitivityDF,
-        stocks = stocks,
-        species_col = 'Species',
-        stock_col = 'Stock',
-        stock_key = stock_key,
-        total_sens_col = 'Total.Sensitivity',
-        bathymetry = bathy,
-        bathymetry_range = c(-1000, 0),
-        r_template = template
-      )
+      species = unique(sensitivityDF$Species)[x],
+      sensitivity = sensitivityDF,
+      stocks = stocks,
+      species_col = 'Species',
+      stock_col = 'Stock',
+      stock_key = stock_key,
+      total_sens_col = 'Total.Sensitivity',
+      bathymetry = bathy,
+      bathymetry_range = c(-1000, 0),
+      r_template = template
+    )
 
     terra::writeRaster(
       x = srast,
@@ -324,20 +372,20 @@ for(x in 1:length(unique(sensitivityDF$Species))){
     )
 
     print(unique(sensitivityDF$Species)[x])
-   # plot(srast, main = unique(sensitivityDF$Species)[x])
+    # plot(srast, main = unique(sensitivityDF$Species)[x])
   }
 }
 
 ###save plots
 # Map raw abbreviations to match stock names
 stock_key <- c(
-  "EGOM"   = "Eastern Gulf of Maine",
-  "GBK"    = "Georges Bank",
-  "SNE"    = "Southern New England",
-  "WGOM"   = "Western Gulf of Maine",
+  "EGOM" = "Eastern Gulf of Maine",
+  "GBK" = "Georges Bank",
+  "SNE" = "Southern New England",
+  "WGOM" = "Western Gulf of Maine",
   "GOM" = "Gulf of Maine",
   "GBGOM" = "Gulf of Maine/Georges Bank",
-  "SNEMA"    = "Southern New England/Mid-Atlantic",
+  "SNEMA" = "Southern New England/Mid-Atlantic",
   "CCGOM" = "Gulf of Maine/Cape Cod",
   "NORTH" = "Northern",
   "SOUTH" = 'Southern',
@@ -346,34 +394,54 @@ stock_key <- c(
 
 
 #get bathymetry for plotting
-statics <- terra::rast(here::here('SDMs/Data/staticVariables_cropped_terra_reproj.tif'))
+statics <- terra::rast(here::here(
+  'SDMs/Data/staticVariables_cropped_terra_reproj.tif'
+))
 bathy <- statics$bathy
 
 #get coastline for plotting
-land <- terra::vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
+land <- terra::vect(here::here(
+  'shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'
+))
 landNE <- terra::crop(land, bathy)
 
 #quick species fix
-sensitivityDF$Species <- replace(sensitivityDF$Species, sensitivityDF$Species == 'Monkfish Goosefish', 'Monkfish')
-sensitivityDF$Species <- replace(sensitivityDF$Species, sensitivityDF$Species == 'Long finned squid', 'Long fin squid')
-sensitivityDF$Species <- replace(sensitivityDF$Species, sensitivityDF$Species == 'Short finned squid', 'Short fin squid')
+sensitivityDF$Species <- replace(
+  sensitivityDF$Species,
+  sensitivityDF$Species == 'Monkfish Goosefish',
+  'Monkfish'
+)
+sensitivityDF$Species <- replace(
+  sensitivityDF$Species,
+  sensitivityDF$Species == 'Long finned squid',
+  'Long fin squid'
+)
+sensitivityDF$Species <- replace(
+  sensitivityDF$Species,
+  sensitivityDF$Species == 'Short finned squid',
+  'Short fin squid'
+)
 
-for(x in 1:length(unique(sensitivityDF$Species))){
-
+for (x in 1:length(unique(sensitivityDF$Species))) {
   #load it in
   srast <- terra::rast(paste0(
-      here::here('Sensitivity/Final/rasters'),
-      paste0(
-        '/',
-        gsub(" ", '', unique(sensitivityDF$Species)[x]),
-        '_',
-        'sensitivity_2.0.tif'
-      )
+    here::here('Sensitivity/Final/rasters'),
+    paste0(
+      '/',
+      gsub(" ", '', unique(sensitivityDF$Species)[x]),
+      '_',
+      'sensitivity_2.0.tif'
     )
-  )
+  ))
 
   #load stocks if available
-  if (file.exists(paste0('../shpfiles/species_stock_areas/', gsub(" ", '', unique(sensitivityDF$Species)[x]), '.shp'))) {
+  if (
+    file.exists(paste0(
+      '../shpfiles/species_stock_areas/',
+      gsub(" ", '', unique(sensitivityDF$Species)[x]),
+      '.shp'
+    ))
+  ) {
     stocks <- terra::vect(paste0(
       '../shpfiles/species_stock_areas/',
       gsub(" ", '', unique(sensitivityDF$Species)[x]),
@@ -383,22 +451,24 @@ for(x in 1:length(unique(sensitivityDF$Species))){
     stocks <- NULL
   }
 
-  plot_total_map_timeseries(map = srast,
-                            timeseries = NULL,
-                            metric = 'sensitivity',
-                            stocks= stocks,
-                            stock_key = stock_key,
-                            fig_name = paste0(
-                              here::here('Sensitivity/Final/rasters'),
-                              paste0(
-                                '/',
-                                gsub(" ", '', unique(sensitivityDF$Species)[x]),
-                                '_',
-                                'sensitivity_2.0'
-                              )
-                            ),
-                            coastline = landNE,
-                            bathymetry = bathy)
+  plot_total_map_timeseries(
+    map = srast,
+    timeseries = NULL,
+    metric = 'sensitivity',
+    stocks = stocks,
+    stock_key = stock_key,
+    fig_name = paste0(
+      here::here('Sensitivity/Final/rasters'),
+      paste0(
+        '/',
+        gsub(" ", '', unique(sensitivityDF$Species)[x]),
+        '_',
+        'sensitivity_2.0'
+      )
+    ),
+    coastline = landNE,
+    bathymetry = bathy
+  )
 
   print(unique(sensitivityDF$Species)[x])
 }

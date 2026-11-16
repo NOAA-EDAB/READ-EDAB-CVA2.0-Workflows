@@ -1216,11 +1216,11 @@ var.list <- data.frame(
 )
 
 
-for(x in 1:nrow(spp.list)){
+for (x in 1:nrow(spp.list)) {
   plot_sdm_wrapper(
     spp = spp.list$Name[x],
     model = 'ensemble',
-    type = 'hindcast', 
+    type = 'hindcast',
     release = 'r20250715',
     init = NULL,
     spatial_temporal = FALSE,

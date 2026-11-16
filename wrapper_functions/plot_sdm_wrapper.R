@@ -10,20 +10,20 @@
 #' @return no returns; figures saved in desired folder
 #'
 plot_sdm_wrapper <- function(
-    spp,
-    model,
-    type = 'hindcast',
-    release,
-    init = NULL,
-    spatial_temporal = FALSE,
-    mask_bathy = TRUE,
-    rm_corr = TRUE,
-    training_years,
-    component_models,
-    var_names,
-    coastline,
-    bathymetry) {
-
+  spp,
+  model,
+  type = 'hindcast',
+  release,
+  init = NULL,
+  spatial_temporal = FALSE,
+  mask_bathy = TRUE,
+  rm_corr = TRUE,
+  training_years,
+  component_models,
+  var_names,
+  coastline,
+  bathymetry
+) {
   suffix <- if (spatial_temporal) "" else "_global"
   bathy_suffix <- if (mask_bathy) "_masked" else ""
   corr_suffix <- if (rm_corr) "rmcorr" else ""
@@ -47,7 +47,8 @@ plot_sdm_wrapper <- function(
     here::here("SDMs"),
     spp,
     'output_rasters',
-    paste0(toupper(model),
+    paste0(
+      toupper(model),
       '_',
       type,
       '_',
@@ -65,30 +66,31 @@ plot_sdm_wrapper <- function(
   ) #average by month => assuming a monthly timeseries
   names(avgHSM) <- month.abb
 
-
   #plot monthly maps
-  plot_sdms(sdm = avgHSM,
-                               stocks = stocks,
-                               coastline = coastline,
-                               bathymetry = bathymetry,
-            panel_names = month.abb,
-                               type = 'model',
-                               fig_name = paste0(
-                                 file.path(
-                                   here::here("SDMs"),
-                                   spp,
-                                   'Figures',
-                                   paste0(
-                                     'mean_SDM_monthly_',
-                                     toupper(model),
-                                     '_',
-                                     type,
-                                     '_',
-                                     release,
-                                     ifelse(type == 'forecast', paste0('_', init), '')
-                                   )
-                                 )
-                               ))
+  plot_sdms(
+    sdm = avgHSM,
+    stocks = stocks,
+    coastline = coastline,
+    bathymetry = bathymetry,
+    panel_names = month.abb,
+    type = 'model',
+    fig_name = paste0(
+      file.path(
+        here::here("SDMs"),
+        spp,
+        'Figures',
+        paste0(
+          'mean_SDM_monthly_',
+          toupper(model),
+          '_',
+          type,
+          '_',
+          release,
+          ifelse(type == 'forecast', paste0('_', init), '')
+        )
+      )
+    )
+  )
 
   #avg ensemble HSM annually
   avgHSM <- terra::tapp(
@@ -98,30 +100,31 @@ plot_sdm_wrapper <- function(
   ) #average by year
   names(avgHSM) <- 1993:2023
 
-
   #plot annual maps
-  plot_sdms(sdm = avgHSM,
-            stocks = stocks,
-            coastline = coastline,
-            bathymetry = bathymetry,
-            panel_names = 1993:2023,
-            type = 'model',
-            fig_name = paste0(
-              file.path(
-                here::here("SDMs"),
-                spp,
-                'Figures',
-                paste0(
-                  'mean_SDM_annual_',
-                  toupper(model),
-                  '_',
-                  type,
-                  '_',
-                  release,
-                  ifelse(type == 'forecast', paste0('_', init), '')
-                )
-              )
-            ))
+  plot_sdms(
+    sdm = avgHSM,
+    stocks = stocks,
+    coastline = coastline,
+    bathymetry = bathymetry,
+    panel_names = 1993:2023,
+    type = 'model',
+    fig_name = paste0(
+      file.path(
+        here::here("SDMs"),
+        spp,
+        'Figures',
+        paste0(
+          'mean_SDM_annual_',
+          toupper(model),
+          '_',
+          type,
+          '_',
+          release,
+          ifelse(type == 'forecast', paste0('_', init), '')
+        )
+      )
+    )
+  )
 
   #### 2 plot residuals
   #load observations
@@ -141,45 +144,47 @@ plot_sdm_wrapper <- function(
   ))
 
   #plot
-  plot_sdms(sdm = abund, #need to pass raw data here to match observations/sdm correctly
-            obs = obs,
-            xy_col = c("grid.lon", "grid.lat"),
-            time_col = 'month',
-            panel_names = month.abb,
-            stocks = stocks,
-            coastline = coastline,
-            bathymetry = bathymetry,
-            type = 'residuals',
-            fig_name = paste0(
-              file.path(
-                here::here("SDMs"),
-                spp,
-                'Figures',
-                paste0(
-                  'mean_residuals_',
-                  toupper(model),
-                  '_',
-                  type,
-                  '_',
-                  release
-                )
-              )
-            ),
-            hist_name = paste0(
-              file.path(
-                here::here("SDMs"),
-                spp,
-                'Figures',
-                paste0(
-                  'hist_residuals_',
-                  toupper(model),
-                  '_',
-                  type,
-                  '_',
-                  release
-                )
-              )
-            ))
+  plot_sdms(
+    sdm = abund, #need to pass raw data here to match observations/sdm correctly
+    obs = obs,
+    xy_col = c("grid.lon", "grid.lat"),
+    time_col = 'month',
+    panel_names = month.abb,
+    stocks = stocks,
+    coastline = coastline,
+    bathymetry = bathymetry,
+    type = 'residuals',
+    fig_name = paste0(
+      file.path(
+        here::here("SDMs"),
+        spp,
+        'Figures',
+        paste0(
+          'mean_residuals_',
+          toupper(model),
+          '_',
+          type,
+          '_',
+          release
+        )
+      )
+    ),
+    hist_name = paste0(
+      file.path(
+        here::here("SDMs"),
+        spp,
+        'Figures',
+        paste0(
+          'hist_residuals_',
+          toupper(model),
+          '_',
+          type,
+          '_',
+          release
+        )
+      )
+    )
+  )
 
   ####3 Plot Variable Importance
   training_name <- file.path(
@@ -205,8 +210,7 @@ plot_sdm_wrapper <- function(
   #normalized variable importance
   #read in variable importance outputs & create list
   flist <- dir(
-    file.path(here::here('SDMs'),
-              spp, 'model_output/importance'),
+    file.path(here::here('SDMs'), spp, 'model_output/importance'),
     full.names = T,
     pattern = 'rds'
   )
@@ -219,8 +223,7 @@ plot_sdm_wrapper <- function(
     '.rds',
     '',
     dir(
-      file.path(here::here('SDMs'),
-                spp, 'model_output/importance'),
+      file.path(here::here('SDMs'), spp, 'model_output/importance'),
       full.names = F,
       pattern = 'rds'
     )
@@ -228,8 +231,7 @@ plot_sdm_wrapper <- function(
 
   imp_list <- imp_list[names(imp_list) %in% toupper(component_models)]
 
-  load(file.path(here::here('SDMs'),
-                 spp, 'model_output/ensemble_weights.rds')) #weights
+  load(file.path(here::here('SDMs'), spp, 'model_output/ensemble_weights.rds')) #weights
 
   #pull variable names from mapexp
   dyn_vars <- names(dfT)[names(dfT) %in% var_names]
@@ -242,7 +244,8 @@ plot_sdm_wrapper <- function(
   )
 
   #save
-  saveRDS(var_imp,
+  saveRDS(
+    var_imp,
     file.path(
       here::here('SDMs'),
       spp,
@@ -251,11 +254,13 @@ plot_sdm_wrapper <- function(
     )
   )
 
-  plot_variable_radars(variable_importance = var_imp,
-                       fig_name = paste0(
-                         file.path(here::here('SDMs'), spp, 'Figures'),
-                         paste0(
-                           '/variable_importance_all'
-                         )
-                       ))
+  plot_variable_radars(
+    variable_importance = var_imp,
+    fig_name = paste0(
+      file.path(here::here('SDMs'), spp, 'Figures'),
+      paste0(
+        '/variable_importance_all'
+      )
+    )
+  )
 }

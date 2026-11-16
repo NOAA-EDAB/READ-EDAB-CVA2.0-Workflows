@@ -86,7 +86,7 @@ total_exposures_wrapper <- function(
     )
   )
   imp_list <- imp_list[names(imp_list) %in% names(weights)]
-  
+
   #pull variable names from mapexp
   dyn_vars <- names(mapExp)
 
@@ -197,7 +197,7 @@ total_exposures_wrapper <- function(
     #combine
     expAvg <- rbind(t(globalAvg), expAvg[, -1])
     expSD <- rbind(t(globalSD), expSD[, -1])
-    
+
     #add stock column
     expAvg$stock <- c('global', stocks$stock_area)
     expSD$stock <- c('global', stocks$stock_area)
@@ -226,7 +226,7 @@ total_exposures_wrapper <- function(
       )
     )
   )
-  
+
   saveRDS(
     expSD,
     file = paste0(
