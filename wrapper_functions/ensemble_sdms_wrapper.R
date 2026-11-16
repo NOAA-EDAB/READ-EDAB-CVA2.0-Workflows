@@ -2,7 +2,7 @@
 #' @description This is a wrapper function for \code{build_sdm}, \code{make_sdm_predictions}, and \code{calculate_sdm_auc}. This function produces log files and has skip functionality to assist in running multiple species in parallel.
 
 #' @param spp Species name to add to log files and save data to correct directory (see vignette for recommended directory set up)
-#' @param model Component model name. One of the following: gam, maxent, rf, brt, sdmtmb
+#' @param models Component model names to use in the ensemble. must match the names of files in the evaluations folder
 #' @param training_years,test_years vectors with lengths equal to 2, indicating the maximum and minimum years that identify the desired training and test datasets
 #' @param short_names a vector of shorthand names for variable to help pull desired environmental data based on naming convention
 #' @param release release code for MOM6 data. Helps pull correct training/test dataset associated with the MOM6 data with the same name

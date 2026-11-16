@@ -32,7 +32,7 @@ variable_exposures_wrapper <- function(
   # STEP 0: Set Up
   # ==========================================================
   # Set up the logger to output to your specific file
-  log_file <- file.path(here::here('Exposure'), 'logs', 'variable_exposure.log')
+  log_file <- file.path('logs', 'variable_exposure.log')
   log_appender(appender_file(log_file))
 
   log_info("Calculating variable exposures for {spp}")

@@ -215,7 +215,7 @@ knitr::kable(
   df_m, 
   format = "latex", 
   booktabs = TRUE, 
-  col.names = c("BRT", "GAM", "MAXENT", "RF", "SDMTMB"),
+  col.names = names(df_m),
   row.names = FALSE  # <--- This removes the "1, 2, 3" column
 ) |> 
 kable_styling(position = "center", 
