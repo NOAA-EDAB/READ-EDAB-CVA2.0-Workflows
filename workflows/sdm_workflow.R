@@ -1448,7 +1448,7 @@ for (x in 1:length(flist)) {
   print(x)
 }
 #clean up
-modConf <- modConf[,c('Species', 'Score.y', 'Scorer')]
+modConf <- modConf[, c('Species', 'Score.y', 'Scorer')]
 colnames(modConf)[2] <- "Score"
 modConf$Score <- replace(modConf$Score, modConf$Score == 'no model', NA)
 modConf$Score <- as.numeric(modConf$Score)
