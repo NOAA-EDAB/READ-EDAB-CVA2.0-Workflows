@@ -110,8 +110,8 @@ distribution_shifts_wrapper <- function(spp,
 
   #clean up metrics and save
   mets <- fives_dyn$metrics
-  mets$range_y <- mets$leading_edge_y - mets$trailing_edge_y
-  mets$range_x <- mets$leading_edge_x - mets$trailing_edge_x
+ # mets$range_y <- mets$leading_edge_y - mets$trailing_edge_y
+# mets$range_x <- mets$leading_edge_x - mets$trailing_edge_x
 
   mets <- mets[,-1]
   mets$timestep <- c('1993-1997', '2019-2023', '2031-2035')
