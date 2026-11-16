@@ -1539,8 +1539,11 @@ flist <- dir(
   full.names = T
 )
 
-template <- read.csv('./ConfidenceScores/Final/submitted_csvs/TEMPLATE.csv', skip = 2)
-template <- template[,1:3]
+template <- read.csv(
+  './ConfidenceScores/Final/submitted_csvs/TEMPLATE.csv',
+  skip = 2
+)
+template <- template[, 1:3]
 
 modConf <- NULL
 for (x in 1:length(flist)) {
