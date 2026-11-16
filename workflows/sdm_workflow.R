@@ -1522,7 +1522,7 @@ for (x in 1:nrow(speciesMC)) {
     breaks = seq(0, 3, by = 1),
     ylim = c(0, 5),
     xlab = '', #make sure breaks and limits are consistent
-    main = paste0(sp, '\nMean: ', round(m, 2), " | SD: ", round(s,2))
+    main = paste0(sp, '\nMean: ', round(m, 2), " | SD: ", round(s, 2))
   ) #add species, and summary stats to main
   dev.off()
 }
