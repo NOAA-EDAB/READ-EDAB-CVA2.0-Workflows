@@ -194,6 +194,7 @@ get_model_data_wrapper <- function(
 
   ##assume you want to move forward with the average of the ensembles
   raw_data <- raw_data$average
+
   # Step 1.5 - mask raw data if necessary BEFORE saving
   if (mask_bathy) {
     # CRITICAL FIX: Unwrap the bathymetry raster inside the worker

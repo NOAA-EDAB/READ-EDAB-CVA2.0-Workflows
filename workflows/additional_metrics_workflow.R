@@ -5,6 +5,10 @@
 
 library(spatialcva)
 
+here::i_am(
+  'workflows/READ-EDAB-CVA2.0-Workflows/workflows/additional_metrics_workflow.R'
+)
+
 ##############################
 ####### DIRECTIONALITY #######
 ##############################
@@ -61,216 +65,381 @@ write.csv(directDF, 'directionality_scores.csv') #save results
 #### DISTRIBUTION CHANGE #####
 ##############################
 setwd(
-  here::here("/AdditionalMetrics/DistributionChange")
+  here::here("AdditionalMetrics/DistributionChange")
 )
-
 
 spp.list <- read.csv(
-  file.path(here::here('SDMs'), , 'spp_list.csv')
+  file.path(here::here('SDMs'), 'spp_list.csv')
 )
 spp.list$Name <- gsub(' ', '', spp.list$Common.Name)
+spp.list <- spp.list[-42, ]
 
 #create species specific folders
 for (x in 1:nrow(spp.list)) {
   dir.create(
     file.path(
-      here::here("/AdditionalMetrics/DistributionChange"),
+      here::here("AdditionalMetrics/DistributionChange"),
       spp.list$Name[x]
     ),
     showWarnings = T
   ) #main folder
 }
 
-##calculate for each time frame of interest
-#1993-2019
-for (x in 1:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_1993_2019.RData'
-  )) #abund
-  abund <- raster::stack(abund)
+##########################################
+##### PREDICT MODELS TO FORECAST  ########
+##########################################
 
-  distMetrics <- change_in_distribution(
-    abund = abund,
-    area.threshold = 0.75,
-    cell.area = 8 * 8
+setwd(here::here('SDMs'))
+
+statics <- terra::rast(here::here(
+  'SDMs/Data/staticVariables_masked_norm_terra.tif'
+))
+bathy <- terra::wrap(statics$bathy)
+
+#first, pull forecast data
+###decadal forecast
+forecast.list <- data.frame(
+  Long.Name = c(
+    'Sea Water Potential Temperature at Sea Floor',
+    'Bottom Oxygen',
+    'Sea Water Salinity at Sea Floor',
+    'Bottom Aragonite Solubility',
+    'Sea Surface Temperature',
+    'Sea Surface Salinity',
+    'Surface pH',
+    'Mixed layer depth (delta rho = 0.03)',
+    'Diazotroph new (NO3-based) prim. prod. integral in upper 100m',
+    'Small phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Medium phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Large phyto. new (NO3-based) prim. prod. integral in upper 100m',
+    'Small zooplankton nitrogen biomass in upper 100m',
+    'Medium zooplankton nitrogen biomass in upper 100m',
+    'Large zooplankton nitrogen biomass in upper 100m',
+    'Water column net primary production vertical integral',
+    'Downward Flux of Particulate Organic Carbon'
+  ),
+  Short.Name = c(
+    'bottomT',
+    'bottomO2',
+    'bottomS',
+    'bottomArg',
+    'surfaceT',
+    'surfaceS',
+    'surfacepH',
+    'MLD',
+    'diazPP',
+    'smallPP',
+    'mediumPP',
+    'largePP',
+    'smallZoo',
+    'mediumZoo',
+    'largeZoo',
+    'intNPP',
+    'POC'
   )
-  save(
-    distMetrics,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x]),
-      '/distribution_metrics_1993_2019.RData'
-    )
+)
+
+#parallel version
+plan(multisession, workers = 8)
+mom6_results <- future_map(
+  1:nrow(forecast.list),
+  ~ get_model_data_wrapper(
+    var_name = forecast.list$Long.Name[.x],
+    short_name = forecast.list$Short.Name[.x],
+    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+    release = 'r20250925',
+    init = 'i202501',
+    spatial_temporal = FALSE,
+    source = "forecast",
+    mask_bathy = T,
+    bathy = bathy,
+    bathy_range = c(-1000, 0),
+    force_overwrite = T
+  ),
+  .progress = T
+)
+plan(sequential)
+
+#because the forecasts have a lot more data to pull from the servers (300+ timestamps for 10 ensemble members), the servers can get angry and the pulls can fail, especially when you are making a lot of requests at the same time. Since the forecasts aren't necessary until calculating exposure and predicting future habitat change, the forecast pulls can happen over a longer period (aka overnight if you're in between steps, etc), so below is the option to run the code in sequence if you want to do that
+
+for (x in c(12)) {
+  print(Sys.time())
+  get_model_data_wrapper(
+    var_name = forecast.list$Long.Name[x],
+    short_name = forecast.list$Short.Name[x],
+    json_url = "https://psl.noaa.gov/cefi_portal/data_index/cefi_data_indexing.Projects.CEFI.regional_mom6.cefi_portal.northwest_atlantic.full_domain.decadal_forecast.json",
+    release = 'r20250925',
+    init = 'i202501',
+    spatial_temporal = FALSE,
+    source = "forecast",
+    mask_bathy = T,
+    bathy = bathy,
+    bathy_range = c(-1000, 0),
+    force_overwrite = T
   )
-  print(spp.list$Name[x])
+  print(x)
+  print(Sys.time())
 }
 
-#2025-2035
-for (x in 1:nrow(spp.list)) {
-  load(paste0(
-    '/home/kgallagher/ClimateVulnerabilityAssessment2.0/SDMs/',
-    spp.list$Name[x],
-    '/output_rasters/ENSEMBLE_2025_2034.RData'
-  )) #abund
-  abund <- raster::stack(abund)
-
-  distMetrics <- change_in_distribution(
-    abund = abund,
-    area.threshold = 0.75,
-    cell.area = 8 * 8
-  )
-  save(
-    distMetrics,
-    file = paste0(
-      file.path(getwd(), spp.list$Name[x]),
-      '/distribution_metrics_2025_2034.RData'
-    )
-  )
-  print(spp.list$Name[x])
-}
-
-## plot on single time series & save
-#should this get a plotting function?
-for (x in 1:nrow(spp.list)) {
-  #1993-2019
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x]),
-    '/distribution_metrics_1993_2019.RData'
-  )) #distMetrics
-  distMetrics$month <- sapply(str_split(distMetrics$timestamp, '[.]'), "[[", 1)
-  distMetrics$year <- as.numeric(sapply(
-    str_split(distMetrics$timestamp, '[.]'),
-    "[[",
-    2
-  ))
-  dist93 <- distMetrics
-
-  #2025-2034
-  load(paste0(
-    file.path(getwd(), spp.list$Name[x]),
-    '/distribution_metrics_2025_2034.RData'
-  )) #distMetrics
-  distMetrics$month <- sapply(str_split(distMetrics$timestamp, '[.]'), "[[", 1)
-  distMetrics$year <- as.numeric(sapply(
-    str_split(distMetrics$timestamp, '[.]'),
-    "[[",
-    2
-  ))
-  dist25 <- distMetrics
-
-  #combine
-  distMetrics <- rbind(dist93, dist25)
-
-  #aggregate annually
-  annualMets <- aggregate(distMetrics, by = list(distMetrics$year), FUN = mean)
-
-  #plot center of gravity
-  pdf(
-    paste0(file.path(getwd(), spp.list$Name[x]), '/center_of_gravity.pdf'),
-    width = 8,
-    height = 11
-  )
-  layout(
-    matrix(c(1, 1, 1, 1, 1, 1, 1, 1, 2:13), nrow = 5, ncol = 4, byrow = T),
-    height = rep(1, 4),
-    width = rep(1, 4)
-  )
-  par(mar = c(2, 2, 1, 1))
-  #annual time series
-  plot(
-    cog ~ year,
-    data = annualMets[annualMets$year < 2020, ],
-    t = 'b',
-    pch = 19,
-    ylim = range(distMetrics$cog),
-    xlim = c(1993, 2035)
-  ) #plot 1993-2019 in black
-  lines(
-    cog ~ year,
-    data = annualMets[annualMets$year > 2020, ],
-    t = 'b',
-    pch = 19,
-    col = 'red4'
-  )
-
-  #plot monthly
-  for (m in month.abb) {
-    plot(
-      cog ~ year,
-      data = distMetrics[distMetrics$month == m & distMetrics$year < 2020, ],
-      t = 'b',
-      pch = 1,
-      main = m,
-      ylim = range(distMetrics$cog),
-      xlim = c(1993, 2035)
-    )
-    lines(
-      cog ~ year,
-      data = distMetrics[distMetrics$month == m & distMetrics$year > 2020, ],
-      t = 'b',
-      pch = 1,
-      col = 'red4'
-    )
-  }
-
-  dev.off()
-
-  #plot center of gravity
-  pdf(
+#second, normalize forecast data to HINDCAST MEAN/SD
+norm_forecast <- vector(
+  mode = 'list',
+  length = length(forecast.list$Short.Name)
+)
+for (x in 1:length(forecast.list$Short.Name)) {
+  raw <- terra::rast(
     paste0(
-      file.path(getwd(), spp.list$Name[x]),
-      '/area_of_high_probability.pdf'
+      here::here('SDMs/Data/MOM6/'),
+      'raw_MOM6_',
+      forecast.list$Short.Name[x],
+      '_forecast_r20250925_i202501_global.tif'
+    )
+  )
+  hind_avg <- readRDS(
+    paste0(
+      here::here('SDMs/Data/MOM6/'),
+      'avg_',
+      forecast.list$Short.Name[x],
+      '_hindcast_r20250715_masked_global.rds'
+    )
+  )
+  hind_sd <- readRDS(
+    paste0(
+      here::here('SDMs/Data/MOM6/'),
+      'sd_',
+      forecast.list$Short.Name[x],
+      '_hindcast_r20250715_masked_global.rds'
+    )
+  )
+
+  norm <- normalize_model_data(
+    raw = raw,
+    avg = hind_avg,
+    sd = hind_sd,
+    spatial_temporal = F
+  )
+  terra::writeRaster(
+    norm,
+    filename = paste0(
+      here::here('SDMs/Data/MOM6/'),
+      'norm_',
+      forecast.list$Short.Name[x],
+      '_forecast_r20250925_i202501_hindcast_r20250715_global.tif'
     ),
-    width = 8,
-    height = 11
+    overwrite = T
   )
-  layout(
-    matrix(c(1, 1, 1, 1, 1, 1, 1, 1, 2:13), nrow = 5, ncol = 4, byrow = T),
-    height = rep(1, 4),
-    width = rep(1, 4)
-  )
-  par(mar = c(2, 2, 1, 1))
-  #annual time series
-  plot(
-    area ~ year,
-    data = annualMets[annualMets$year < 2020, ],
-    t = 'b',
-    pch = 19,
-    ylim = range(distMetrics$area),
-    xlim = c(1993, 2035)
-  ) #plot 1993-2019 in black
-  lines(
-    area ~ year,
-    data = annualMets[annualMets$year > 2020, ],
-    t = 'b',
-    pch = 19,
-    col = 'red4'
-  )
+  #add to big list to pass to predictions
+  norm_forecast[[x]] <- norm
+}
 
-  #plot monthly
-  for (m in month.abb) {
-    plot(
-      area ~ year,
-      data = distMetrics[distMetrics$month == m & distMetrics$year < 2020, ],
-      t = 'b',
-      pch = 1,
-      main = m,
-      ylim = range(distMetrics$area),
-      xlim = c(1993, 2035)
-    )
-    lines(
-      area ~ year,
-      data = distMetrics[distMetrics$month == m & distMetrics$year > 2020, ],
-      t = 'b',
-      pch = 1,
-      col = 'red4'
-    )
+names(norm_forecast) <- forecast.list$Short.Name
+
+#for some reason some of the forecast rasters are flipped, so flipping them back
+for (x in 1:length(norm_forecast)) {
+  if (
+    names(norm_forecast)[x] %in%
+      c('bottomO2', 'diazPP', 'smallPP', 'largePP', 'smallZoo', 'intNPP')
+  ) {
+    norm_forecast[[x]] <- terra::flip(norm_forecast[[x]])
   }
+}
 
-  dev.off()
+#third, predict models
+statics <- terra::rast(here::here(
+  'SDMs/Data/staticVariables_masked_norm_terra.tif'
+))
+#reproject statics to forecast grid because somehow they are always different
+statics <- terra::resample(statics, norm_forecast[[1]], method = "bilinear") #using raw data from pull_mom6_hindcast
+statics <- terra::wrap(statics)
 
-  print(spp.list$Name[x])
+mods <- c("BRT", "GAM", "MAXENT", "SDMTMB")
+
+# 1. Load parallel packages
+library(foreach)
+library(doParallel)
+library(terra)
+
+# 2. Set up the parallel cluster
+#num_cores <- 2
+#cl <- parallel::makeCluster(num_cores)
+#doParallel::registerDoParallel(cl)
+
+# 3. CRITICAL: Wrap any SpatRaster objects in the global environment
+
+# New: Apply wrap to each raster in the list
+norm_forecast_wrapped <- lapply(norm_forecast, terra::wrap)
+# Assuming static_variables is already wrapped based on your original code:
+# static_variables_wrapped <- static_variables
+
+# 4. Execute the parallel loop
+#foreach(
+#s = 1:nrow(spp.list),
+# .packages = c("terra"),
+#  .export = c(
+#"make_sdm_predictions",
+# 'prep_time_step_df',
+#  'prep_time_step_stack'
+# ),
+#  .errorhandling = "pass"
+#) %dopar%
+for (s in 1:nrow(spp.list)) {
+  # 1. Clear terra's hidden temporary files from previous iterations
+  terra::tmpFiles(remove = TRUE)
+  gc()
+  # a. Unwrap the spatial data inside the worker environment
+  # New: Apply unwrap to each wrapped object in the list
+  norm_forecast_worker <- lapply(norm_forecast_wrapped, terra::unwrap)
+  static_vars_worker <- terra::unwrap(statics)
+
+  # b. Load in training data for the species
+  dfT <- read.csv(file.path(
+    here::here("SDMs"),
+    spp.list$Name[s],
+    'training_1993_2019_rmcorr_hindcast_r20250715_masked_global.csv'
+  ))
+
+  # 3. Use a character vector for file paths instead of a list for terra objects
+  pred_paths <- vector(mode = 'character', length = length(mods))
+
+  # c. Predict component models
+  for (m in 1:length(mods)) {
+    #check to see if model has already been predicted
+    out_path <- file.path(
+      here::here("SDMs"),
+      spp.list$Name[s],
+      'output_rasters',
+      paste0(mods[m], '_forecast_r20250925_i202501.tif')
+    )
+
+    #  if(!file.exists(out_path)){#if the file doesn't exist, make it
+    # FIX: Use readRDS() for .rds files, not load()
+    mod_path <- file.path(
+      here::here("SDMs"),
+      spp.list$Name[s],
+      'model_output',
+      'models',
+      paste0(mods[m], '.rds')
+    )
+    if (file.exists(mod_path)) {
+      load(mod_path) #mod
+
+      p <- make_sdm_predictions(
+        mod = mod,
+        model = tolower(mods[m]),
+        rasts = norm_forecast_worker,
+        static_variables = static_vars_worker,
+        se = dfT,
+        pa_col = 'pa',
+        month_col = 'month',
+        year_col = 'year',
+        xy_col = c("grid.lon", "grid.lat")
+      )
+
+      # Save prediction
+      terra::writeRaster(p, file = out_path, overwrite = TRUE)
+      print(mods[m])
+    } else {
+      next
+    }
+
+    # } else {
+    #if the file exists
+    #  p <- terra::rast(out_path)
+    # }
+
+    # Add to list for ensemble
+    # Store the file path instead of the raster pointer
+    pred_paths[m] <- out_path
+
+    rm(p, mod)
+    gc()
+  } #end m
+
+  # Drop empty strings if any models were skipped
+  pred_paths <- pred_paths[pred_paths != ""]
+
+  # d. Now predict ensemble
+  # FIX: Assigning weights via load() returns a character string. Use readRDS() instead.
+  weights_path <- file.path(
+    here::here("SDMs"),
+    spp.list$Name[s],
+    'model_output',
+    'ensemble_weights.rds'
+  )
+  load(weights_path) #weights
+  #mods as provided means that the model outputs in preds will be in the same order as they are in weights so no need to reorder
+
+  # 6. Re-load the rasters directly from disk for the ensemble.
+  # This guarantees clean pointers that aren't tied to the previous loop's memory space.
+  preds_stack <- lapply(pred_paths, terra::rast)
+
+  ens <- make_sdm_predictions(
+    model = 'ensemble',
+    rasts = preds_stack,
+    weights = weights,
+    mod = NULL,
+    static_variables = static_vars_worker,
+    se = dfT,
+    pa_col = 'pa',
+    month_col = 'month',
+    year_col = 'year',
+    xy_col = c("grid.lon", "grid.lat")
+  )
+
+  # Save ensemble
+  ens_path <- file.path(
+    here::here("SDMs"),
+    spp.list$Name[s],
+    'output_rasters',
+    'ENSEMBLE_forecast_r20250925_i202501.tif'
+  )
+  terra::writeRaster(ens, file = ens_path, overwrite = TRUE)
+
+  # Return NULL to prevent foreach from saving massive raster lists into RAM
+  #return(NULL)
+  print(s)
+
+  # Clear heavy variables at the end of the species loop
+  rm(ens, preds_stack, norm_forecast_worker, static_vars_worker, dfT, weights)
+  gc()
+}
+
+# 5. Stop the cluster when finished
+#parallel::stopCluster(cl)
+##########################################
+
+###############################
+#### CALCULATE SHIFTS #########
+###############################
+statics <- terra::rast(here::here(
+  'SDMs/Data/staticVariables_cropped_terra_reproj.tif'
+))
+bathy <- statics$bathy
+
+land <- vect(here::here('shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'))
+landNE <- terra::crop(land, bathy)
+
+for (x in 1:nrow(spp.list)) {
+  distMat <- distribution_shifts_wrapper(
+    spp = spp.list$Name[x],
+    model = 'ensemble',
+    hindcast_release = 'r20250715',
+    forecast_release = 'r20250925',
+    forecast_init = 'i202501',
+    spatial_temporal = F,
+    mask_bathy = T,
+    bathymetry = bathy,
+    coastline = landNE
+  )
+  saveRDS(
+    distMat,
+    file = file.path(
+      here::here('AdditionalMetrics/DistributionChange'),
+      spp.list$Name[x],
+      'distribution_shift_metrics.rds'
+    )
+  )
+  print(x)
 }
 
 ##############################
