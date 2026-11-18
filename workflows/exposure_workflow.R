@@ -371,16 +371,23 @@ stock_key <- stock_key[
 
 #merge with spp.list to subset to just species list
 stock_key <- merge(stock_key, spp.list, by = 'Name', all.x = F, all.y = T)
+stock_key <- stock_key[!is.na(stock_key$AREA), ]
 
 ##load in CAM polygons
-stat_areas <- terra::vect('../NEFSC_GIS/Statistical_Areas_2010_withNames.shp')
+stat_areas <- terra::vect(here::here(
+  'shpfiles/NEFSC_GIS/Statistical_Areas_2010_withNames.shp'
+))
 
 #get bathymetry for plotting
-statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+statics <- terra::rast(here::here(
+  'SDMs/Data/staticVariables_cropped_terra_reproj.tif'
+))
 bathy <- statics$bathy
 
 #get coastline for plotting
-land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+land <- terra::vect(here::here(
+  'shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'
+))
 landNE <- terra::crop(land, bathy)
 
 make_stock_polygons(
@@ -424,7 +431,7 @@ var.names <- c(
 
 
 #2014-23 v 2025 - 2035
-#plan(multisession, workers = 8)
+#plan(multisession, workers = 2)
 #combs <- future_map(
 for (x in 1:nrow(spp.list)) {
   variable_exposures_wrapper(
@@ -441,8 +448,8 @@ for (x in 1:nrow(spp.list)) {
   )
   print(x)
 }
-#.progress = T,
-#.options = furrr_options(scheduling = FALSE)
+# .progress = T,
+# .options = furrr_options(scheduling = FALSE)
 #)
 #plan(sequential)
 
@@ -466,7 +473,7 @@ for (x in 1:nrow(spp.list)) {
   print(x)
 }
 # .progress = T,
-#.options = furrr_options(scheduling = FALSE)
+# .options = furrr_options(scheduling = FALSE)
 #)
 #plan(sequential)
 
@@ -477,11 +484,15 @@ for (x in 1:nrow(spp.list)) {
 ##################################
 
 #get bathymetry for plotting
-statics <- terra::rast('../SDMs/Data/staticVariables_cropped_terra_reproj.tif')
+statics <- terra::rast(here::here(
+  'SDMs/Data/staticVariables_cropped_terra_reproj.tif'
+))
 bathy <- statics$bathy
 
 #get coastline for plotting
-land <- terra::vect('../shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp')
+land <- terra::vect(here::here(
+  'shpfiles/gshhg-shp-2.3.7/GSHHS_shp/i/GSHHS_i_L1.shp'
+))
 landNE <- terra::crop(land, bathy)
 
 ### set up variable dataframe to make pretty names - not exact MOM6 names to make sure they fit
@@ -526,25 +537,88 @@ varDF <- data.frame(
   )
 )
 
+# Map raw abbreviations to long display names
+stock_key <- c(
+  "EGOM" = "Eastern Gulf of Maine",
+  "GBK" = "Georges Bank",
+  "SNE" = "Southern New England",
+  "WGOM" = "Western Gulf of Maine",
+  "GOM" = "Gulf of Maine",
+  "GBGOM" = "Gulf of Maine/Georges Bank",
+  "SNEMA" = "Southern New England/Mid-Atlantic",
+  "CCGOM" = "Gulf of Maine/Cape Cod",
+  "NORTH" = "Northern",
+  "SOUTH" = 'Southern',
+  "global" = "Range"
+)
 
-make_exposure_plots(
+ns_stocks <- c(
+  'Range',
+  'Northern',
+  'Eastern Gulf of Maine',
+  'Western Gulf of Maine',
+  'Gulf of Maine',
+  'Gulf of Maine/Georges Bank',
+  'Georges Bank',
+  'Gulf of Maine/Cape Cod',
+  'Southern New England',
+  'MA/RI',
+  'NJ/NY',
+  'Southern New England/Mid-Atlantic',
+  'Long Island Sound',
+  'Mid Atlantic Bight',
+  'DE/MA/VA',
+  'Southern'
+)
+
+### set up variable dataframe to make pretty names - not exact MOM6 names to make sure they fit
+var_key <- c(
+  'bottomT' = 'Bottom\nTemperature',
+  'bottomO2' = 'Bottom\nOxygen',
+  'bottomS' = 'Bottom\nSalinity',
+  'bottomArg' = 'Bottom\nAragonite',
+  'surfaceT' = 'Surface\nTemperature',
+  'surfaceS' = 'Surface\nSalinity',
+  'surfacepH' = 'Surface pH',
+  'MLD' = 'Mixed layer\ndepth',
+  'diazPP' = 'Diazotroph\nprim. prod.',
+  'smallPP' = 'Small phyto.\nprim. prod.',
+  'mediumPP' = 'Medium phyto.\nprim. prod.',
+  'largePP' = 'Large phyto.\nprim. prod.',
+  'smallZoo' = 'Small\nzoo.\nbiomass',
+  'mediumZoo' = 'Medium\nzoo.\nbiomass',
+  'largeZoo' = 'Large\nzoo.\nbiomass',
+  'intNPP' = 'Net primary\nproduction',
+  'POC' = 'Downward Flux of\nParticulate\nOrganic Carbon'
+)
+
+for (x in 1:nrow(spp.list)) {
+  plot_exposure_wrapper(
+    spp = spp.list$Name[x],
+    forecast_release = 'r20250925',
+    forecast_init = 'i202501',
+    hindcast_release = 'r20250715',
+    hindcast_yr_range = '20142023',
+    variable_df = varDF,
+    coastline = landNE,
+    bathymetry = bathy,
+    stock_key = stock_key,
+    var_key = var_key
+  )
+  print(x)
+}
+
+## make exposure summary tables
+make_exposure_table(
   species = spp.list$Name,
-  type = c('variable', 'total', 'important', 'radar'),
   forecast_release = 'r20250925',
   forecast_init = 'i202501',
   hindcast_release = 'r20250715',
   hindcast_yr_range = '20142023',
   variable_df = varDF,
-  coastline = landNE,
-  bathymetry = bathy
-)
-
-## make exposure summary tables
-makereport_exposuretable(
-  species = spp.list$Name,
-  presentTime = '2009-2019',
-  futureTime = '2025-2035',
-  variableDF = varDF
+  stock_key = stock_key,
+  stock_order = ns_stocks,
+  table_dir = './Summary_Tables/'
 )
 
 ##################################
